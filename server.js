@@ -6,7 +6,7 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Keep-alive heartbeat: pingInterval 20s prevents Render's 55s idle WebSocket termination
+// Keep-alive heartbeat: pingInterval 20s prevents Render's 55s idle proxy disconnect
 const io = new Server(server, {
   cors: { origin: '*' },
   pingInterval: 20000,
@@ -37,11 +37,26 @@ io.on('connection', (socket) => {
     const clients = rooms.get(roomId);
     clients.add(socket.id);
 
-    // Notify any other peer already present
+    // Notify any peer already in the room
     socket.to(roomId).emit('peer-joined', socket.id);
 
     if (clients.size > 1) {
       socket.emit('ready');
+    }
+  });
+
+  socket.on('leave-room', (roomId) => {
+    socket.leave(roomId);
+    if (rooms.has(roomId)) {
+      const clients = rooms.get(roomId);
+      clients.delete(socket.id);
+      socket.to(roomId).emit('peer-disconnected', socket.id);
+      if (clients.size === 0) {
+        rooms.delete(roomId);
+      }
+    }
+    if (currentRoom === roomId) {
+      currentRoom = null;
     }
   });
 

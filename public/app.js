@@ -93,7 +93,12 @@ const etaText = document.getElementById('eta-text');
 const systemStatus = document.getElementById('system-status');
 const senderStatusPill = document.getElementById('sender-status-pill');
 const cancelTransferBtn = document.getElementById('cancel-transfer-btn');
-const resetAppBtn = document.getElementById('reset-app-btn');
+
+// Navigation Elements
+const brandHomeLink = document.getElementById('brand-home-link');
+const navBackHomeBtn = document.getElementById('nav-back-home-btn');
+const sendAnotherBtn = document.getElementById('send-another-btn');
+const completeBackHomeBtn = document.getElementById('complete-back-home-btn');
 
 // Scanner Elements
 const scanQrBtn = document.getElementById('scan-qr-btn');
@@ -107,6 +112,14 @@ const openModalBtn = document.getElementById('open-modal-btn');
 const closeModalBtn = document.getElementById('close-modal-btn');
 
 // ================= UTILITIES & HELPERS =================
+
+function updateNavState(activeViewId) {
+  if (activeViewId === 'selection-view') {
+    navBackHomeBtn.classList.add('hidden');
+  } else {
+    navBackHomeBtn.classList.remove('hidden');
+  }
+}
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 Bytes';
@@ -230,6 +243,7 @@ function handleFileSelected(file) {
 
   selectionView.classList.add('hidden');
   senderView.classList.remove('hidden');
+  updateNavState('sender-view');
 
   socket.emit('join-room', currentRoomId);
 }
@@ -330,6 +344,8 @@ function initiateReceiver(roomId) {
   isInitiator = false;
   selectionView.classList.add('hidden');
   transferView.classList.remove('hidden');
+  updateNavState('transfer-view');
+
   document.getElementById('transfer-role-text').textContent = 'Connecting...';
   systemStatus.textContent = 'Connecting via signaling server...';
 
@@ -378,6 +394,12 @@ socket.on('ice-candidate', async ({ candidate }) => {
   }
 });
 
+socket.on('peer-disconnected', () => {
+  if (isTransferring) {
+    systemStatus.textContent = 'Peer disconnected unexpectedly.';
+  }
+});
+
 function createPeerConnection() {
   if (peerConnection) return;
 
@@ -412,6 +434,7 @@ function setupSenderDataChannel(channel) {
     isTransferring = true;
     senderView.classList.add('hidden');
     transferView.classList.remove('hidden');
+    updateNavState('transfer-view');
 
     document.getElementById('transfer-role-text').textContent = 'Sending Payload';
     document.getElementById('transfer-file-name').textContent = selectedFile.name;
@@ -624,6 +647,7 @@ function finishTransferSuccess(fileName) {
   isTransferring = false;
   transferView.classList.add('hidden');
   completeView.classList.remove('hidden');
+  updateNavState('complete-view');
 
   document.getElementById('complete-details').textContent =
     `"${fileName}" was transferred and finalized successfully.`;
@@ -633,22 +657,50 @@ function finishTransferSuccess(fileName) {
   lucide.createIcons();
 }
 
-function resetApplicationState() {
+function resetApplicationState(confirmIfBusy = false) {
+  if (confirmIfBusy && isTransferring) {
+    const proceed = confirm('A file transfer is actively in progress. Returning home will cancel it. Continue?');
+    if (!proceed) return;
+  }
+
+  // 1. Terminate DataChannel
   if (dataChannel) {
-    try { dataChannel.close(); } catch (_) {}
+    try {
+      dataChannel.onclose = null;
+      dataChannel.close();
+    } catch (_) {}
     dataChannel = null;
   }
+
+  // 2. Terminate Peer Connection
   if (peerConnection) {
-    try { peerConnection.close(); } catch (_) {}
+    try {
+      peerConnection.onicecandidate = null;
+      peerConnection.ondatachannel = null;
+      peerConnection.close();
+    } catch (_) {}
     peerConnection = null;
   }
 
+  // 3. Abort disk stream if open
+  if (fileWritableStream) {
+    try {
+      fileWritableStream.abort();
+    } catch (_) {}
+    fileWritableStream = null;
+  }
+
+  // 4. Notify signaling server to leave room
+  if (currentRoomId && socket.connected) {
+    socket.emit('leave-room', currentRoomId);
+  }
+
+  // 5. Clear application state
   selectedFile = null;
   currentRoomId = null;
   remotePeerId = null;
   isInitiator = false;
   isTransferring = false;
-  fileWritableStream = null;
   incomingMetadata = null;
   receivedBytes = 0;
   diskWriteBuffer = [];
@@ -656,27 +708,50 @@ function resetApplicationState() {
   receivedChunksFallback = [];
   speedSamples = [];
 
+  // 6. Reset UI progress & metric indicators
   progressBarFill.style.width = '0%';
   percentageText.textContent = '0.0%';
   speedText.textContent = '0.00 MB/s';
   etaText.textContent = 'Calculating...';
   manualCodeInput.value = '';
+  fileInput.value = '';
 
-  document.getElementById('manual-download-container').classList.add('hidden');
+  const manualContainer = document.getElementById('manual-download-container');
+  if (manualContainer) manualContainer.classList.add('hidden');
+
+  // 7. Clean up the URL query parameters without reloading the page
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  // 8. Restore views
   completeView.classList.add('hidden');
   transferView.classList.add('hidden');
   senderView.classList.add('hidden');
   selectionView.classList.remove('hidden');
+
+  updateNavState('selection-view');
+  lucide.createIcons();
+}
+
+// Navigation event bindings
+brandHomeLink.addEventListener('click', () => resetApplicationState(true));
+navBackHomeBtn.addEventListener('click', () => resetApplicationState(true));
+
+if (sendAnotherBtn) {
+  sendAnotherBtn.addEventListener('click', () => {
+    resetApplicationState(false);
+    fileInput.click();
+  });
+}
+
+if (completeBackHomeBtn) {
+  completeBackHomeBtn.addEventListener('click', () => {
+    resetApplicationState(false);
+  });
 }
 
 cancelTransferBtn.addEventListener('click', () => {
-  if (confirm('Cancel this active transfer?')) {
-    resetApplicationState();
-    showToast('Transfer canceled');
-  }
+  resetApplicationState(true);
 });
-
-resetAppBtn.addEventListener('click', resetApplicationState);
 
 // Troubleshooting Modal
 openModalBtn.addEventListener('click', () => {

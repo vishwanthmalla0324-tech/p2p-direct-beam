@@ -53,13 +53,26 @@
     </div>
   </div>
 
-  <!-- Header -->
-  <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 text-center">
-    <div class="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs text-cyan-400 font-mono font-medium mb-3 shadow-inner">
-      <span class="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
-      Direct DataChannel Pipeline
+  <!-- Top Navigation & Header -->
+  <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 text-center relative">
+    <div class="flex items-center justify-between mb-4">
+      <button id="nav-back-home-btn" class="hidden inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-cyan-400 bg-slate-900 border border-slate-800 hover:border-slate-700 px-3 py-1.5 rounded-lg transition active:scale-95">
+        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+        <span>Back to Home</span>
+      </button>
+
+      <div class="mx-auto inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs text-cyan-400 font-mono font-medium shadow-inner">
+        <span class="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        Direct DataChannel Pipeline
+      </div>
+
+      <div class="w-24 hidden sm:block"></div>
     </div>
-    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">Direct Beam</h1>
+
+    <!-- Clickable Brand / Logo -->
+    <h1 id="brand-home-link" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 cursor-pointer hover:text-cyan-400 transition-colors inline-block select-none" title="Return to Home">
+      Direct Beam
+    </h1>
     <p class="text-xs sm:text-sm text-slate-400 max-w-md mx-auto mb-5">
       Encrypted point-to-point data streaming. Direct disk writes, unlimited size, and zero cloud retention.
     </p>
@@ -212,9 +225,18 @@
           <p id="complete-details" class="text-xs text-slate-400 max-w-sm mx-auto">Payload transmitted with end-to-end cryptographic integrity.</p>
         </div>
         <div id="manual-download-container" class="hidden"></div>
-        <button id="reset-app-btn" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-cyan-500/20">
-          Send Another File
-        </button>
+        
+        <!-- Side-by-Side Post-Transfer Actions -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <button id="send-another-btn" class="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Send Another File</span>
+          </button>
+          <button id="complete-back-home-btn" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-2">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Back to Home</span>
+          </button>
+        </div>
       </section>
 
     </div>
