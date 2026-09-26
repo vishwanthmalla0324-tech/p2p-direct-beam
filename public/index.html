@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Direct Beam — Multi-Device Peer-to-Peer Transfer</title>
+  <title>Direct Beam — Enterprise Multi-File P2P Transfer</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +13,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
 
   <script>
@@ -30,27 +31,24 @@
   </script>
 
   <style>
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-cyan-500/20 selection:text-cyan-300 font-sans antialiased">
 
+  <!-- Toast Notification -->
   <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-[-20px] opacity-0 pointer-events-none flex items-center gap-2 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-lg shadow-2xl text-xs font-medium">
     <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
     <span id="toast-message">Notification</span>
   </div>
 
-  <div id="cold-start-banner" class="hidden w-full bg-amber-500/10 border-b border-amber-500/20 py-2 px-4 text-center text-xs text-amber-300 font-medium">
-    <div class="inline-flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-      Waking up signaling server (~30s on initial cold start)...
-    </div>
-  </div>
-
+  <!-- Header -->
   <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 text-center relative">
     <div class="flex items-center justify-between mb-4">
       <button id="nav-back-home-btn" class="hidden inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-cyan-400 bg-slate-900 border border-slate-800 hover:border-slate-700 px-3 py-1.5 rounded-lg transition active:scale-95">
@@ -60,44 +58,45 @@
 
       <div class="mx-auto inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs text-cyan-400 font-mono font-medium shadow-inner">
         <span class="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
-        Multi-Device Mesh Pipeline
+        Multi-File Direct Stream Engine
       </div>
-
       <div class="w-24 hidden sm:block"></div>
     </div>
 
-    <h1 id="brand-home-link" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 cursor-pointer hover:text-cyan-400 transition-colors inline-block select-none" title="Return to Home">
+    <h1 id="brand-home-link" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 cursor-pointer hover:text-cyan-400 transition-colors inline-block select-none">
       Direct Beam
     </h1>
     <p class="text-xs sm:text-sm text-slate-400 max-w-md mx-auto mb-5">
-      Direct device-to-device mesh broadcast. Beam to 1 or many receivers simultaneously with zero cloud storage.
+      Direct point-to-point batch file streaming. End-to-end encrypted with zero server storage.
     </p>
 
     <div class="flex flex-wrap items-center justify-center gap-2.5 text-xs text-slate-400">
       <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
-        <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-400"></i> E2E Encrypted (DTLS)
+        <i data-lucide="layers" class="w-3.5 h-3.5 text-cyan-400"></i> Multi-File Queue
       </span>
       <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
-        <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i> Multi-Peer Broadcast
+        <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Direct P2P Streaming
       </span>
       <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
-        <i data-lucide="cloud-off" class="w-3.5 h-3.5 text-amber-400"></i> Zero Cloud Storage
+        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i> DTLS Encrypted
       </span>
     </div>
   </header>
 
+  <!-- Main Workstation -->
   <main class="w-full max-w-lg mx-auto px-4 flex-1 flex flex-col justify-center py-6">
     <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl relative">
 
-      <!-- View 1: Selector & Receiver -->
+      <!-- ================= VIEW 1: SELECTION & RECEIVE ================= -->
       <section id="selection-view" class="space-y-6">
         <div id="drop-zone" class="border-2 border-dashed border-slate-800 hover:border-cyan-500/50 bg-slate-950/40 hover:bg-slate-950/70 transition-all rounded-xl p-8 text-center cursor-pointer group flex flex-col items-center justify-center">
           <div class="w-14 h-14 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-3 group-hover:border-cyan-500/40 text-slate-400 group-hover:text-cyan-400 transition-colors">
-            <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+            <i data-lucide="files" class="w-7 h-7"></i>
           </div>
-          <p class="text-sm font-semibold text-slate-200 mb-1">Click to select or drop a file</p>
-          <p class="text-xs text-slate-400">Share to one or multiple phones, PCs, or tablets</p>
-          <input type="file" id="file-input" class="hidden">
+          <p class="text-sm font-semibold text-slate-200 mb-1">Click or drag & drop files</p>
+          <p class="text-xs text-slate-400">Select any mix of documents, photos, audio, videos, or zips</p>
+          <!-- Multi-file file input -->
+          <input type="file" id="file-input" class="hidden" multiple>
         </div>
 
         <div class="relative flex items-center py-1">
@@ -131,118 +130,121 @@
         </div>
       </section>
 
-      <!-- View 2: Sender Ready State -->
-      <section id="sender-view" class="hidden space-y-5">
-        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex items-center gap-3">
-          <div class="w-10 h-10 rounded-lg bg-cyan-950/60 border border-cyan-800/60 flex items-center justify-center text-cyan-400 flex-shrink-0">
-            <i data-lucide="file-check" class="w-5 h-5"></i>
+      <!-- ================= VIEW 2: SENDER QUEUE & READY ================= -->
+      <section id="sender-view" class="hidden space-y-4">
+        <!-- Queue Header with "Add More Files" -->
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+            <div>
+              <span id="queue-summary-count" class="text-xs font-bold text-white">0 files</span>
+              <span class="text-slate-500 mx-1.5">•</span>
+              <span id="queue-summary-size" class="text-xs font-mono text-cyan-400">0 Bytes</span>
+            </div>
+            <button id="add-more-files-btn" class="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-slate-900 hover:bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg transition">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add More
+            </button>
           </div>
-          <div class="min-w-0 flex-1">
-            <p id="sender-file-name" class="text-sm font-semibold text-white truncate">archive.tar.gz</p>
-            <p id="sender-file-size" class="text-xs text-slate-400 font-mono">0 Bytes</p>
-          </div>
-          <span id="sender-status-pill" class="text-[11px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap">
-            0 Devices Connected
-          </span>
+
+          <!-- Dynamic File Queue List -->
+          <ul id="sender-queue-list" class="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 text-xs"></ul>
         </div>
 
-        <div class="bg-slate-950 border border-slate-800 rounded-xl p-5 text-center space-y-2">
-          <div class="flex items-center justify-center gap-2">
-            <label class="text-xs font-medium text-slate-400 uppercase tracking-wider block">Security Room Key</label>
-            <span class="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full font-mono">Multi-device</span>
+        <!-- Room Key Display -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center space-y-2">
+          <div class="flex items-center justify-between px-2">
+            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">Security Room Key</label>
+            <span id="sender-status-pill" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              Waiting for peer...
+            </span>
           </div>
           <div id="display-code" class="text-3xl sm:text-4xl font-mono font-bold tracking-[0.3em] text-cyan-400 select-all">
             ------
           </div>
-          <p class="text-xs text-slate-400">Multiple people can scan or connect simultaneously</p>
         </div>
 
+        <!-- Actions -->
         <div class="flex gap-2">
-          <button id="copy-link-btn" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
-            <i data-lucide="copy" class="w-4 h-4"></i> Copy Share Link
+          <button id="copy-link-btn" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Link
           </button>
-          <button id="toggle-qr-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
-            <i data-lucide="qr-code" class="w-4 h-4"></i> QR Code
+          <button id="toggle-qr-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95">
+            <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> QR Code
           </button>
         </div>
 
-        <div id="qr-modal-container" class="hidden flex flex-col items-center justify-center bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-2">
-          <div id="qrcode-box" class="bg-white p-3 rounded-lg shadow-lg"></div>
-          <span class="text-[11px] text-slate-400 font-mono mt-1">Scan with as many devices as you want</span>
+        <div id="qr-modal-container" class="hidden flex flex-col items-center justify-center bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
+          <div id="qrcode-box" class="bg-white p-2.5 rounded-lg shadow-lg"></div>
+          <span class="text-[11px] text-slate-400 font-mono mt-1">Scan to connect</span>
         </div>
 
-        <!-- Start Multi-Beam Button for Senders -->
-        <div class="pt-2">
-          <button id="start-broadcast-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 disabled:hover:bg-cyan-500 text-slate-950 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition active:scale-98 shadow-lg shadow-cyan-500/20" disabled>
-            Waiting for Devices to Join...
-          </button>
-        </div>
+        <button id="start-beam-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 disabled:hover:bg-cyan-500 text-slate-950 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition active:scale-98 shadow-lg shadow-cyan-500/20" disabled>
+          Waiting for Peer to Connect...
+        </button>
       </section>
 
-      <!-- View 3: Active Transfer Pipeline -->
-      <section id="transfer-view" class="hidden space-y-5">
-        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex items-center justify-between">
-          <div class="min-w-0 pr-3">
-            <div class="flex items-center gap-2 mb-1">
-              <h2 id="transfer-role-text" class="text-xs font-semibold text-cyan-400 uppercase tracking-wider">Streaming Payload</h2>
-              <span id="active-devices-pill" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
-                1 Device
-              </span>
+      <!-- ================= VIEW 3: TRANSFERRING DASHBOARD ================= -->
+      <section id="transfer-view" class="hidden space-y-4">
+        <!-- Aggregate Batch Progress -->
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <span id="transfer-role-text" class="text-[11px] font-semibold text-cyan-400 uppercase tracking-wider block">Transferring Batch</span>
+              <p id="overall-batch-subtitle" class="text-xs font-mono text-slate-400 mt-0.5">0 of 0 files completed</p>
             </div>
-            <p id="transfer-file-name" class="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-xs">dataset.iso</p>
-            <p id="transfer-file-size" class="text-xs text-slate-400 font-mono mt-0.5">0 MB</p>
+            <span id="overall-percentage" class="text-2xl font-black font-mono text-cyan-400">0.0%</span>
           </div>
-          <div class="text-right flex-shrink-0">
-            <span id="percentage-text" class="text-2xl font-black font-mono text-cyan-400">0.0%</span>
-          </div>
-        </div>
 
-        <div class="w-full bg-slate-950 border border-slate-800 rounded-full h-3 p-0.5 overflow-hidden">
-          <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full w-0 transition-all duration-150 ease-out"></div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-slate-950 border border-slate-800/70 p-3 rounded-xl text-center">
-            <span class="text-[10px] uppercase text-slate-400 font-semibold tracking-wider block mb-0.5">Speed</span>
-            <span id="speed-text" class="text-base font-bold font-mono text-slate-200">0.00 MB/s</span>
+          <div class="w-full bg-slate-900 border border-slate-800 rounded-full h-2.5 p-0.5 overflow-hidden">
+            <div id="overall-progress-bar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full w-0 transition-all duration-150"></div>
           </div>
-          <div class="bg-slate-950 border border-slate-800/70 p-3 rounded-xl text-center">
-            <span class="text-[10px] uppercase text-slate-400 font-semibold tracking-wider block mb-0.5">ETA</span>
-            <span id="eta-text" class="text-base font-bold font-mono text-slate-200">Calculating...</span>
+
+          <div class="grid grid-cols-2 gap-2 pt-1 text-center font-mono">
+            <div class="bg-slate-900/60 rounded-lg p-2 border border-slate-800/60">
+              <span class="text-[10px] text-slate-500 uppercase block">Speed</span>
+              <span id="speed-text" class="text-xs font-bold text-slate-200">0.00 MB/s</span>
+            </div>
+            <div class="bg-slate-900/60 rounded-lg p-2 border border-slate-800/60">
+              <span class="text-[10px] text-slate-500 uppercase block">ETA</span>
+              <span id="eta-text" class="text-xs font-bold text-slate-200">Calculating...</span>
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center justify-center gap-2 pt-1 text-xs text-slate-400">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="system-status">Broadcasting to connected peers...</span>
+        <!-- Manifest File List with Live Per-File Status -->
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-2 px-1">Batch Manifest</span>
+          <ul id="transfer-manifest-list" class="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pr-1 text-xs"></ul>
         </div>
 
-        <div class="pt-2">
-          <button id="cancel-transfer-btn" class="w-full bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 border border-rose-900/40 py-2.5 rounded-xl text-xs font-semibold transition active:scale-98">
-            Cancel Transfer
-          </button>
-        </div>
+        <button id="cancel-transfer-btn" class="w-full bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 border border-rose-900/40 py-2.5 rounded-xl text-xs font-semibold transition active:scale-98">
+          Cancel Transfer
+        </button>
       </section>
 
-      <!-- View 4: Completed State -->
-      <section id="complete-view" class="hidden text-center space-y-5 py-4">
-        <div class="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
-          <i data-lucide="check" class="w-8 h-8"></i>
+      <!-- ================= VIEW 4: TRANSFER COMPLETE ================= -->
+      <section id="complete-view" class="hidden text-center space-y-4 py-3">
+        <div class="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
+          <i data-lucide="check-check" class="w-7 h-7"></i>
         </div>
         <div>
-          <h2 class="text-xl font-bold text-white mb-1">Transfer Complete!</h2>
-          <p id="complete-details" class="text-xs text-slate-400 max-w-sm mx-auto">Payload transmitted with end-to-end cryptographic integrity.</p>
+          <h2 class="text-lg font-bold text-white mb-0.5">Batch Completed!</h2>
+          <p id="complete-details" class="text-xs text-slate-400">All files transferred directly peer-to-peer.</p>
         </div>
-        <div id="manual-download-container" class="hidden"></div>
-        
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-          <button id="send-another-btn" class="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-            <span>Send Another File</span>
+
+        <!-- Receiver Actions: Download All ZIP or Individual Files -->
+        <div id="receiver-actions-box" class="space-y-2 pt-1">
+          <button id="download-zip-btn" class="hidden w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-98 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
+            <i data-lucide="archive" class="w-4 h-4"></i> Download All as .ZIP
           </button>
-          <button id="complete-back-home-btn" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-2">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i>
-            <span>Back to Home</span>
+          <div id="individual-downloads-container" class="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-1 text-left"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
+          <button id="send-another-btn" class="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-1.5">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Send More
+          </button>
+          <button id="complete-back-home-btn" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-1.5">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back Home
           </button>
         </div>
       </section>
@@ -250,37 +252,14 @@
     </div>
   </main>
 
-  <div id="info-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 max-w-md w-full rounded-2xl p-6 shadow-2xl space-y-4">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-          <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i> Multi-Device Mesh Architecture
-        </h3>
-        <button id="close-modal-btn" class="text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <div class="text-xs text-slate-300 space-y-3 leading-relaxed">
-        <p><strong class="text-white">Multi-Device Mesh:</strong> Direct Beam establishes individual DTLS-encrypted DataChannels to every connected device. The file is sliced from the sender's disk and broadcast simultaneously to all receiving peers without touching our servers.</p>
-        <p><strong class="text-white">Bandwidth Scalability:</strong> Sender upload bandwidth is shared evenly across all connected peers. Receivers download at peak local peer speeds.</p>
-        <p><strong class="text-white">Zero RAM Footprint:</strong> Files of any size (50 GB+) are streamed in 64KB slices with 2MB chunked writing directly to the target system's filesystem.</p>
-      </div>
-    </div>
-  </div>
-
-  <footer class="w-full max-w-4xl mx-auto py-5 px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 border-t border-slate-900">
+  <footer class="w-full max-w-4xl mx-auto py-5 px-4 flex items-center justify-between text-xs text-slate-500 border-t border-slate-900">
     <div class="flex items-center gap-2">
       <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-500"></i>
-      <span>Streams API & WebRTC Core</span>
+      <span>Sequential Multi-File Framing Protocol</span>
     </div>
-    <div class="flex items-center gap-4">
-      <button id="open-modal-btn" class="hover:text-slate-300 underline underline-offset-4 decoration-slate-800 transition">
-        Troubleshooting / NAT
-      </button>
-      <a href="https://github.com/vishwanthmalla0324-tech/p2p-direct-beam" target="_blank" rel="noopener noreferrer" class="hover:text-slate-300 flex items-center gap-1 transition">
-        <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
-      </a>
-    </div>
+    <a href="https://github.com/vishwanthmalla0324-tech/p2p-direct-beam" target="_blank" rel="noopener noreferrer" class="hover:text-slate-300 flex items-center gap-1 transition">
+      <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
+    </a>
   </footer>
 
   <script src="/app.js"></script>

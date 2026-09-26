@@ -5,54 +5,35 @@ const socket = io({
   transports: ['websocket', 'polling']
 });
 
-let coldStartTimer = setTimeout(() => {
-  const banner = document.getElementById('cold-start-banner');
-  if (banner && !socket.connected) {
-    banner.classList.remove('hidden');
-  }
-}, 3000);
-
-socket.on('connect', () => {
-  clearTimeout(coldStartTimer);
-  const banner = document.getElementById('cold-start-banner');
-  if (banner) banner.classList.add('hidden');
-});
-
-socket.on('disconnect', () => {
-  if (isTransferring) {
-    systemStatus.textContent = 'Signaling disconnect. Direct P2P channels active.';
-  }
-});
-
-const CHUNK_SIZE = 64 * 1024;
-const WRITE_BUFFER_SIZE = 2 * 1024 * 1024;
-const BUFFER_THRESHOLD = 8 * 1024 * 1024;
+// WebRTC & Backpressure Constants
+const CHUNK_SIZE = 64 * 1024; // 64 KB per network packet
+const BUFFER_THRESHOLD = 8 * 1024 * 1024; // 8 MB backpressure threshold
 
 // Application State
-let selectedFile = null;
+let fileQueue = []; // Queue: Array of { id, file, name, size, type }
 let currentRoomId = null;
 let isInitiator = false;
 let isTransferring = false;
+let abortRequested = false;
 
-// Multi-Peer Connection Map: peerId -> { pc: RTCPeerConnection, dc: RTCDataChannel, status: string }
-const peers = new Map();
+// Peer Connection
+let peerConnection = null;
+let dataChannel = null;
+let remotePeerId = null;
 
-// Receiver specific states (when this client is a receiver)
-let receiverPeerConnection = null;
-let receiverDataChannel = null;
-let fileWritableStream = null;
-let incomingMetadata = null;
-let receivedBytes = 0;
-let diskWriteBuffer = [];
-let diskWriteBufferSize = 0;
-let isWritingToDisk = false;
-let receivedChunksFallback = [];
-
-// Metrics & Rolling Calculation
+// Metrics
 let bytesTransferredLastInterval = 0;
 let lastSpeedCalcTime = Date.now();
 const SPEED_WINDOW_SIZE = 5;
 let speedSamples = [];
+let totalBatchBytes = 0;
+let totalBatchBytesTransferred = 0;
+
+// Receiver Batch Engine State
+let incomingManifest = [];
+let currentReceivingFile = null;
+let receivedFileChunks = []; // In-memory chunks for active file
+let completedFiles = []; // Array of { name, blob, url }
 
 // Scanner
 let html5QrScanner = null;
@@ -79,20 +60,28 @@ const manualCodeInput = document.getElementById('manual-code-input');
 const joinBtn = document.getElementById('join-btn');
 const displayCode = document.getElementById('display-code');
 
+const senderQueueList = document.getElementById('sender-queue-list');
+const queueSummaryCount = document.getElementById('queue-summary-count');
+const queueSummarySize = document.getElementById('queue-summary-size');
+const addMoreFilesBtn = document.getElementById('add-more-files-btn');
+const startBeamBtn = document.getElementById('start-beam-btn');
+const senderStatusPill = document.getElementById('sender-status-pill');
+
 const copyLinkBtn = document.getElementById('copy-link-btn');
 const toggleQrBtn = document.getElementById('toggle-qr-btn');
 const qrModalContainer = document.getElementById('qr-modal-container');
 const qrcodeBox = document.getElementById('qrcode-box');
-const startBroadcastBtn = document.getElementById('start-broadcast-btn');
-const activeDevicesPill = document.getElementById('active-devices-pill');
 
-const progressBarFill = document.getElementById('progress-bar-fill');
-const percentageText = document.getElementById('percentage-text');
+const overallPercentage = document.getElementById('overall-percentage');
+const overallProgressBar = document.getElementById('overall-progress-bar');
+const overallBatchSubtitle = document.getElementById('overall-batch-subtitle');
 const speedText = document.getElementById('speed-text');
 const etaText = document.getElementById('eta-text');
-const systemStatus = document.getElementById('system-status');
-const senderStatusPill = document.getElementById('sender-status-pill');
+const transferManifestList = document.getElementById('transfer-manifest-list');
 const cancelTransferBtn = document.getElementById('cancel-transfer-btn');
+
+const downloadZipBtn = document.getElementById('download-zip-btn');
+const individualDownloadsContainer = document.getElementById('individual-downloads-container');
 
 const brandHomeLink = document.getElementById('brand-home-link');
 const navBackHomeBtn = document.getElementById('nav-back-home-btn');
@@ -104,16 +93,30 @@ const scannerWrapper = document.getElementById('scanner-wrapper');
 const closeScannerBtn = document.getElementById('close-scanner-btn');
 const flipCameraBtn = document.getElementById('flip-camera-btn');
 
-const infoModal = document.getElementById('info-modal');
-const openModalBtn = document.getElementById('open-modal-btn');
-const closeModalBtn = document.getElementById('close-modal-btn');
+// ================= FILE TYPE ICON DETECTOR =================
 
-function updateNavState(activeViewId) {
-  if (activeViewId === 'selection-view') {
-    navBackHomeBtn.classList.add('hidden');
-  } else {
-    navBackHomeBtn.classList.remove('hidden');
+function getFileIcon(fileName, mimeType) {
+  const ext = fileName.split('.').pop().toLowerCase();
+
+  if (['mp4', 'mkv', 'avi', 'mov', 'webm'].includes(ext) || mimeType.startsWith('video/')) {
+    return '<i data-lucide="video" class="w-4 h-4 text-purple-400"></i>';
   }
+  if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'].includes(ext) || mimeType.startsWith('audio/')) {
+    return '<i data-lucide="music" class="w-4 h-4 text-pink-400"></i>';
+  }
+  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext) || mimeType.startsWith('image/')) {
+    return '<i data-lucide="image" class="w-4 h-4 text-emerald-400"></i>';
+  }
+  if (['zip', 'tar', 'gz', 'rar', '7z', 'bz2'].includes(ext)) {
+    return '<i data-lucide="archive" class="w-4 h-4 text-amber-400"></i>';
+  }
+  if (['js', 'ts', 'html', 'css', 'json', 'py', 'cpp', 'rs', 'go'].includes(ext)) {
+    return '<i data-lucide="code" class="w-4 h-4 text-cyan-400"></i>';
+  }
+  if (['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) {
+    return '<i data-lucide="file-text" class="w-4 h-4 text-blue-400"></i>';
+  }
+  return '<i data-lucide="file" class="w-4 h-4 text-slate-400"></i>';
 }
 
 function formatBytes(bytes) {
@@ -134,53 +137,11 @@ function showToast(message) {
   }, 2200);
 }
 
-function playCompletionChime() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.3);
-  } catch (_) {}
+function updateNavState(activeViewId) {
+  navBackHomeBtn.classList.toggle('hidden', activeViewId === 'selection-view');
 }
 
-if ('Notification' in window && Notification.permission === 'default') {
-  Notification.requestPermission();
-}
-
-function sendNativeNotification(filename) {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('Direct Beam Complete', {
-      body: `Successfully transferred ${filename}`,
-      icon: '/favicon.ico'
-    });
-  }
-}
-
-window.addEventListener('beforeunload', (e) => {
-  if (isTransferring) {
-    e.preventDefault();
-    e.returnValue = 'Direct streaming in progress. Leaving will abort the transfer.';
-  }
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const room = urlParams.get('room');
-  if (room && room.length === 6) {
-    manualCodeInput.value = room;
-    initiateReceiver(room);
-  }
-});
-
-// ================= FILE SELECTION =================
+// ================= QUEUE MANAGEMENT (SENDER) =================
 
 dropZone.addEventListener('click', (e) => {
   if (e.target !== fileInput) fileInput.click();
@@ -199,44 +160,103 @@ dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('border-cyan-500', 'bg-slate-950/70');
   if (e.dataTransfer?.files?.length > 0) {
-    handleFileSelected(e.dataTransfer.files[0]);
+    appendFilesToQueue(Array.from(e.dataTransfer.files));
   }
 });
 
 fileInput.addEventListener('change', (e) => {
   if (e.target.files?.length > 0) {
-    handleFileSelected(e.target.files[0]);
+    appendFilesToQueue(Array.from(e.target.files));
   }
 });
 
-function handleFileSelected(file) {
-  if (!file) return;
-  selectedFile = file;
-  isInitiator = true;
-  currentRoomId = Math.floor(100000 + Math.random() * 900000).toString();
+addMoreFilesBtn.addEventListener('click', () => {
+  fileInput.click();
+});
 
-  document.getElementById('sender-file-name').textContent = file.name;
-  document.getElementById('sender-file-size').textContent = formatBytes(file.size);
-  displayCode.textContent = currentRoomId;
-
-  qrcodeBox.innerHTML = '';
-  const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
-  new QRCode(qrcodeBox, {
-    text: shareUrl,
-    width: 160,
-    height: 160,
-    colorDark: "#020617",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.M
+function appendFilesToQueue(newFiles) {
+  newFiles.forEach((file) => {
+    fileQueue.push({
+      id: 'f_' + Math.random().toString(36).substring(2, 9),
+      file: file,
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream'
+    });
   });
 
-  selectionView.classList.add('hidden');
-  senderView.classList.remove('hidden');
-  updateNavState('sender-view');
+  if (!isInitiator) {
+    isInitiator = true;
+    currentRoomId = Math.floor(100000 + Math.random() * 900000).toString();
+    displayCode.textContent = currentRoomId;
 
-  socket.emit('join-room', currentRoomId);
+    // Render Canvas QR Code
+    qrcodeBox.innerHTML = '';
+    const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
+    new QRCode(qrcodeBox, {
+      text: shareUrl,
+      width: 140,
+      height: 140,
+      colorDark: "#020617",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    selectionView.classList.add('hidden');
+    senderView.classList.remove('hidden');
+    updateNavState('sender-view');
+    socket.emit('join-room', currentRoomId);
+  }
+
+  renderQueueUI();
 }
 
+function removeFileFromQueue(fileId) {
+  fileQueue = fileQueue.filter(item => item.id !== fileId);
+  if (fileQueue.length === 0) {
+    resetApplicationState(false);
+    return;
+  }
+  renderQueueUI();
+}
+
+function renderQueueUI() {
+  senderQueueList.innerHTML = '';
+  let totalBytes = 0;
+
+  fileQueue.forEach((item) => {
+    totalBytes += item.size;
+    const li = document.createElement('li');
+    li.className = 'flex items-center justify-between bg-slate-900 border border-slate-800/80 px-2.5 py-1.5 rounded-lg';
+    li.innerHTML = `
+      <div class="flex items-center gap-2 min-w-0 pr-2">
+        ${getFileIcon(item.name, item.type)}
+        <span class="truncate text-slate-200 font-medium">${item.name}</span>
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <span class="font-mono text-[11px] text-slate-400">${formatBytes(item.size)}</span>
+        <button data-id="${item.id}" class="remove-file-btn text-slate-500 hover:text-rose-400 transition">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    `;
+    senderQueueList.appendChild(li);
+  });
+
+  queueSummaryCount.textContent = `${fileQueue.length} file${fileQueue.length === 1 ? '' : 's'}`;
+  queueSummarySize.textContent = formatBytes(totalBytes);
+
+  senderQueueList.querySelectorAll('.remove-file-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeFileFromQueue(btn.getAttribute('data-id'));
+    });
+  });
+
+  lucide.createIcons();
+}
+
+// Copy URL Action
 copyLinkBtn.addEventListener('click', () => {
   const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
   navigator.clipboard.writeText(shareUrl).then(() => {
@@ -250,28 +270,7 @@ toggleQrBtn.addEventListener('click', () => {
   qrModalContainer.classList.toggle('hidden');
 });
 
-// SENDER: Start Broadcast Button
-startBroadcastBtn.addEventListener('click', () => {
-  if (getReadyDataChannels().length === 0) return;
-  startBroadcasting();
-});
-
-function updateSenderPeerCountUI() {
-  const count = peers.size;
-  senderStatusPill.textContent = `${count} Device${count === 1 ? '' : 's'} Connected`;
-  
-  if (count > 0) {
-    senderStatusPill.className = 'text-[11px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap';
-    startBroadcastBtn.disabled = false;
-    startBroadcastBtn.textContent = `Beam File to ${count} Device${count === 1 ? '' : 's'}`;
-  } else {
-    senderStatusPill.className = 'text-[11px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap';
-    startBroadcastBtn.disabled = true;
-    startBroadcastBtn.textContent = 'Waiting for Devices to Join...';
-  }
-}
-
-// ================= QR SCANNER =================
+// ================= QR SCANNER & MANUAL CONNECT =================
 
 scanQrBtn.addEventListener('click', async () => {
   scannerWrapper.classList.remove('hidden');
@@ -352,343 +351,282 @@ joinBtn.addEventListener('click', () => {
 function initiateReceiver(roomId) {
   currentRoomId = roomId;
   isInitiator = false;
+  abortRequested = false;
   selectionView.classList.add('hidden');
   transferView.classList.remove('hidden');
   updateNavState('transfer-view');
 
-  document.getElementById('transfer-role-text').textContent = 'Receiver Standby';
-  activeDevicesPill.textContent = 'P2P Connected';
-  systemStatus.textContent = 'Waiting for sender to start broadcast...';
+  document.getElementById('transfer-role-text').textContent = 'Connecting to Sender...';
+  overallBatchSubtitle.textContent = 'Waiting for sender manifest handshake...';
 
   socket.emit('join-room', currentRoomId);
 }
 
-// ================= MULTI-PEER WEBRTC PIPELINE =================
+// Auto-Join by ?room= URL Parameter
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const room = urlParams.get('room');
+  if (room && room.length === 6) {
+    manualCodeInput.value = room;
+    initiateReceiver(room);
+  }
+});
 
-// Triggered when a new device enters the room
+// ================= WEBRTC PEER CONNECTION =================
+
 socket.on('peer-joined', async (peerId) => {
+  remotePeerId = peerId;
+  senderStatusPill.textContent = 'Peer Connected';
+  senderStatusPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+  startBeamBtn.disabled = false;
+  startBeamBtn.textContent = `Beam ${fileQueue.length} File${fileQueue.length === 1 ? '' : 's'}`;
+
   if (isInitiator) {
-    // Setup dedicated RTCPeerConnection for this new device
-    const pc = new RTCPeerConnection(rtcConfig);
-    const dc = pc.createDataChannel('fileTransfer', { ordered: true });
-    dc.binaryType = 'arraybuffer';
-    dc.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
+    peerConnection = new RTCPeerConnection(rtcConfig);
+    dataChannel = peerConnection.createDataChannel('multiFileTransfer', { ordered: true });
+    dataChannel.binaryType = 'arraybuffer';
+    dataChannel.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
 
-    peers.set(peerId, { pc, dc, status: 'connecting' });
-
-    pc.onicecandidate = (event) => {
+    peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('ice-candidate', { target: peerId, candidate: event.candidate });
       }
     };
 
-    dc.onopen = () => {
-      if (peers.has(peerId)) {
-        peers.get(peerId).status = 'open';
-      }
-      updateSenderPeerCountUI();
-
-      // If a broadcast is already underway when this peer joins, send metadata and catch them up
-      if (isTransferring) {
-        dc.send(JSON.stringify({
-          type: 'metadata',
-          name: selectedFile.name,
-          size: selectedFile.size
-        }));
-      }
-    };
-
-    dc.onclose = () => {
-      peers.delete(peerId);
-      updateSenderPeerCountUI();
-    };
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
     socket.emit('offer', { target: peerId, sdp: offer });
-
-    updateSenderPeerCountUI();
   }
 });
 
-// Receiver receives offer from sender
 socket.on('offer', async ({ sender, sdp }) => {
-  if (!isInitiator) {
-    receiverPeerConnection = new RTCPeerConnection(rtcConfig);
+  remotePeerId = sender;
+  peerConnection = new RTCPeerConnection(rtcConfig);
 
-    receiverPeerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
-      }
-    };
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
+    }
+  };
 
-    receiverPeerConnection.ondatachannel = (event) => {
-      receiverDataChannel = event.channel;
-      receiverDataChannel.binaryType = 'arraybuffer';
-      setupReceiverDataChannel(receiverDataChannel);
-    };
+  peerConnection.ondatachannel = (event) => {
+    dataChannel = event.channel;
+    dataChannel.binaryType = 'arraybuffer';
+    setupReceiverDataChannel();
+  };
 
-    await receiverPeerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-    const answer = await receiverPeerConnection.createAnswer();
-    await receiverPeerConnection.setLocalDescription(answer);
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+  const answer = await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
 
-    socket.emit('answer', { target: sender, sdp: answer });
+  socket.emit('answer', { target: sender, sdp: answer });
+});
+
+socket.on('answer', async ({ sdp }) => {
+  if (peerConnection) {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
   }
 });
 
-// Sender receives answer from specific receiver
-socket.on('answer', async ({ sender, sdp }) => {
-  if (isInitiator && peers.has(sender)) {
-    const peer = peers.get(sender);
-    await peer.pc.setRemoteDescription(new RTCSessionDescription(sdp));
-  }
-});
-
-socket.on('ice-candidate', async ({ sender, candidate }) => {
-  if (candidate) {
+socket.on('ice-candidate', async ({ candidate }) => {
+  if (candidate && peerConnection) {
     try {
-      if (isInitiator && peers.has(sender)) {
-        await peers.get(sender).pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } else if (!isInitiator && receiverPeerConnection) {
-        await receiverPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-      }
+      await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (_) {}
   }
 });
 
-socket.on('peer-disconnected', (peerId) => {
-  if (isInitiator && peers.has(peerId)) {
-    const p = peers.get(peerId);
-    try { p.dc.close(); } catch (_) {}
-    try { p.pc.close(); } catch (_) {}
-    peers.delete(peerId);
-    updateSenderPeerCountUI();
-  }
-});
+// ================= SENDER: MULTI-FILE STREAMING ENGINE =================
 
-function getReadyDataChannels() {
-  const readyChannels = [];
-  for (const [_, p] of peers) {
-    if (p.dc && p.dc.readyState === 'open') {
-      readyChannels.push(p.dc);
-    }
-  }
-  return readyChannels;
-}
-
-// ================= MULTI-DEVICE BROADCAST ENGINE =================
-
-function startBroadcasting() {
-  const openChannels = getReadyDataChannels();
-  if (openChannels.length === 0) {
-    showToast('No active peer connections open');
+startBeamBtn.addEventListener('click', () => {
+  if (!dataChannel || dataChannel.readyState !== 'open') {
+    showToast('Data channel is establishing...');
     return;
   }
+  startBroadcastingBatch();
+});
 
+async function startBroadcastingBatch() {
   isTransferring = true;
+  abortRequested = false;
   senderView.classList.add('hidden');
   transferView.classList.remove('hidden');
   updateNavState('transfer-view');
 
-  const count = openChannels.length;
-  document.getElementById('transfer-role-text').textContent = 'Broadcasting Payload';
-  activeDevicesPill.textContent = `${count} Device${count === 1 ? '' : 's'}`;
-  document.getElementById('transfer-file-name').textContent = selectedFile.name;
-  document.getElementById('transfer-file-size').textContent = formatBytes(selectedFile.size);
-  systemStatus.textContent = `Streaming to ${count} device${count === 1 ? '' : 's'} via direct DataChannels...`;
+  document.getElementById('transfer-role-text').textContent = 'Broadcasting Batch';
 
-  // Send metadata header to all peers
-  const metaMsg = JSON.stringify({
-    type: 'metadata',
-    name: selectedFile.name,
-    size: selectedFile.size
-  });
-  openChannels.forEach(dc => dc.send(metaMsg));
+  totalBatchBytes = fileQueue.reduce((acc, f) => acc + f.size, 0);
+  totalBatchBytesTransferred = 0;
 
-  streamMultiDeviceFile();
+  // Build manifest representation
+  const manifest = fileQueue.map(item => ({
+    id: item.id,
+    name: item.name,
+    size: item.size,
+    type: item.type
+  }));
+
+  renderManifestUI(manifest);
+
+  // Send Metadata Manifest Handshake
+  dataChannel.send(JSON.stringify({
+    type: 'manifest',
+    totalFiles: fileQueue.length,
+    totalBytes: totalBatchBytes,
+    files: manifest
+  }));
+
+  // Sequentially stream each file in the queue
+  for (let i = 0; i < fileQueue.length; i++) {
+    if (abortRequested || !isTransferring) break;
+    const item = fileQueue[i];
+
+    overallBatchSubtitle.textContent = `Streaming file ${i + 1} of ${fileQueue.length}`;
+    updateManifestRowStatus(item.id, 'streaming');
+
+    await streamSingleFile(item);
+    updateManifestRowStatus(item.id, 'complete');
+  }
+
+  if (!abortRequested && isTransferring) {
+    dataChannel.send(JSON.stringify({ type: 'batch-complete' }));
+    finishTransferSuccess(fileQueue.length);
+  }
 }
 
-async function streamMultiDeviceFile() {
-  let offset = 0;
-  const total = selectedFile.size;
-  lastSpeedCalcTime = Date.now();
-  bytesTransferredLastInterval = 0;
-  speedSamples = [];
+function streamSingleFile(item) {
+  return new Promise((resolve) => {
+    dataChannel.send(JSON.stringify({
+      type: 'file-start',
+      id: item.id
+    }));
 
-  function readNextChunk() {
-    if (!isTransferring) return;
+    let offset = 0;
+    const file = item.file;
+    const total = file.size;
 
-    const channels = getReadyDataChannels();
-    if (channels.length === 0) {
-      systemStatus.textContent = 'All receivers disconnected.';
-      isTransferring = false;
-      return;
-    }
+    lastSpeedCalcTime = Date.now();
+    bytesTransferredLastInterval = 0;
+    speedSamples = [];
 
-    // Backpressure check across all connected devices
-    let isSaturated = false;
-    for (const ch of channels) {
-      if (ch.bufferedAmount > BUFFER_THRESHOLD) {
-        isSaturated = true;
-        ch.onbufferedamountlow = () => {
-          ch.onbufferedamountlow = null;
-          readNextChunk();
+    function readNextSlice() {
+      if (abortRequested || !isTransferring) {
+        resolve();
+        return;
+      }
+
+      // Check Backpressure
+      if (dataChannel.bufferedAmount > BUFFER_THRESHOLD) {
+        dataChannel.onbufferedamountlow = () => {
+          dataChannel.onbufferedamountlow = null;
+          readNextSlice();
         };
-        break;
+        return;
+      }
+
+      if (offset < total) {
+        const slice = file.slice(offset, offset + CHUNK_SIZE);
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+          if (abortRequested || !isTransferring) {
+            resolve();
+            return;
+          }
+
+          dataChannel.send(e.target.result);
+          const bytesRead = e.target.result.byteLength;
+          offset += bytesRead;
+          totalBatchBytesTransferred += bytesRead;
+          bytesTransferredLastInterval += bytesRead;
+
+          updateProgressTelemetry(totalBatchBytesTransferred, totalBatchBytes, item.id, offset, total);
+          readNextSlice();
+        };
+
+        reader.readAsArrayBuffer(slice);
+      } else {
+        // Send delimiter for this file
+        dataChannel.send(JSON.stringify({ type: 'file-end', id: item.id }));
+        resolve();
       }
     }
-    if (isSaturated) return;
 
-    if (offset < total) {
-      const slice = selectedFile.slice(offset, offset + CHUNK_SIZE);
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        if (!isTransferring) return;
-
-        const buffer = e.target.result;
-        // Fan out this slice to every device simultaneously
-        channels.forEach(ch => {
-          if (ch.readyState === 'open') {
-            ch.send(buffer);
-          }
-        });
-
-        const bytesRead = buffer.byteLength;
-        offset += bytesRead;
-        bytesTransferredLastInterval += bytesRead;
-
-        updateMetricsUI(offset, total);
-        readNextChunk();
-      };
-
-      reader.readAsArrayBuffer(slice);
-    } else {
-      channels.forEach(ch => {
-        if (ch.readyState === 'open') {
-          ch.send(JSON.stringify({ type: 'EOF' }));
-        }
-      });
-      finishTransferSuccess(selectedFile.name);
-    }
-  }
-
-  readNextChunk();
+    readNextSlice();
+  });
 }
 
-// ================= DATA RECEIVER PIPELINE =================
+// ================= RECEIVER: MULTI-FILE DESERIALIZER =================
 
-async function flushDiskBuffer() {
-  if (diskWriteBuffer.length === 0 || !fileWritableStream || isWritingToDisk) return;
-  isWritingToDisk = true;
-
-  const chunks = diskWriteBuffer;
-  diskWriteBuffer = [];
-  diskWriteBufferSize = 0;
-
-  try {
-    const blob = new Blob(chunks);
-    await fileWritableStream.write(blob);
-  } catch (err) {
-    console.error('Batched disk write error:', err);
-  } finally {
-    isWritingToDisk = false;
-    if (diskWriteBufferSize >= WRITE_BUFFER_SIZE) {
-      flushDiskBuffer();
-    }
-  }
-}
-
-function setupReceiverDataChannel(channel) {
-  channel.onmessage = async (event) => {
+function setupReceiverDataChannel() {
+  dataChannel.onmessage = async (event) => {
     if (typeof event.data === 'string') {
       const msg = JSON.parse(event.data);
 
-      if (msg.type === 'metadata') {
-        incomingMetadata = msg;
-        receivedBytes = 0;
-        diskWriteBuffer = [];
-        diskWriteBufferSize = 0;
-        receivedChunksFallback = [];
-        speedSamples = [];
-        bytesTransferredLastInterval = 0;
-        lastSpeedCalcTime = Date.now();
+      if (msg.type === 'manifest') {
         isTransferring = true;
+        abortRequested = false;
+        incomingManifest = msg.files;
+        totalBatchBytes = msg.totalBytes;
+        totalBatchBytesTransferred = 0;
+        completedFiles = [];
 
-        document.getElementById('transfer-role-text').textContent = 'Receiving Payload';
-        document.getElementById('transfer-file-name').textContent = msg.name;
-        document.getElementById('transfer-file-size').textContent = formatBytes(msg.size);
+        document.getElementById('transfer-role-text').textContent = 'Receiving Batch';
+        overallBatchSubtitle.textContent = `0 of ${incomingManifest.length} files received`;
+        renderManifestUI(incomingManifest);
+      }
+      else if (msg.type === 'file-start') {
+        currentReceivingFile = incomingManifest.find(f => f.id === msg.id);
+        receivedFileChunks = [];
+        updateManifestRowStatus(msg.id, 'streaming');
+      }
+      else if (msg.type === 'file-end') {
+        // Finalize completed file
+        const blob = new Blob(receivedFileChunks, { type: currentReceivingFile.type });
+        const url = URL.createObjectURL(blob);
+        completedFiles.push({ name: currentReceivingFile.name, blob, url });
 
-        if ('showSaveFilePicker' in window && window.isSecureContext) {
-          try {
-            const handle = await window.showSaveFilePicker({ suggestedName: msg.name });
-            fileWritableStream = await handle.createWritable();
-            systemStatus.textContent = 'Writing directly to disk (Zero-RAM batching)...';
-          } catch (_) {
-            fileWritableStream = null;
-            systemStatus.textContent = 'Receiving into memory cache...';
-          }
-        } else {
-          fileWritableStream = null;
-          systemStatus.textContent = 'Receiving into memory cache...';
-        }
-      } else if (msg.type === 'EOF') {
-        if (fileWritableStream) {
-          while (isWritingToDisk) {
-            await new Promise(r => setTimeout(r, 20));
-          }
-          if (diskWriteBuffer.length > 0) {
-            await fileWritableStream.write(new Blob(diskWriteBuffer));
-          }
-          await fileWritableStream.close();
-          finishTransferSuccess(incomingMetadata.name);
-        } else {
-          const blob = new Blob(receivedChunksFallback);
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = incomingMetadata.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+        // Auto trigger individual download fallback
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = currentReceivingFile.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-          const manualContainer = document.getElementById('manual-download-container');
-          manualContainer.innerHTML = `
-            <a href="${url}" download="${incomingMetadata.name}" class="text-xs text-cyan-400 hover:text-cyan-300 underline font-mono">
-              Click to download again if download didn't trigger
-            </a>`;
-          manualContainer.classList.remove('hidden');
+        updateManifestRowStatus(currentReceivingFile.id, 'complete');
+        receivedFileChunks = [];
+        currentReceivingFile = null;
 
-          finishTransferSuccess(incomingMetadata.name);
-        }
+        overallBatchSubtitle.textContent = `${completedFiles.length} of ${incomingManifest.length} files received`;
+      }
+      else if (msg.type === 'batch-complete') {
+        renderCompletedReceiverDownloads();
+        finishTransferSuccess(incomingManifest.length);
       }
       return;
     }
 
-    const chunkSize = event.data.byteLength;
-    receivedBytes += chunkSize;
+    // Binary Chunk received for current file
+    const chunk = event.data;
+    receivedFileChunks.push(chunk);
+
+    const chunkSize = chunk.byteLength;
+    totalBatchBytesTransferred += chunkSize;
     bytesTransferredLastInterval += chunkSize;
 
-    if (fileWritableStream) {
-      diskWriteBuffer.push(event.data);
-      diskWriteBufferSize += chunkSize;
-      if (diskWriteBufferSize >= WRITE_BUFFER_SIZE && !isWritingToDisk) {
-        flushDiskBuffer();
-      }
-    } else {
-      receivedChunksFallback.push(event.data);
+    if (currentReceivingFile) {
+      updateProgressTelemetry(totalBatchBytesTransferred, totalBatchBytes);
     }
-
-    updateMetricsUI(receivedBytes, incomingMetadata.size);
   };
 }
 
-// ================= METRICS & TELEMETRY =================
+// ================= PROGRESS & METRICS =================
 
-function updateMetricsUI(current, total) {
-  const percent = Math.min(100, ((current / total) * 100));
-  progressBarFill.style.width = `${percent}%`;
-  percentageText.textContent = `${percent.toFixed(1)}%`;
+function updateProgressTelemetry(batchCurrent, batchTotal) {
+  const percent = Math.min(100, (batchCurrent / batchTotal) * 100);
+  overallProgressBar.style.width = `${percent}%`;
+  overallPercentage.textContent = `${percent.toFixed(1)}%`;
 
   const now = Date.now();
   const delta = (now - lastSpeedCalcTime) / 1000;
@@ -704,7 +642,7 @@ function updateMetricsUI(current, total) {
 
     speedText.textContent = `${avgSpeedMBps.toFixed(2)} MB/s`;
 
-    const remainingBytes = total - current;
+    const remainingBytes = batchTotal - batchCurrent;
     if (avgSpeedMBps > 0.05) {
       const remainingSeconds = remainingBytes / (avgSpeedMBps * 1024 * 1024);
       etaText.textContent = formatETA(remainingSeconds);
@@ -722,77 +660,149 @@ function formatETA(seconds) {
   return `${mins}m ${secs}s`;
 }
 
-// ================= FINALIZE & RESET =================
+function renderManifestUI(manifest) {
+  transferManifestList.innerHTML = '';
+  manifest.forEach((item) => {
+    const li = document.createElement('li');
+    li.id = `manifest-${item.id}`;
+    li.className = 'flex items-center justify-between bg-slate-900 border border-slate-800/80 px-2.5 py-1.5 rounded-lg';
+    li.innerHTML = `
+      <div class="flex items-center gap-2 min-w-0 pr-2">
+        ${getFileIcon(item.name, item.type)}
+        <span class="truncate text-slate-300 font-medium">${item.name}</span>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <span class="font-mono text-[10px] text-slate-500">${formatBytes(item.size)}</span>
+        <span class="status-indicator text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">queued</span>
+      </div>
+    `;
+    transferManifestList.appendChild(li);
+  });
+  lucide.createIcons();
+}
 
-function finishTransferSuccess(fileName) {
+function updateManifestRowStatus(fileId, status) {
+  const row = document.getElementById(`manifest-${fileId}`);
+  if (!row) return;
+
+  const indicator = row.querySelector('.status-indicator');
+  if (status === 'streaming') {
+    indicator.textContent = 'streaming';
+    indicator.className = 'status-indicator text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 animate-pulse';
+  } else if (status === 'complete') {
+    indicator.textContent = 'done';
+    indicator.className = 'status-indicator text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+  }
+}
+
+// ================= COMPLETION & ZIP DOWNLOAD =================
+
+function renderCompletedReceiverDownloads() {
+  if (completedFiles.length === 0) return;
+
+  downloadZipBtn.classList.remove('hidden');
+  downloadZipBtn.onclick = async () => {
+    downloadZipBtn.disabled = true;
+    downloadZipBtn.textContent = 'Generating .ZIP archive...';
+
+    const zip = new JSZip();
+    completedFiles.forEach((f) => {
+      zip.file(f.name, f.blob);
+    });
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = zipUrl;
+    a.download = `DirectBeam_Batch_${Date.now()}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    downloadZipBtn.disabled = false;
+    downloadZipBtn.innerHTML = '<i data-lucide="archive" class="w-4 h-4"></i> Download All as .ZIP';
+    lucide.createIcons();
+  };
+
+  individualDownloadsContainer.innerHTML = completedFiles.map(f => `
+    <div class="flex items-center justify-between bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+      <span class="truncate text-slate-300 text-xs">${f.name}</span>
+      <a href="${f.url}" download="${f.name}" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1">
+        <i data-lucide="download" class="w-3 h-3"></i> save
+      </a>
+    </div>
+  `).join('');
+  lucide.createIcons();
+}
+
+function finishTransferSuccess(fileCount) {
   isTransferring = false;
   transferView.classList.add('hidden');
   completeView.classList.remove('hidden');
   updateNavState('complete-view');
 
   document.getElementById('complete-details').textContent =
-    `"${fileName}" was transferred and finalized successfully across all devices.`;
+    `Successfully transferred ${fileCount} file${fileCount === 1 ? '' : 's'} with full cryptographic integrity.`;
 
-  playCompletionChime();
-  sendNativeNotification(fileName);
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (_) {}
+
   lucide.createIcons();
 }
 
+// ================= RESET STATE =================
+
 function resetApplicationState(confirmIfBusy = false) {
   if (confirmIfBusy && isTransferring) {
-    const proceed = confirm('A transfer is active across one or more devices. Returning home will terminate it. Continue?');
+    const proceed = confirm('A transfer is active. Returning home will cancel it. Continue?');
     if (!proceed) return;
   }
 
-  // 1. Close all multi-peer connections
-  for (const [id, p] of peers) {
-    try { p.dc?.close(); } catch (_) {}
-    try { p.pc?.close(); } catch (_) {}
-  }
-  peers.clear();
+  abortRequested = true;
+  isTransferring = false;
 
-  // 2. Close receiver connection
-  if (receiverDataChannel) {
-    try { receiverDataChannel.close(); } catch (_) {}
-    receiverDataChannel = null;
+  if (dataChannel) {
+    try { dataChannel.close(); } catch (_) {}
+    dataChannel = null;
   }
-  if (receiverPeerConnection) {
-    try { receiverPeerConnection.close(); } catch (_) {}
-    receiverPeerConnection = null;
+  if (peerConnection) {
+    try { peerConnection.close(); } catch (_) {}
+    peerConnection = null;
   }
 
-  // 3. Abort disk stream
-  if (fileWritableStream) {
-    try { fileWritableStream.abort(); } catch (_) {}
-    fileWritableStream = null;
-  }
-
-  // 4. Notify signaling server to exit room
   if (currentRoomId && socket.connected) {
     socket.emit('leave-room', currentRoomId);
   }
 
-  selectedFile = null;
+  fileQueue = [];
+  incomingManifest = [];
+  currentReceivingFile = null;
+  receivedFileChunks = [];
+  completedFiles = [];
   currentRoomId = null;
   isInitiator = false;
-  isTransferring = false;
-  incomingMetadata = null;
-  receivedBytes = 0;
-  diskWriteBuffer = [];
-  diskWriteBufferSize = 0;
-  receivedChunksFallback = [];
-  speedSamples = [];
 
-  progressBarFill.style.width = '0%';
-  percentageText.textContent = '0.0%';
+  overallProgressBar.style.width = '0%';
+  overallPercentage.textContent = '0.0%';
   speedText.textContent = '0.00 MB/s';
   etaText.textContent = 'Calculating...';
   manualCodeInput.value = '';
   fileInput.value = '';
 
-  const manualContainer = document.getElementById('manual-download-container');
-  if (manualContainer) manualContainer.classList.add('hidden');
-
+  downloadZipBtn.classList.add('hidden');
+  individualDownloadsContainer.innerHTML = '';
   window.history.replaceState({}, document.title, window.location.pathname);
 
   completeView.classList.add('hidden');
@@ -806,30 +816,10 @@ function resetApplicationState(confirmIfBusy = false) {
 
 brandHomeLink.addEventListener('click', () => resetApplicationState(true));
 navBackHomeBtn.addEventListener('click', () => resetApplicationState(true));
+cancelTransferBtn.addEventListener('click', () => resetApplicationState(true));
+completeBackHomeBtn.addEventListener('click', () => resetApplicationState(false));
 
-if (sendAnotherBtn) {
-  sendAnotherBtn.addEventListener('click', () => {
-    resetApplicationState(false);
-    fileInput.click();
-  });
-}
-
-if (completeBackHomeBtn) {
-  completeBackHomeBtn.addEventListener('click', () => {
-    resetApplicationState(false);
-  });
-}
-
-cancelTransferBtn.addEventListener('click', () => {
-  resetApplicationState(true);
-});
-
-openModalBtn.addEventListener('click', () => {
-  infoModal.classList.remove('hidden');
-  infoModal.classList.add('flex');
-});
-
-closeModalBtn.addEventListener('click', () => {
-  infoModal.classList.add('hidden');
-  infoModal.classList.remove('flex');
+sendAnotherBtn.addEventListener('click', () => {
+  resetApplicationState(false);
+  fileInput.click();
 });
