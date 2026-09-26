@@ -5,13 +5,23 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
+
+// Keep-alive heartbeat: pingInterval 20s prevents Render's 55s idle WebSocket termination
 const io = new Server(server, {
-  cors: { origin: '*' }
+  cors: { origin: '*' },
+  pingInterval: 20000,
+  pingTimeout: 25000,
+  transports: ['websocket', 'polling']
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-memory active room tracker: roomId -> Set of socket IDs
+// Lightweight health check endpoint for uptime pingers
+app.get('/healthz', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// Map: roomId -> Set of socket IDs
 const rooms = new Map();
 
 io.on('connection', (socket) => {
@@ -27,7 +37,7 @@ io.on('connection', (socket) => {
     const clients = rooms.get(roomId);
     clients.add(socket.id);
 
-    // Notify other peers in this room
+    // Notify any other peer already present
     socket.to(roomId).emit('peer-joined', socket.id);
 
     if (clients.size > 1) {
@@ -60,8 +70,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Dynamic port binding for local or cloud environments
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Direct Beam signaling server running on port ${PORT}`);
 });

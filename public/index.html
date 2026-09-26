@@ -1,397 +1,261 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>P2P Direct File Beam</title>
-
-  <style>
-    :root {
-      --bg: #0f172a;
-      --surface: #1e293b;
-      --border: #334155;
-      --accent: #38bdf8;
-      --accent-hover: #0284c7;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 520px;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-
-    h1 {
-      font-size: 2rem;
-      letter-spacing: -0.05em;
-      color: var(--text-main);
-    }
-
-    .subtitle {
-      color: var(--text-muted);
-      font-size: 0.875rem;
-      margin-top: 0.5rem;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      padding: 2rem;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: 0.75rem;
-      padding: 2.5rem 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color 0.2s, background-color 0.2s;
-    }
-
-    .drop-zone.drag-over {
-      border-color: var(--accent);
-      background-color: rgba(56, 189, 248, 0.05);
-    }
-
-    .drop-zone svg.icon {
-      width: 48px !important;
-      height: 48px !important;
-      max-width: 48px !important;
-      max-height: 48px !important;
-      stroke: var(--accent);
-      margin: 0 auto 0.75rem auto;
-      display: block;
-    }
-
-    .file-label {
-      color: var(--accent);
-      cursor: pointer;
-      text-decoration: underline;
-    }
-
-    .divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      margin: 1.5rem 0;
-    }
-
-    .divider::before, .divider::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .divider span {
-      padding: 0 0.75rem;
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-    }
-
-    .receive-box {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    input[type="text"] {
-      flex: 1;
-      background: #0b1120;
-      border: 1px solid var(--border);
-      border-radius: 0.5rem;
-      padding: 0.75rem 1rem;
-      color: var(--text-main);
-      text-align: center;
-      font-size: 1.125rem;
-      font-weight: 600;
-      outline: none;
-    }
-
-    input[type="text"]:focus {
-      border-color: var(--accent);
-    }
-
-    .btn {
-      background: var(--accent);
-      color: #0f172a;
-      border: none;
-      border-radius: 0.5rem;
-      padding: 0.75rem 1.25rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .btn:hover {
-      background: var(--accent-hover);
-    }
-
-    .btn-secondary {
-      background: #334155;
-      color: var(--text-main);
-      padding: 0.75rem 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .btn-secondary:hover {
-      background: #475569;
-    }
-
-    .camera-icon {
-      width: 20px;
-      height: 20px;
-      stroke: var(--accent);
-    }
-
-    .scanner-wrapper {
-      margin-top: 1rem;
-      background: #0b1120;
-      border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      padding: 1rem;
-      text-align: center;
-    }
-
-    #qr-reader {
-      width: 100%;
-      border-radius: 0.5rem;
-      overflow: hidden;
-    }
-
-    .scanner-controls {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-    }
-
-    .btn-switch {
-      flex: 1;
-      background: #3b82f6;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.75rem;
-    }
-
-    .btn-switch:hover {
-      background: #2563eb;
-    }
-
-    .btn-cancel {
-      flex: 1;
-      background: #ef4444;
-      color: white;
-      padding: 0.75rem;
-    }
-
-    .btn-cancel:hover {
-      background: #dc2626;
-    }
-
-    .pairing-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
-      margin: 1.5rem 0;
-    }
-
-    .room-code-display {
-      text-align: center;
-    }
-
-    .room-code-display label {
-      display: block;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 0.25rem;
-    }
-
-    .room-code-display span {
-      font-size: 2.25rem;
-      font-weight: 800;
-      letter-spacing: 0.25em;
-      color: var(--accent);
-    }
-
-    .qrcode-wrapper {
-      background: white;
-      padding: 0.75rem;
-      border-radius: 0.5rem;
-    }
-
-    .file-details {
-      display: flex;
-      justify-content: space-between;
-      background: #0b1120;
-      padding: 0.75rem 1rem;
-      border-radius: 0.5rem;
-      margin-top: 1rem;
-      font-size: 0.875rem;
-    }
-
-    .file-details .name {
-      max-width: 70%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .file-details .size {
-      color: var(--text-muted);
-    }
-
-    .instruction {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      text-align: center;
-    }
-
-    .progress-bar-container {
-      width: 100%;
-      height: 12px;
-      background: #0b1120;
-      border-radius: 6px;
-      overflow: hidden;
-      margin: 1.5rem 0 0.75rem;
-    }
-
-    .progress-bar-fill {
-      width: 0%;
-      height: 100%;
-      background: var(--accent);
-      transition: width 0.1s linear;
-    }
-
-    .metrics {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.875rem;
-      color: var(--text-muted);
-    }
-
-    .status-msg {
-      text-align: center;
-      margin-top: 1.5rem;
-      font-size: 0.85rem;
-      color: var(--accent);
-    }
-  </style>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Direct Beam — Enterprise Peer-to-Peer Transfer</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="/socket.io/socket.io.js"></script>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>Direct Beam</h1>
-      <p class="subtitle">Zero-cloud, high-throughput WebRTC direct disk-to-disk transfer</p>
-    </header>
 
-    <main class="card">
-      <section id="selection-view" class="view">
-        <div id="drop-zone" class="drop-zone">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          <p class="primary-text">Drag & drop large files (1GB - 50GB+)</p>
-          <p class="secondary-text">or <label for="file-input" class="file-label">browse file</label></p>
-          <input type="file" id="file-input" style="display: none;" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-cyan-500/20 selection:text-cyan-300 font-sans antialiased">
+
+  <!-- Toast Container -->
+  <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-[-20px] opacity-0 pointer-events-none flex items-center gap-2 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-lg shadow-2xl text-xs font-medium">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-message">Notification</span>
+  </div>
+
+  <!-- Cold Start Server Awakening Pill -->
+  <div id="cold-start-banner" class="hidden w-full bg-amber-500/10 border-b border-amber-500/20 py-2 px-4 text-center text-xs text-amber-300 font-medium">
+    <div class="inline-flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+      Waking up signaling server (~30s on initial cold start)...
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 text-center">
+    <div class="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs text-cyan-400 font-mono font-medium mb-3 shadow-inner">
+      <span class="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
+      Direct DataChannel Pipeline
+    </div>
+    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">Direct Beam</h1>
+    <p class="text-xs sm:text-sm text-slate-400 max-w-md mx-auto mb-5">
+      Encrypted point-to-point data streaming. Direct disk writes, unlimited size, and zero cloud retention.
+    </p>
+
+    <!-- Trust Badges -->
+    <div class="flex flex-wrap items-center justify-center gap-2.5 text-xs text-slate-400">
+      <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
+        <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-400"></i> E2E Encrypted (DTLS)
+      </span>
+      <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
+        <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Direct Peer-to-Peer
+      </span>
+      <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
+        <i data-lucide="cloud-off" class="w-3.5 h-3.5 text-cyan-400"></i> Zero Cloud Storage
+      </span>
+    </div>
+  </header>
+
+  <!-- Workstation Container -->
+  <main class="w-full max-w-lg mx-auto px-4 flex-1 flex flex-col justify-center py-6">
+    <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl relative">
+
+      <!-- View 1: Selector & Receiver -->
+      <section id="selection-view" class="space-y-6">
+        <div id="drop-zone" class="border-2 border-dashed border-slate-800 hover:border-cyan-500/50 bg-slate-950/40 hover:bg-slate-950/70 transition-all rounded-xl p-8 text-center cursor-pointer group flex flex-col items-center justify-center">
+          <div class="w-14 h-14 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-3 group-hover:border-cyan-500/40 text-slate-400 group-hover:text-cyan-400 transition-colors">
+            <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+          </div>
+          <p class="text-sm font-semibold text-slate-200 mb-1">Click to select or drop a file</p>
+          <p class="text-xs text-slate-400">No file size restrictions (1 GB – 50 GB+)</p>
+          <input type="file" id="file-input" class="hidden">
         </div>
 
-        <div class="divider"><span>OR RECEIVE</span></div>
+        <div class="relative flex items-center py-1">
+          <div class="flex-grow border-t border-slate-800"></div>
+          <span class="flex-shrink mx-4 text-xs font-mono uppercase text-slate-500 font-semibold tracking-wider">or receive</span>
+          <div class="flex-grow border-t border-slate-800"></div>
+        </div>
 
-        <div class="receive-box">
-          <input type="text" id="manual-code-input" placeholder="Enter 6-digit code" maxlength="6" inputmode="numeric">
-          <button id="join-btn" class="btn">Connect</button>
-          <button id="scan-qr-btn" class="btn btn-secondary" title="Scan QR with Camera" type="button">
-            <svg class="camera-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+        <div class="space-y-3">
+          <div class="flex gap-2">
+            <input type="text" id="manual-code-input" maxlength="6" inputmode="numeric" placeholder="6-digit code" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-center text-lg font-mono tracking-widest text-white focus:outline-none focus:border-cyan-500 transition-colors uppercase placeholder:text-slate-600">
+            <button id="join-btn" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-5 py-3 rounded-xl transition text-sm active:scale-95">
+              Connect
+            </button>
+            <button id="scan-qr-btn" type="button" title="Scan QR Code" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3.5 py-3 rounded-xl border border-slate-700 transition active:scale-95">
+              <i data-lucide="camera" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <div id="scanner-wrapper" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-4 text-center mt-3">
+            <div id="qr-reader" class="rounded-lg overflow-hidden w-full aspect-square bg-black"></div>
+            <div class="flex gap-2 mt-3">
+              <button id="flip-camera-btn" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Flip Lens
+              </button>
+              <button id="close-scanner-btn" type="button" class="flex-1 bg-rose-900/40 hover:bg-rose-900/60 text-rose-300 text-xs font-semibold py-2 rounded-lg transition">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 2: Sender Ready State -->
+      <section id="sender-view" class="hidden space-y-5">
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-cyan-950/60 border border-cyan-800/60 flex items-center justify-center text-cyan-400 flex-shrink-0">
+            <i data-lucide="file-check" class="w-5 h-5"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p id="sender-file-name" class="text-sm font-semibold text-white truncate">archive.tar.gz</p>
+            <p id="sender-file-size" class="text-xs text-slate-400 font-mono">0 Bytes</p>
+          </div>
+          <span id="sender-status-pill" class="text-[11px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap">
+            Waiting for peer...
+          </span>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-5 text-center space-y-2">
+          <label class="text-xs font-medium text-slate-400 uppercase tracking-wider block">Security Room Key</label>
+          <div id="display-code" class="text-3xl sm:text-4xl font-mono font-bold tracking-[0.3em] text-cyan-400 select-all">
+            ------
+          </div>
+          <p class="text-xs text-slate-400">Share this code or copy the link below</p>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="copy-link-btn" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
+            <i data-lucide="copy" class="w-4 h-4"></i> Copy Share Link
+          </button>
+          <button id="toggle-qr-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
+            <i data-lucide="qr-code" class="w-4 h-4"></i> QR Code
           </button>
         </div>
 
-        <div id="scanner-wrapper" class="scanner-wrapper hidden">
-          <div id="qr-reader"></div>
-          <div class="scanner-controls">
-            <button id="flip-camera-btn" class="btn btn-switch" type="button">Flip Camera</button>
-            <button id="close-scanner-btn" class="btn btn-cancel" type="button">Cancel</button>
+        <div id="qr-modal-container" class="hidden flex flex-col items-center justify-center bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-2">
+          <div id="qrcode-box" class="bg-white p-3 rounded-lg shadow-lg"></div>
+          <span class="text-[11px] text-slate-400 font-mono mt-1">Scan with any mobile camera</span>
+        </div>
+      </section>
+
+      <!-- View 3: Active Transfer Pipeline -->
+      <section id="transfer-view" class="hidden space-y-5">
+        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex items-center justify-between">
+          <div class="min-w-0 pr-3">
+            <h2 id="transfer-role-text" class="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">Streaming Payload</h2>
+            <p id="transfer-file-name" class="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-xs">dataset.iso</p>
+            <p id="transfer-file-size" class="text-xs text-slate-400 font-mono mt-0.5">0 MB</p>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <span id="percentage-text" class="text-2xl font-black font-mono text-cyan-400">0.0%</span>
           </div>
         </div>
-      </section>
 
-      <section id="sender-view" class="view hidden">
-        <h2>Ready to Send</h2>
-        <div class="file-details">
-          <span id="sender-file-name" class="name">--</span>
-          <span id="sender-file-size" class="size">--</span>
+        <div class="w-full bg-slate-950 border border-slate-800 rounded-full h-3 p-0.5 overflow-hidden">
+          <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full w-0 transition-all duration-150 ease-out"></div>
         </div>
 
-        <div class="pairing-container">
-          <div class="room-code-display">
-            <label>Share this 6-digit code:</label>
-            <span id="display-code">------</span>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-slate-950 border border-slate-800/70 p-3 rounded-xl text-center">
+            <span class="text-[10px] uppercase text-slate-400 font-semibold tracking-wider block mb-0.5">Speed</span>
+            <span id="speed-text" class="text-base font-bold font-mono text-slate-200">0.00 MB/s</span>
           </div>
-          <div id="qrcode" class="qrcode-wrapper"></div>
+          <div class="bg-slate-950 border border-slate-800/70 p-3 rounded-xl text-center">
+            <span class="text-[10px] uppercase text-slate-400 font-semibold tracking-wider block mb-0.5">ETA</span>
+            <span id="eta-text" class="text-base font-bold font-mono text-slate-200">Calculating...</span>
+          </div>
         </div>
-        <p class="instruction">Keep this tab open. Transfer starts as soon as receiver connects.</p>
+
+        <div class="flex items-center justify-center gap-2 pt-1 text-xs text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="system-status">Establishing encrypted direct data channel...</span>
+        </div>
+
+        <div class="pt-2">
+          <button id="cancel-transfer-btn" class="w-full bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 border border-rose-900/40 py-2.5 rounded-xl text-xs font-semibold transition active:scale-98">
+            Cancel Transfer
+          </button>
+        </div>
       </section>
 
-      <section id="transfer-view" class="view hidden">
-        <h2 id="transfer-status-text">Transferring...</h2>
-        <div class="file-details">
-          <span id="transfer-file-name" class="name">--</span>
-          <span id="transfer-file-size" class="size">--</span>
+      <!-- View 4: Completed State -->
+      <section id="complete-view" class="hidden text-center space-y-5 py-4">
+        <div class="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
+          <i data-lucide="check" class="w-8 h-8"></i>
         </div>
-
-        <div class="progress-bar-container">
-          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        <div>
+          <h2 class="text-xl font-bold text-white mb-1">Transfer Complete!</h2>
+          <p id="complete-details" class="text-xs text-slate-400 max-w-sm mx-auto">Payload transmitted with end-to-end cryptographic integrity.</p>
         </div>
-
-        <div class="metrics">
-          <span id="percentage-text">0%</span>
-          <span id="speed-text">0.00 MB/s</span>
-        </div>
-
-        <p id="system-status" class="status-msg">Establishing direct WebRTC peer connection...</p>
+        <div id="manual-download-container" class="hidden"></div>
+        <button id="reset-app-btn" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-cyan-500/20">
+          Send Another File
+        </button>
       </section>
-    </main>
+
+    </div>
+  </main>
+
+  <!-- Troubleshooting & NAT Modal -->
+  <div id="info-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 max-w-md w-full rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i> Architecture & NAT Traversal
+        </h3>
+        <button id="close-modal-btn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="text-xs text-slate-300 space-y-3 leading-relaxed">
+        <p><strong class="text-white">Signaling vs. Data:</strong> Render only handles the lightweight room-handshake signaling. Once peers pair, 100% of the byte transfer moves directly device-to-device through a direct WebRTC DataChannel.</p>
+        <p><strong class="text-white">Symmetric NAT & Strict Firewalls:</strong> The app queries Google and Cloudflare STUN servers. If both sender and receiver are on restrictive corporate firewalls or carrier-grade symmetric NATs, a direct socket may time out without a TURN relay.</p>
+        <p><strong class="text-white">Direct-to-Disk Pipelining:</strong> Uses the Chromium File System Access API with batched 2MB buffers to bypass browser RAM bottlenecks completely.</p>
+      </div>
+    </div>
   </div>
 
+  <!-- Footer -->
+  <footer class="w-full max-w-4xl mx-auto py-5 px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 border-t border-slate-900">
+    <div class="flex items-center gap-2">
+      <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-500"></i>
+      <span>Streams API & WebRTC Core</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <button id="open-modal-btn" class="hover:text-slate-300 underline underline-offset-4 decoration-slate-800 transition">
+        Troubleshooting / NAT
+      </button>
+      <a href="https://github.com/vishwanthmalla0324-tech/p2p-direct-beam" target="_blank" rel="noopener noreferrer" class="hover:text-slate-300 flex items-center gap-1 transition">
+        <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
+      </a>
+    </div>
+  </footer>
+
   <script src="/app.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>

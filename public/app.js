@@ -1,18 +1,52 @@
-const socket = io();
+// Socket.io initialization with automated reconnection
+const socket = io({
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 2000,
+  transports: ['websocket', 'polling']
+});
 
-// High-Throughput Constants
-const CHUNK_SIZE = 64 * 1024; // 64 KB slices over wire
+// Cold-Start Watchdog for Render Free Tier
+let coldStartTimer = setTimeout(() => {
+  const banner = document.getElementById('cold-start-banner');
+  if (banner && !socket.connected) {
+    banner.classList.remove('hidden');
+  }
+}, 3000);
+
+socket.on('connect', () => {
+  clearTimeout(coldStartTimer);
+  const banner = document.getElementById('cold-start-banner');
+  if (banner) banner.classList.add('hidden');
+});
+
+socket.on('disconnect', () => {
+  if (isTransferring) {
+    systemStatus.textContent = 'Signaling disconnect. P2P DataChannel still active.';
+  }
+});
+
+// High-Performance WebRTC Pipeline Constants
+const CHUNK_SIZE = 64 * 1024; // 64 KB wire chunks
 const WRITE_BUFFER_SIZE = 2 * 1024 * 1024; // 2 MB batched disk write
-const BUFFER_THRESHOLD = 8 * 1024 * 1024; // 8 MB sender backpressure limit
+const BUFFER_THRESHOLD = 8 * 1024 * 1024; // 8 MB backpressure threshold
 
+// Application State
 let selectedFile = null;
 let currentRoomId = null;
 let peerConnection = null;
 let dataChannel = null;
 let remotePeerId = null;
 let isInitiator = false;
+let isTransferring = false;
 
-// Receiver State
+// Metrics & Rolling Average State
+let bytesTransferredLastInterval = 0;
+let lastSpeedCalcTime = Date.now();
+const SPEED_WINDOW_SIZE = 5;
+let speedSamples = [];
+
+// Receiver Buffers
 let fileWritableStream = null;
 let incomingMetadata = null;
 let receivedBytes = 0;
@@ -21,42 +55,58 @@ let diskWriteBufferSize = 0;
 let isWritingToDisk = false;
 let receivedChunksFallback = [];
 
-let bytesTransferredLastSec = 0;
-let lastSpeedCalcTime = Date.now();
-
-// Scanner State
+// Camera Scanner
 let html5QrScanner = null;
 let availableCameras = [];
 let activeCameraIndex = 0;
 
+// High-Availability Multi-STUN Configuration
 const rtcConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' }
   ]
 };
 
-// UI Elements
+// UI Element Bindings
 const selectionView = document.getElementById('selection-view');
 const senderView = document.getElementById('sender-view');
 const transferView = document.getElementById('transfer-view');
+const completeView = document.getElementById('complete-view');
+
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const manualCodeInput = document.getElementById('manual-code-input');
 const joinBtn = document.getElementById('join-btn');
 const displayCode = document.getElementById('display-code');
-const qrCodeContainer = document.getElementById('qrcode');
+
+const copyLinkBtn = document.getElementById('copy-link-btn');
+const toggleQrBtn = document.getElementById('toggle-qr-btn');
+const qrModalContainer = document.getElementById('qr-modal-container');
+const qrcodeBox = document.getElementById('qrcode-box');
+
 const progressBarFill = document.getElementById('progress-bar-fill');
 const percentageText = document.getElementById('percentage-text');
 const speedText = document.getElementById('speed-text');
+const etaText = document.getElementById('eta-text');
 const systemStatus = document.getElementById('system-status');
-const transferStatusText = document.getElementById('transfer-status-text');
+const senderStatusPill = document.getElementById('sender-status-pill');
+const cancelTransferBtn = document.getElementById('cancel-transfer-btn');
+const resetAppBtn = document.getElementById('reset-app-btn');
 
-// Scanner Controls
+// Scanner Elements
 const scanQrBtn = document.getElementById('scan-qr-btn');
 const scannerWrapper = document.getElementById('scanner-wrapper');
 const closeScannerBtn = document.getElementById('close-scanner-btn');
 const flipCameraBtn = document.getElementById('flip-camera-btn');
+
+// Troubleshooting Modal Elements
+const infoModal = document.getElementById('info-modal');
+const openModalBtn = document.getElementById('open-modal-btn');
+const closeModalBtn = document.getElementById('close-modal-btn');
+
+// ================= UTILITIES & HELPERS =================
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 Bytes';
@@ -66,95 +116,153 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const roomFromUrl = urlParams.get('room');
-  if (roomFromUrl) {
-    manualCodeInput.value = roomFromUrl;
-    initiateReceiver(roomFromUrl);
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  const msg = document.getElementById('toast-message');
+  msg.textContent = message;
+  toast.classList.remove('translate-y-[-20px]', 'opacity-0', 'pointer-events-none');
+  setTimeout(() => {
+    toast.classList.add('translate-y-[-20px]', 'opacity-0', 'pointer-events-none');
+  }, 2200);
+}
+
+function playCompletionChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (_) {}
+}
+
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+
+function sendNativeNotification(filename) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('Direct Beam Complete', {
+      body: `Successfully transferred ${filename}`,
+      icon: '/favicon.ico'
+    });
+  }
+}
+
+// Prevent Accidental Tab Closure During Active Transfer
+window.addEventListener('beforeunload', (e) => {
+  if (isTransferring) {
+    e.preventDefault();
+    e.returnValue = 'Direct streaming is in progress. Leaving will abort the transfer.';
   }
 });
 
-// Dropzone & File Pickers
-dropZone.addEventListener('click', (e) => {
-  if (e.target !== fileInput) {
-    fileInput.click();
+// Auto-Join when opening via ?room=XXXXXX URL
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const room = urlParams.get('room');
+  if (room && room.length === 6) {
+    manualCodeInput.value = room;
+    initiateReceiver(room);
   }
+});
+
+// ================= FILE SELECTION =================
+
+dropZone.addEventListener('click', (e) => {
+  if (e.target !== fileInput) fileInput.click();
 });
 
 dropZone.addEventListener('dragover', (e) => {
   e.preventDefault();
-  dropZone.classList.add('drag-over');
+  dropZone.classList.add('border-cyan-500', 'bg-slate-950/70');
 });
 
 dropZone.addEventListener('dragleave', () => {
-  dropZone.classList.remove('drag-over');
+  dropZone.classList.remove('border-cyan-500', 'bg-slate-950/70');
 });
 
 dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+  dropZone.classList.remove('border-cyan-500', 'bg-slate-950/70');
+  if (e.dataTransfer?.files?.length > 0) {
     handleFileSelected(e.dataTransfer.files[0]);
   }
 });
 
 fileInput.addEventListener('change', (e) => {
-  if (e.target.files && e.target.files.length > 0) {
+  if (e.target.files?.length > 0) {
     handleFileSelected(e.target.files[0]);
   }
 });
 
 function handleFileSelected(file) {
-  try {
-    if (!file) return;
-    selectedFile = file;
-    isInitiator = true;
-    currentRoomId = Math.floor(100000 + Math.random() * 900000).toString();
+  if (!file) return;
+  selectedFile = file;
+  isInitiator = true;
+  currentRoomId = Math.floor(100000 + Math.random() * 900000).toString();
 
-    document.getElementById('sender-file-name').textContent = file.name;
-    document.getElementById('sender-file-size').textContent = formatBytes(file.size);
-    displayCode.textContent = currentRoomId;
+  document.getElementById('sender-file-name').textContent = file.name;
+  document.getElementById('sender-file-size').textContent = formatBytes(file.size);
+  displayCode.textContent = currentRoomId;
 
-    qrCodeContainer.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(currentRoomId)}`;
-    img.width = 160;
-    img.height = 160;
-    img.style.display = 'block';
-    qrCodeContainer.appendChild(img);
+  // Render Canvas QR Code
+  qrcodeBox.innerHTML = '';
+  const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
+  new QRCode(qrcodeBox, {
+    text: shareUrl,
+    width: 160,
+    height: 160,
+    colorDark: "#020617",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
 
-    selectionView.classList.add('hidden');
-    senderView.classList.remove('hidden');
+  selectionView.classList.add('hidden');
+  senderView.classList.remove('hidden');
 
-    socket.emit('join-room', currentRoomId);
-  } catch (err) {
-    alert("Error selecting file: " + err.message);
-  }
+  socket.emit('join-room', currentRoomId);
 }
 
-// Camera Scanner Setup
+copyLinkBtn.addEventListener('click', () => {
+  const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
+  navigator.clipboard.writeText(shareUrl).then(() => {
+    showToast('Share link copied to clipboard');
+  }).catch(() => {
+    showToast('Failed to copy link');
+  });
+});
+
+toggleQrBtn.addEventListener('click', () => {
+  qrModalContainer.classList.toggle('hidden');
+});
+
+// ================= QR SCANNER =================
+
 scanQrBtn.addEventListener('click', async () => {
   scannerWrapper.classList.remove('hidden');
-
   try {
     availableCameras = await Html5Qrcode.getCameras();
-    if (!availableCameras || availableCameras.length === 0) {
-      alert("No camera found on this device.");
+    if (!availableCameras?.length) {
+      alert('No camera detected on this device.');
       stopScanner();
       return;
     }
-
-    if (availableCameras.length <= 1) {
-      flipCameraBtn.style.display = 'none';
-    } else {
-      flipCameraBtn.style.display = 'flex';
-    }
-
+    flipCameraBtn.style.display = availableCameras.length > 1 ? 'flex' : 'none';
     activeCameraIndex = availableCameras.length > 1 ? availableCameras.length - 1 : 0;
-    startSelectedCamera();
+    startActiveCamera();
   } catch (err) {
-    alert("Camera unavailable: " + err);
+    alert('Camera permission denied or camera unavailable.');
     stopScanner();
   }
 });
@@ -162,42 +270,34 @@ scanQrBtn.addEventListener('click', async () => {
 flipCameraBtn.addEventListener('click', async () => {
   if (availableCameras.length <= 1) return;
   activeCameraIndex = (activeCameraIndex + 1) % availableCameras.length;
-  await startSelectedCamera();
+  startActiveCamera();
 });
 
-async function startSelectedCamera() {
+async function startActiveCamera() {
   if (html5QrScanner) {
     try { await html5QrScanner.stop(); } catch (_) {}
   }
-
   const cameraId = availableCameras[activeCameraIndex].id;
   html5QrScanner = new Html5Qrcode("qr-reader");
 
-  const config = { fps: 15, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 };
+  await html5QrScanner.start(
+    cameraId,
+    { fps: 15, qrbox: { width: 200, height: 200 } },
+    (decodedText) => {
+      stopScanner();
+      let code = decodedText.trim();
+      const match = code.match(/\b\d{6}\b/);
+      if (match) code = match[0];
 
-  try {
-    await html5QrScanner.start(
-      cameraId,
-      config,
-      (decodedText) => {
-        stopScanner();
-
-        let code = decodedText.trim();
-        const match = code.match(/\b\d{6}\b/);
-        if (match) code = match[0];
-
-        if (code.length === 6) {
-          manualCodeInput.value = code;
-          initiateReceiver(code);
-        } else {
-          alert(`Scanned: ${decodedText}. Please enter 6-digit code manually.`);
-        }
-      },
-      () => {}
-    );
-  } catch (e) {
-    console.error("Camera start failure:", e);
-  }
+      if (code.length === 6) {
+        manualCodeInput.value = code;
+        initiateReceiver(code);
+      } else {
+        showToast('Invalid QR Code');
+      }
+    },
+    () => {}
+  );
 }
 
 closeScannerBtn.addEventListener('click', stopScanner);
@@ -221,7 +321,7 @@ joinBtn.addEventListener('click', () => {
     stopScanner();
     initiateReceiver(code);
   } else {
-    alert('Please enter a valid 6-digit code');
+    showToast('Please enter a valid 6-digit key');
   }
 });
 
@@ -230,15 +330,18 @@ function initiateReceiver(roomId) {
   isInitiator = false;
   selectionView.classList.add('hidden');
   transferView.classList.remove('hidden');
-  systemStatus.textContent = 'Contacting sender...';
+  document.getElementById('transfer-role-text').textContent = 'Connecting...';
+  systemStatus.textContent = 'Connecting via signaling server...';
 
   socket.emit('join-room', currentRoomId);
 }
 
-// WebRTC Signaling
+// ================= WEBRTC CONNECTION SETUP =================
+
 socket.on('peer-joined', async (peerId) => {
   remotePeerId = peerId;
-  systemStatus.textContent = 'Peer detected. Setting up connection...';
+  senderStatusPill.textContent = 'Connecting...';
+  senderStatusPill.className = 'text-[11px] font-mono px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
 
   if (isInitiator) {
     createPeerConnection();
@@ -271,9 +374,7 @@ socket.on('ice-candidate', async ({ candidate }) => {
   if (candidate && peerConnection) {
     try {
       await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-    } catch (e) {
-      console.error('ICE candidate error', e);
-    }
+    } catch (_) {}
   }
 });
 
@@ -289,7 +390,10 @@ function createPeerConnection() {
   };
 
   peerConnection.oniceconnectionstatechange = () => {
-    systemStatus.textContent = `Connection: ${peerConnection.iceConnectionState}`;
+    if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
+      systemStatus.textContent = 'Direct connection disconnected or failed.';
+      isTransferring = false;
+    }
   };
 
   peerConnection.ondatachannel = (event) => {
@@ -299,35 +403,41 @@ function createPeerConnection() {
   };
 }
 
+// ================= DATA PIPELINE (SENDER) =================
+
 function setupSenderDataChannel(channel) {
   channel.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
 
   channel.onopen = () => {
+    isTransferring = true;
     senderView.classList.add('hidden');
     transferView.classList.remove('hidden');
-    transferStatusText.textContent = 'Sending File...';
+
+    document.getElementById('transfer-role-text').textContent = 'Sending Payload';
     document.getElementById('transfer-file-name').textContent = selectedFile.name;
     document.getElementById('transfer-file-size').textContent = formatBytes(selectedFile.size);
-    systemStatus.textContent = 'Direct pipe open. Transferring...';
+    systemStatus.textContent = 'Direct P2P established. Streaming raw bytes...';
 
-    const metadata = JSON.stringify({
+    channel.send(JSON.stringify({
       type: 'metadata',
       name: selectedFile.name,
       size: selectedFile.size
-    });
-    channel.send(metadata);
+    }));
 
-    streamFileChunks();
+    streamFile();
   };
 }
 
-async function streamFileChunks() {
+async function streamFile() {
   let offset = 0;
-  const totalSize = selectedFile.size;
+  const total = selectedFile.size;
   lastSpeedCalcTime = Date.now();
-  bytesTransferredLastSec = 0;
+  bytesTransferredLastInterval = 0;
+  speedSamples = [];
 
   function readNextChunk() {
+    if (!isTransferring) return;
+
     if (dataChannel.bufferedAmount > BUFFER_THRESHOLD) {
       dataChannel.onbufferedamountlow = () => {
         dataChannel.onbufferedamountlow = null;
@@ -336,7 +446,7 @@ async function streamFileChunks() {
       return;
     }
 
-    if (offset < totalSize) {
+    if (offset < total) {
       const slice = selectedFile.slice(offset, offset + CHUNK_SIZE);
       const reader = new FileReader();
 
@@ -344,40 +454,42 @@ async function streamFileChunks() {
         if (dataChannel.readyState !== 'open') return;
 
         dataChannel.send(e.target.result);
-        offset += e.target.result.byteLength;
-        bytesTransferredLastSec += e.target.result.byteLength;
+        const bytesRead = e.target.result.byteLength;
+        offset += bytesRead;
+        bytesTransferredLastInterval += bytesRead;
 
-        updateProgressUI(offset, totalSize);
+        updateMetricsUI(offset, total);
         readNextChunk();
       };
 
       reader.readAsArrayBuffer(slice);
     } else {
       dataChannel.send(JSON.stringify({ type: 'EOF' }));
-      transferStatusText.textContent = 'Transfer Complete!';
-      systemStatus.textContent = 'All bytes sent successfully.';
+      finishTransferSuccess(selectedFile.name);
     }
   }
 
   readNextChunk();
 }
 
+// ================= DATA PIPELINE (RECEIVER) =================
+
 async function flushDiskBuffer() {
   if (diskWriteBuffer.length === 0 || !fileWritableStream || isWritingToDisk) return;
   isWritingToDisk = true;
 
-  const chunksToWrite = diskWriteBuffer;
+  const chunks = diskWriteBuffer;
   diskWriteBuffer = [];
   diskWriteBufferSize = 0;
 
   try {
-    const combinedBlob = new Blob(chunksToWrite);
-    await fileWritableStream.write(combinedBlob);
+    const blob = new Blob(chunks);
+    await fileWritableStream.write(blob);
   } catch (err) {
-    console.error("Disk write error:", err);
+    console.error('Batched disk write error:', err);
   } finally {
     isWritingToDisk = false;
-    if (diskWriteBuffer.length >= WRITE_BUFFER_SIZE) {
+    if (diskWriteBufferSize >= WRITE_BUFFER_SIZE) {
       flushDiskBuffer();
     }
   }
@@ -394,49 +506,56 @@ function setupReceiverDataChannel(channel) {
         diskWriteBuffer = [];
         diskWriteBufferSize = 0;
         receivedChunksFallback = [];
+        speedSamples = [];
+        bytesTransferredLastInterval = 0;
+        lastSpeedCalcTime = Date.now();
+        isTransferring = true;
+
+        document.getElementById('transfer-role-text').textContent = 'Receiving Payload';
         document.getElementById('transfer-file-name').textContent = msg.name;
         document.getElementById('transfer-file-size').textContent = formatBytes(msg.size);
-        transferStatusText.textContent = 'Receiving File...';
 
         if ('showSaveFilePicker' in window && window.isSecureContext) {
           try {
             const handle = await window.showSaveFilePicker({ suggestedName: msg.name });
             fileWritableStream = await handle.createWritable();
-            systemStatus.textContent = 'Streaming direct to disk (Batched I/O)...';
-          } catch (err) {
+            systemStatus.textContent = 'Writing directly to disk (Zero-RAM batching)...';
+          } catch (_) {
             fileWritableStream = null;
-            systemStatus.textContent = 'Receiving file into memory cache...';
+            systemStatus.textContent = 'Receiving into memory cache...';
           }
         } else {
           fileWritableStream = null;
-          systemStatus.textContent = 'Receiving file into memory cache...';
+          systemStatus.textContent = 'Receiving into memory cache...';
         }
-
-        lastSpeedCalcTime = Date.now();
       } else if (msg.type === 'EOF') {
         if (fileWritableStream) {
           while (isWritingToDisk) {
-            await new Promise(res => setTimeout(res, 20));
+            await new Promise(r => setTimeout(r, 20));
           }
           if (diskWriteBuffer.length > 0) {
-            const combinedBlob = new Blob(diskWriteBuffer);
-            await fileWritableStream.write(combinedBlob);
+            await fileWritableStream.write(new Blob(diskWriteBuffer));
           }
           await fileWritableStream.close();
-          transferStatusText.textContent = 'Transfer Complete!';
-          systemStatus.textContent = 'File saved directly to disk.';
+          finishTransferSuccess(incomingMetadata.name);
         } else {
           const blob = new Blob(receivedChunksFallback);
-          const downloadUrl = URL.createObjectURL(blob);
+          const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = downloadUrl;
+          a.href = url;
           a.download = incomingMetadata.name;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
 
-          transferStatusText.textContent = 'Transfer Complete!';
-          systemStatus.innerHTML = `File downloaded to your Downloads folder! <br><a href="${downloadUrl}" download="${incomingMetadata.name}" style="color:var(--accent); text-decoration:underline; font-weight:bold; display:inline-block; margin-top:8px;">Click here if download didn't start</a>`;
+          const manualContainer = document.getElementById('manual-download-container');
+          manualContainer.innerHTML = `
+            <a href="${url}" download="${incomingMetadata.name}" class="text-xs text-cyan-400 hover:text-cyan-300 underline font-mono">
+              Click to download again if download didn't trigger
+            </a>`;
+          manualContainer.classList.remove('hidden');
+
+          finishTransferSuccess(incomingMetadata.name);
         }
       }
       return;
@@ -444,12 +563,11 @@ function setupReceiverDataChannel(channel) {
 
     const chunkSize = event.data.byteLength;
     receivedBytes += chunkSize;
-    bytesTransferredLastSec += chunkSize;
+    bytesTransferredLastInterval += chunkSize;
 
     if (fileWritableStream) {
       diskWriteBuffer.push(event.data);
       diskWriteBufferSize += chunkSize;
-
       if (diskWriteBufferSize >= WRITE_BUFFER_SIZE && !isWritingToDisk) {
         flushDiskBuffer();
       }
@@ -457,22 +575,116 @@ function setupReceiverDataChannel(channel) {
       receivedChunksFallback.push(event.data);
     }
 
-    updateProgressUI(receivedBytes, incomingMetadata.size);
+    updateMetricsUI(receivedBytes, incomingMetadata.size);
   };
 }
 
-function updateProgressUI(current, total) {
-  const percentage = Math.min(100, ((current / total) * 100)).toFixed(1);
-  progressBarFill.style.width = `${percentage}%`;
-  percentageText.textContent = `${percentage}%`;
+// ================= METRICS & TELEMETRY =================
+
+function updateMetricsUI(current, total) {
+  const percent = Math.min(100, ((current / total) * 100));
+  progressBarFill.style.width = `${percent}%`;
+  percentageText.textContent = `${percent.toFixed(1)}%`;
 
   const now = Date.now();
-  const timeDelta = (now - lastSpeedCalcTime) / 1000;
+  const delta = (now - lastSpeedCalcTime) / 1000;
 
-  if (timeDelta >= 1) {
-    const speedMBps = (bytesTransferredLastSec / (1024 * 1024)) / timeDelta;
-    speedText.textContent = `${speedMBps.toFixed(2)} MB/s`;
-    bytesTransferredLastSec = 0;
+  if (delta >= 0.8) {
+    const currentSpeedMBps = (bytesTransferredLastInterval / (1024 * 1024)) / delta;
+    bytesTransferredLastInterval = 0;
     lastSpeedCalcTime = now;
+
+    speedSamples.push(currentSpeedMBps);
+    if (speedSamples.length > SPEED_WINDOW_SIZE) speedSamples.shift();
+    const avgSpeedMBps = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
+
+    speedText.textContent = `${avgSpeedMBps.toFixed(2)} MB/s`;
+
+    const remainingBytes = total - current;
+    if (avgSpeedMBps > 0.05) {
+      const remainingSeconds = remainingBytes / (avgSpeedMBps * 1024 * 1024);
+      etaText.textContent = formatETA(remainingSeconds);
+    } else {
+      etaText.textContent = 'Calculating...';
+    }
   }
 }
+
+function formatETA(seconds) {
+  if (!isFinite(seconds) || seconds < 0) return 'Calculating...';
+  if (seconds < 60) return `${Math.ceil(seconds)}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.ceil(seconds % 60);
+  return `${mins}m ${secs}s`;
+}
+
+// ================= FINALIZE & RESET =================
+
+function finishTransferSuccess(fileName) {
+  isTransferring = false;
+  transferView.classList.add('hidden');
+  completeView.classList.remove('hidden');
+
+  document.getElementById('complete-details').textContent =
+    `"${fileName}" was transferred and finalized successfully.`;
+
+  playCompletionChime();
+  sendNativeNotification(fileName);
+  lucide.createIcons();
+}
+
+function resetApplicationState() {
+  if (dataChannel) {
+    try { dataChannel.close(); } catch (_) {}
+    dataChannel = null;
+  }
+  if (peerConnection) {
+    try { peerConnection.close(); } catch (_) {}
+    peerConnection = null;
+  }
+
+  selectedFile = null;
+  currentRoomId = null;
+  remotePeerId = null;
+  isInitiator = false;
+  isTransferring = false;
+  fileWritableStream = null;
+  incomingMetadata = null;
+  receivedBytes = 0;
+  diskWriteBuffer = [];
+  diskWriteBufferSize = 0;
+  receivedChunksFallback = [];
+  speedSamples = [];
+
+  progressBarFill.style.width = '0%';
+  percentageText.textContent = '0.0%';
+  speedText.textContent = '0.00 MB/s';
+  etaText.textContent = 'Calculating...';
+  manualCodeInput.value = '';
+
+  document.getElementById('manual-download-container').classList.add('hidden');
+  completeView.classList.add('hidden');
+  transferView.classList.add('hidden');
+  senderView.classList.add('hidden');
+  selectionView.classList.remove('hidden');
+}
+
+cancelTransferBtn.addEventListener('click', () => {
+  if (confirm('Cancel this active transfer?')) {
+    resetApplicationState();
+    showToast('Transfer canceled');
+  }
+});
+
+resetAppBtn.addEventListener('click', resetApplicationState);
+
+// Troubleshooting Modal
+openModalBtn.addEventListener('click', () => {
+  infoModal.classList.remove('hidden');
+  infoModal.classList.add('flex');
+});
+
+closeModalBtn.addEventListener('click', () => {
+  infoModal.classList.add('hidden');
+  infoModal.classList.remove('flex');
+});
