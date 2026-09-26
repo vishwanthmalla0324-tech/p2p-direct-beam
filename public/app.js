@@ -1,4 +1,3 @@
-// Socket.io initialization with automated reconnection
 const socket = io({
   reconnection: true,
   reconnectionAttempts: 10,
@@ -6,7 +5,6 @@ const socket = io({
   transports: ['websocket', 'polling']
 });
 
-// Cold-Start Watchdog for Render Free Tier
 let coldStartTimer = setTimeout(() => {
   const banner = document.getElementById('cold-start-banner');
   if (banner && !socket.connected) {
@@ -22,31 +20,26 @@ socket.on('connect', () => {
 
 socket.on('disconnect', () => {
   if (isTransferring) {
-    systemStatus.textContent = 'Signaling disconnect. P2P DataChannel still active.';
+    systemStatus.textContent = 'Signaling disconnect. Direct P2P channels active.';
   }
 });
 
-// High-Performance WebRTC Pipeline Constants
-const CHUNK_SIZE = 64 * 1024; // 64 KB wire chunks
-const WRITE_BUFFER_SIZE = 2 * 1024 * 1024; // 2 MB batched disk write
-const BUFFER_THRESHOLD = 8 * 1024 * 1024; // 8 MB backpressure threshold
+const CHUNK_SIZE = 64 * 1024;
+const WRITE_BUFFER_SIZE = 2 * 1024 * 1024;
+const BUFFER_THRESHOLD = 8 * 1024 * 1024;
 
 // Application State
 let selectedFile = null;
 let currentRoomId = null;
-let peerConnection = null;
-let dataChannel = null;
-let remotePeerId = null;
 let isInitiator = false;
 let isTransferring = false;
 
-// Metrics & Rolling Average State
-let bytesTransferredLastInterval = 0;
-let lastSpeedCalcTime = Date.now();
-const SPEED_WINDOW_SIZE = 5;
-let speedSamples = [];
+// Multi-Peer Connection Map: peerId -> { pc: RTCPeerConnection, dc: RTCDataChannel, status: string }
+const peers = new Map();
 
-// Receiver Buffers
+// Receiver specific states (when this client is a receiver)
+let receiverPeerConnection = null;
+let receiverDataChannel = null;
 let fileWritableStream = null;
 let incomingMetadata = null;
 let receivedBytes = 0;
@@ -55,12 +48,17 @@ let diskWriteBufferSize = 0;
 let isWritingToDisk = false;
 let receivedChunksFallback = [];
 
-// Camera Scanner
+// Metrics & Rolling Calculation
+let bytesTransferredLastInterval = 0;
+let lastSpeedCalcTime = Date.now();
+const SPEED_WINDOW_SIZE = 5;
+let speedSamples = [];
+
+// Scanner
 let html5QrScanner = null;
 let availableCameras = [];
 let activeCameraIndex = 0;
 
-// High-Availability Multi-STUN Configuration
 const rtcConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -69,7 +67,7 @@ const rtcConfig = {
   ]
 };
 
-// UI Element Bindings
+// UI Elements
 const selectionView = document.getElementById('selection-view');
 const senderView = document.getElementById('sender-view');
 const transferView = document.getElementById('transfer-view');
@@ -85,6 +83,8 @@ const copyLinkBtn = document.getElementById('copy-link-btn');
 const toggleQrBtn = document.getElementById('toggle-qr-btn');
 const qrModalContainer = document.getElementById('qr-modal-container');
 const qrcodeBox = document.getElementById('qrcode-box');
+const startBroadcastBtn = document.getElementById('start-broadcast-btn');
+const activeDevicesPill = document.getElementById('active-devices-pill');
 
 const progressBarFill = document.getElementById('progress-bar-fill');
 const percentageText = document.getElementById('percentage-text');
@@ -94,24 +94,19 @@ const systemStatus = document.getElementById('system-status');
 const senderStatusPill = document.getElementById('sender-status-pill');
 const cancelTransferBtn = document.getElementById('cancel-transfer-btn');
 
-// Navigation Elements
 const brandHomeLink = document.getElementById('brand-home-link');
 const navBackHomeBtn = document.getElementById('nav-back-home-btn');
 const sendAnotherBtn = document.getElementById('send-another-btn');
 const completeBackHomeBtn = document.getElementById('complete-back-home-btn');
 
-// Scanner Elements
 const scanQrBtn = document.getElementById('scan-qr-btn');
 const scannerWrapper = document.getElementById('scanner-wrapper');
 const closeScannerBtn = document.getElementById('close-scanner-btn');
 const flipCameraBtn = document.getElementById('flip-camera-btn');
 
-// Troubleshooting Modal Elements
 const infoModal = document.getElementById('info-modal');
 const openModalBtn = document.getElementById('open-modal-btn');
 const closeModalBtn = document.getElementById('close-modal-btn');
-
-// ================= UTILITIES & HELPERS =================
 
 function updateNavState(activeViewId) {
   if (activeViewId === 'selection-view') {
@@ -144,14 +139,11 @@ function playCompletionChime() {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-
     osc.type = 'sine';
     osc.frequency.setValueAtTime(587.33, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
-
     gain.gain.setValueAtTime(0.12, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
@@ -172,15 +164,13 @@ function sendNativeNotification(filename) {
   }
 }
 
-// Prevent Accidental Tab Closure During Active Transfer
 window.addEventListener('beforeunload', (e) => {
   if (isTransferring) {
     e.preventDefault();
-    e.returnValue = 'Direct streaming is in progress. Leaving will abort the transfer.';
+    e.returnValue = 'Direct streaming in progress. Leaving will abort the transfer.';
   }
 });
 
-// Auto-Join when opening via ?room=XXXXXX URL
 window.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const room = urlParams.get('room');
@@ -229,7 +219,6 @@ function handleFileSelected(file) {
   document.getElementById('sender-file-size').textContent = formatBytes(file.size);
   displayCode.textContent = currentRoomId;
 
-  // Render Canvas QR Code
   qrcodeBox.innerHTML = '';
   const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
   new QRCode(qrcodeBox, {
@@ -260,6 +249,27 @@ copyLinkBtn.addEventListener('click', () => {
 toggleQrBtn.addEventListener('click', () => {
   qrModalContainer.classList.toggle('hidden');
 });
+
+// SENDER: Start Broadcast Button
+startBroadcastBtn.addEventListener('click', () => {
+  if (getReadyDataChannels().length === 0) return;
+  startBroadcasting();
+});
+
+function updateSenderPeerCountUI() {
+  const count = peers.size;
+  senderStatusPill.textContent = `${count} Device${count === 1 ? '' : 's'} Connected`;
+  
+  if (count > 0) {
+    senderStatusPill.className = 'text-[11px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap';
+    startBroadcastBtn.disabled = false;
+    startBroadcastBtn.textContent = `Beam File to ${count} Device${count === 1 ? '' : 's'}`;
+  } else {
+    senderStatusPill.className = 'text-[11px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap';
+    startBroadcastBtn.disabled = true;
+    startBroadcastBtn.textContent = 'Waiting for Devices to Join...';
+  }
+}
 
 // ================= QR SCANNER =================
 
@@ -346,112 +356,159 @@ function initiateReceiver(roomId) {
   transferView.classList.remove('hidden');
   updateNavState('transfer-view');
 
-  document.getElementById('transfer-role-text').textContent = 'Connecting...';
-  systemStatus.textContent = 'Connecting via signaling server...';
+  document.getElementById('transfer-role-text').textContent = 'Receiver Standby';
+  activeDevicesPill.textContent = 'P2P Connected';
+  systemStatus.textContent = 'Waiting for sender to start broadcast...';
 
   socket.emit('join-room', currentRoomId);
 }
 
-// ================= WEBRTC CONNECTION SETUP =================
+// ================= MULTI-PEER WEBRTC PIPELINE =================
 
+// Triggered when a new device enters the room
 socket.on('peer-joined', async (peerId) => {
-  remotePeerId = peerId;
-  senderStatusPill.textContent = 'Connecting...';
-  senderStatusPill.className = 'text-[11px] font-mono px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
-
   if (isInitiator) {
-    createPeerConnection();
-    dataChannel = peerConnection.createDataChannel('fileTransfer', { ordered: true });
-    dataChannel.binaryType = 'arraybuffer';
-    setupSenderDataChannel(dataChannel);
+    // Setup dedicated RTCPeerConnection for this new device
+    const pc = new RTCPeerConnection(rtcConfig);
+    const dc = pc.createDataChannel('fileTransfer', { ordered: true });
+    dc.binaryType = 'arraybuffer';
+    dc.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
 
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
+    peers.set(peerId, { pc, dc, status: 'connecting' });
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', { target: peerId, candidate: event.candidate });
+      }
+    };
+
+    dc.onopen = () => {
+      if (peers.has(peerId)) {
+        peers.get(peerId).status = 'open';
+      }
+      updateSenderPeerCountUI();
+
+      // If a broadcast is already underway when this peer joins, send metadata and catch them up
+      if (isTransferring) {
+        dc.send(JSON.stringify({
+          type: 'metadata',
+          name: selectedFile.name,
+          size: selectedFile.size
+        }));
+      }
+    };
+
+    dc.onclose = () => {
+      peers.delete(peerId);
+      updateSenderPeerCountUI();
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
     socket.emit('offer', { target: peerId, sdp: offer });
+
+    updateSenderPeerCountUI();
   }
 });
 
+// Receiver receives offer from sender
 socket.on('offer', async ({ sender, sdp }) => {
-  remotePeerId = sender;
-  createPeerConnection();
+  if (!isInitiator) {
+    receiverPeerConnection = new RTCPeerConnection(rtcConfig);
 
-  await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-  const answer = await peerConnection.createAnswer();
-  await peerConnection.setLocalDescription(answer);
+    receiverPeerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
+      }
+    };
 
-  socket.emit('answer', { target: sender, sdp: answer });
+    receiverPeerConnection.ondatachannel = (event) => {
+      receiverDataChannel = event.channel;
+      receiverDataChannel.binaryType = 'arraybuffer';
+      setupReceiverDataChannel(receiverDataChannel);
+    };
+
+    await receiverPeerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+    const answer = await receiverPeerConnection.createAnswer();
+    await receiverPeerConnection.setLocalDescription(answer);
+
+    socket.emit('answer', { target: sender, sdp: answer });
+  }
 });
 
-socket.on('answer', async ({ sdp }) => {
-  await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+// Sender receives answer from specific receiver
+socket.on('answer', async ({ sender, sdp }) => {
+  if (isInitiator && peers.has(sender)) {
+    const peer = peers.get(sender);
+    await peer.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  }
 });
 
-socket.on('ice-candidate', async ({ candidate }) => {
-  if (candidate && peerConnection) {
+socket.on('ice-candidate', async ({ sender, candidate }) => {
+  if (candidate) {
     try {
-      await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      if (isInitiator && peers.has(sender)) {
+        await peers.get(sender).pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } else if (!isInitiator && receiverPeerConnection) {
+        await receiverPeerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      }
     } catch (_) {}
   }
 });
 
-socket.on('peer-disconnected', () => {
-  if (isTransferring) {
-    systemStatus.textContent = 'Peer disconnected unexpectedly.';
+socket.on('peer-disconnected', (peerId) => {
+  if (isInitiator && peers.has(peerId)) {
+    const p = peers.get(peerId);
+    try { p.dc.close(); } catch (_) {}
+    try { p.pc.close(); } catch (_) {}
+    peers.delete(peerId);
+    updateSenderPeerCountUI();
   }
 });
 
-function createPeerConnection() {
-  if (peerConnection) return;
-
-  peerConnection = new RTCPeerConnection(rtcConfig);
-
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate && remotePeerId) {
-      socket.emit('ice-candidate', { target: remotePeerId, candidate: event.candidate });
+function getReadyDataChannels() {
+  const readyChannels = [];
+  for (const [_, p] of peers) {
+    if (p.dc && p.dc.readyState === 'open') {
+      readyChannels.push(p.dc);
     }
-  };
-
-  peerConnection.oniceconnectionstatechange = () => {
-    if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
-      systemStatus.textContent = 'Direct connection disconnected or failed.';
-      isTransferring = false;
-    }
-  };
-
-  peerConnection.ondatachannel = (event) => {
-    dataChannel = event.channel;
-    dataChannel.binaryType = 'arraybuffer';
-    setupReceiverDataChannel(dataChannel);
-  };
+  }
+  return readyChannels;
 }
 
-// ================= DATA PIPELINE (SENDER) =================
+// ================= MULTI-DEVICE BROADCAST ENGINE =================
 
-function setupSenderDataChannel(channel) {
-  channel.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
+function startBroadcasting() {
+  const openChannels = getReadyDataChannels();
+  if (openChannels.length === 0) {
+    showToast('No active peer connections open');
+    return;
+  }
 
-  channel.onopen = () => {
-    isTransferring = true;
-    senderView.classList.add('hidden');
-    transferView.classList.remove('hidden');
-    updateNavState('transfer-view');
+  isTransferring = true;
+  senderView.classList.add('hidden');
+  transferView.classList.remove('hidden');
+  updateNavState('transfer-view');
 
-    document.getElementById('transfer-role-text').textContent = 'Sending Payload';
-    document.getElementById('transfer-file-name').textContent = selectedFile.name;
-    document.getElementById('transfer-file-size').textContent = formatBytes(selectedFile.size);
-    systemStatus.textContent = 'Direct P2P established. Streaming raw bytes...';
+  const count = openChannels.length;
+  document.getElementById('transfer-role-text').textContent = 'Broadcasting Payload';
+  activeDevicesPill.textContent = `${count} Device${count === 1 ? '' : 's'}`;
+  document.getElementById('transfer-file-name').textContent = selectedFile.name;
+  document.getElementById('transfer-file-size').textContent = formatBytes(selectedFile.size);
+  systemStatus.textContent = `Streaming to ${count} device${count === 1 ? '' : 's'} via direct DataChannels...`;
 
-    channel.send(JSON.stringify({
-      type: 'metadata',
-      name: selectedFile.name,
-      size: selectedFile.size
-    }));
+  // Send metadata header to all peers
+  const metaMsg = JSON.stringify({
+    type: 'metadata',
+    name: selectedFile.name,
+    size: selectedFile.size
+  });
+  openChannels.forEach(dc => dc.send(metaMsg));
 
-    streamFile();
-  };
+  streamMultiDeviceFile();
 }
 
-async function streamFile() {
+async function streamMultiDeviceFile() {
   let offset = 0;
   const total = selectedFile.size;
   lastSpeedCalcTime = Date.now();
@@ -461,23 +518,43 @@ async function streamFile() {
   function readNextChunk() {
     if (!isTransferring) return;
 
-    if (dataChannel.bufferedAmount > BUFFER_THRESHOLD) {
-      dataChannel.onbufferedamountlow = () => {
-        dataChannel.onbufferedamountlow = null;
-        readNextChunk();
-      };
+    const channels = getReadyDataChannels();
+    if (channels.length === 0) {
+      systemStatus.textContent = 'All receivers disconnected.';
+      isTransferring = false;
       return;
     }
+
+    // Backpressure check across all connected devices
+    let isSaturated = false;
+    for (const ch of channels) {
+      if (ch.bufferedAmount > BUFFER_THRESHOLD) {
+        isSaturated = true;
+        ch.onbufferedamountlow = () => {
+          ch.onbufferedamountlow = null;
+          readNextChunk();
+        };
+        break;
+      }
+    }
+    if (isSaturated) return;
 
     if (offset < total) {
       const slice = selectedFile.slice(offset, offset + CHUNK_SIZE);
       const reader = new FileReader();
 
       reader.onload = (e) => {
-        if (dataChannel.readyState !== 'open') return;
+        if (!isTransferring) return;
 
-        dataChannel.send(e.target.result);
-        const bytesRead = e.target.result.byteLength;
+        const buffer = e.target.result;
+        // Fan out this slice to every device simultaneously
+        channels.forEach(ch => {
+          if (ch.readyState === 'open') {
+            ch.send(buffer);
+          }
+        });
+
+        const bytesRead = buffer.byteLength;
         offset += bytesRead;
         bytesTransferredLastInterval += bytesRead;
 
@@ -487,7 +564,11 @@ async function streamFile() {
 
       reader.readAsArrayBuffer(slice);
     } else {
-      dataChannel.send(JSON.stringify({ type: 'EOF' }));
+      channels.forEach(ch => {
+        if (ch.readyState === 'open') {
+          ch.send(JSON.stringify({ type: 'EOF' }));
+        }
+      });
       finishTransferSuccess(selectedFile.name);
     }
   }
@@ -495,7 +576,7 @@ async function streamFile() {
   readNextChunk();
 }
 
-// ================= DATA PIPELINE (RECEIVER) =================
+// ================= DATA RECEIVER PIPELINE =================
 
 async function flushDiskBuffer() {
   if (diskWriteBuffer.length === 0 || !fileWritableStream || isWritingToDisk) return;
@@ -650,7 +731,7 @@ function finishTransferSuccess(fileName) {
   updateNavState('complete-view');
 
   document.getElementById('complete-details').textContent =
-    `"${fileName}" was transferred and finalized successfully.`;
+    `"${fileName}" was transferred and finalized successfully across all devices.`;
 
   playCompletionChime();
   sendNativeNotification(fileName);
@@ -659,46 +740,40 @@ function finishTransferSuccess(fileName) {
 
 function resetApplicationState(confirmIfBusy = false) {
   if (confirmIfBusy && isTransferring) {
-    const proceed = confirm('A file transfer is actively in progress. Returning home will cancel it. Continue?');
+    const proceed = confirm('A transfer is active across one or more devices. Returning home will terminate it. Continue?');
     if (!proceed) return;
   }
 
-  // 1. Terminate DataChannel
-  if (dataChannel) {
-    try {
-      dataChannel.onclose = null;
-      dataChannel.close();
-    } catch (_) {}
-    dataChannel = null;
+  // 1. Close all multi-peer connections
+  for (const [id, p] of peers) {
+    try { p.dc?.close(); } catch (_) {}
+    try { p.pc?.close(); } catch (_) {}
+  }
+  peers.clear();
+
+  // 2. Close receiver connection
+  if (receiverDataChannel) {
+    try { receiverDataChannel.close(); } catch (_) {}
+    receiverDataChannel = null;
+  }
+  if (receiverPeerConnection) {
+    try { receiverPeerConnection.close(); } catch (_) {}
+    receiverPeerConnection = null;
   }
 
-  // 2. Terminate Peer Connection
-  if (peerConnection) {
-    try {
-      peerConnection.onicecandidate = null;
-      peerConnection.ondatachannel = null;
-      peerConnection.close();
-    } catch (_) {}
-    peerConnection = null;
-  }
-
-  // 3. Abort disk stream if open
+  // 3. Abort disk stream
   if (fileWritableStream) {
-    try {
-      fileWritableStream.abort();
-    } catch (_) {}
+    try { fileWritableStream.abort(); } catch (_) {}
     fileWritableStream = null;
   }
 
-  // 4. Notify signaling server to leave room
+  // 4. Notify signaling server to exit room
   if (currentRoomId && socket.connected) {
     socket.emit('leave-room', currentRoomId);
   }
 
-  // 5. Clear application state
   selectedFile = null;
   currentRoomId = null;
-  remotePeerId = null;
   isInitiator = false;
   isTransferring = false;
   incomingMetadata = null;
@@ -708,7 +783,6 @@ function resetApplicationState(confirmIfBusy = false) {
   receivedChunksFallback = [];
   speedSamples = [];
 
-  // 6. Reset UI progress & metric indicators
   progressBarFill.style.width = '0%';
   percentageText.textContent = '0.0%';
   speedText.textContent = '0.00 MB/s';
@@ -719,10 +793,8 @@ function resetApplicationState(confirmIfBusy = false) {
   const manualContainer = document.getElementById('manual-download-container');
   if (manualContainer) manualContainer.classList.add('hidden');
 
-  // 7. Clean up the URL query parameters without reloading the page
   window.history.replaceState({}, document.title, window.location.pathname);
 
-  // 8. Restore views
   completeView.classList.add('hidden');
   transferView.classList.add('hidden');
   senderView.classList.add('hidden');
@@ -732,7 +804,6 @@ function resetApplicationState(confirmIfBusy = false) {
   lucide.createIcons();
 }
 
-// Navigation event bindings
 brandHomeLink.addEventListener('click', () => resetApplicationState(true));
 navBackHomeBtn.addEventListener('click', () => resetApplicationState(true));
 
@@ -753,7 +824,6 @@ cancelTransferBtn.addEventListener('click', () => {
   resetApplicationState(true);
 });
 
-// Troubleshooting Modal
 openModalBtn.addEventListener('click', () => {
   infoModal.classList.remove('hidden');
   infoModal.classList.add('flex');

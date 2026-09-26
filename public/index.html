@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Direct Beam — Enterprise Peer-to-Peer Transfer</title>
+  <title>Direct Beam — Multi-Device Peer-to-Peer Transfer</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,13 +39,11 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-cyan-500/20 selection:text-cyan-300 font-sans antialiased">
 
-  <!-- Toast Container -->
   <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-[-20px] opacity-0 pointer-events-none flex items-center gap-2 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-lg shadow-2xl text-xs font-medium">
     <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
     <span id="toast-message">Notification</span>
   </div>
 
-  <!-- Cold Start Server Awakening Pill -->
   <div id="cold-start-banner" class="hidden w-full bg-amber-500/10 border-b border-amber-500/20 py-2 px-4 text-center text-xs text-amber-300 font-medium">
     <div class="inline-flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
@@ -53,7 +51,6 @@
     </div>
   </div>
 
-  <!-- Top Navigation & Header -->
   <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 text-center relative">
     <div class="flex items-center justify-between mb-4">
       <button id="nav-back-home-btn" class="hidden inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-cyan-400 bg-slate-900 border border-slate-800 hover:border-slate-700 px-3 py-1.5 rounded-lg transition active:scale-95">
@@ -63,35 +60,32 @@
 
       <div class="mx-auto inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs text-cyan-400 font-mono font-medium shadow-inner">
         <span class="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
-        Direct DataChannel Pipeline
+        Multi-Device Mesh Pipeline
       </div>
 
       <div class="w-24 hidden sm:block"></div>
     </div>
 
-    <!-- Clickable Brand / Logo -->
     <h1 id="brand-home-link" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 cursor-pointer hover:text-cyan-400 transition-colors inline-block select-none" title="Return to Home">
       Direct Beam
     </h1>
     <p class="text-xs sm:text-sm text-slate-400 max-w-md mx-auto mb-5">
-      Encrypted point-to-point data streaming. Direct disk writes, unlimited size, and zero cloud retention.
+      Direct device-to-device mesh broadcast. Beam to 1 or many receivers simultaneously with zero cloud storage.
     </p>
 
-    <!-- Trust Badges -->
     <div class="flex flex-wrap items-center justify-center gap-2.5 text-xs text-slate-400">
       <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
         <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-400"></i> E2E Encrypted (DTLS)
       </span>
       <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
-        <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Direct Peer-to-Peer
+        <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i> Multi-Peer Broadcast
       </span>
       <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
-        <i data-lucide="cloud-off" class="w-3.5 h-3.5 text-cyan-400"></i> Zero Cloud Storage
+        <i data-lucide="cloud-off" class="w-3.5 h-3.5 text-amber-400"></i> Zero Cloud Storage
       </span>
     </div>
   </header>
 
-  <!-- Workstation Container -->
   <main class="w-full max-w-lg mx-auto px-4 flex-1 flex flex-col justify-center py-6">
     <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl relative">
 
@@ -102,7 +96,7 @@
             <i data-lucide="upload-cloud" class="w-7 h-7"></i>
           </div>
           <p class="text-sm font-semibold text-slate-200 mb-1">Click to select or drop a file</p>
-          <p class="text-xs text-slate-400">No file size restrictions (1 GB – 50 GB+)</p>
+          <p class="text-xs text-slate-400">Share to one or multiple phones, PCs, or tablets</p>
           <input type="file" id="file-input" class="hidden">
         </div>
 
@@ -148,16 +142,19 @@
             <p id="sender-file-size" class="text-xs text-slate-400 font-mono">0 Bytes</p>
           </div>
           <span id="sender-status-pill" class="text-[11px] font-mono px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap">
-            Waiting for peer...
+            0 Devices Connected
           </span>
         </div>
 
         <div class="bg-slate-950 border border-slate-800 rounded-xl p-5 text-center space-y-2">
-          <label class="text-xs font-medium text-slate-400 uppercase tracking-wider block">Security Room Key</label>
+          <div class="flex items-center justify-center gap-2">
+            <label class="text-xs font-medium text-slate-400 uppercase tracking-wider block">Security Room Key</label>
+            <span class="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-full font-mono">Multi-device</span>
+          </div>
           <div id="display-code" class="text-3xl sm:text-4xl font-mono font-bold tracking-[0.3em] text-cyan-400 select-all">
             ------
           </div>
-          <p class="text-xs text-slate-400">Share this code or copy the link below</p>
+          <p class="text-xs text-slate-400">Multiple people can scan or connect simultaneously</p>
         </div>
 
         <div class="flex gap-2">
@@ -171,7 +168,14 @@
 
         <div id="qr-modal-container" class="hidden flex flex-col items-center justify-center bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-2">
           <div id="qrcode-box" class="bg-white p-3 rounded-lg shadow-lg"></div>
-          <span class="text-[11px] text-slate-400 font-mono mt-1">Scan with any mobile camera</span>
+          <span class="text-[11px] text-slate-400 font-mono mt-1">Scan with as many devices as you want</span>
+        </div>
+
+        <!-- Start Multi-Beam Button for Senders -->
+        <div class="pt-2">
+          <button id="start-broadcast-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 disabled:hover:bg-cyan-500 text-slate-950 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition active:scale-98 shadow-lg shadow-cyan-500/20" disabled>
+            Waiting for Devices to Join...
+          </button>
         </div>
       </section>
 
@@ -179,7 +183,12 @@
       <section id="transfer-view" class="hidden space-y-5">
         <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex items-center justify-between">
           <div class="min-w-0 pr-3">
-            <h2 id="transfer-role-text" class="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">Streaming Payload</h2>
+            <div class="flex items-center gap-2 mb-1">
+              <h2 id="transfer-role-text" class="text-xs font-semibold text-cyan-400 uppercase tracking-wider">Streaming Payload</h2>
+              <span id="active-devices-pill" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                1 Device
+              </span>
+            </div>
             <p id="transfer-file-name" class="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-xs">dataset.iso</p>
             <p id="transfer-file-size" class="text-xs text-slate-400 font-mono mt-0.5">0 MB</p>
           </div>
@@ -205,7 +214,7 @@
 
         <div class="flex items-center justify-center gap-2 pt-1 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="system-status">Establishing encrypted direct data channel...</span>
+          <span id="system-status">Broadcasting to connected peers...</span>
         </div>
 
         <div class="pt-2">
@@ -226,7 +235,6 @@
         </div>
         <div id="manual-download-container" class="hidden"></div>
         
-        <!-- Side-by-Side Post-Transfer Actions -->
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <button id="send-another-btn" class="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2">
             <i data-lucide="plus-circle" class="w-4 h-4"></i>
@@ -242,26 +250,24 @@
     </div>
   </main>
 
-  <!-- Troubleshooting & NAT Modal -->
   <div id="info-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 max-w-md w-full rounded-2xl p-6 shadow-2xl space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
         <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-          <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i> Architecture & NAT Traversal
+          <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i> Multi-Device Mesh Architecture
         </h3>
         <button id="close-modal-btn" class="text-slate-400 hover:text-white">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
       <div class="text-xs text-slate-300 space-y-3 leading-relaxed">
-        <p><strong class="text-white">Signaling vs. Data:</strong> Render only handles the lightweight room-handshake signaling. Once peers pair, 100% of the byte transfer moves directly device-to-device through a direct WebRTC DataChannel.</p>
-        <p><strong class="text-white">Symmetric NAT & Strict Firewalls:</strong> The app queries Google and Cloudflare STUN servers. If both sender and receiver are on restrictive corporate firewalls or carrier-grade symmetric NATs, a direct socket may time out without a TURN relay.</p>
-        <p><strong class="text-white">Direct-to-Disk Pipelining:</strong> Uses the Chromium File System Access API with batched 2MB buffers to bypass browser RAM bottlenecks completely.</p>
+        <p><strong class="text-white">Multi-Device Mesh:</strong> Direct Beam establishes individual DTLS-encrypted DataChannels to every connected device. The file is sliced from the sender's disk and broadcast simultaneously to all receiving peers without touching our servers.</p>
+        <p><strong class="text-white">Bandwidth Scalability:</strong> Sender upload bandwidth is shared evenly across all connected peers. Receivers download at peak local peer speeds.</p>
+        <p><strong class="text-white">Zero RAM Footprint:</strong> Files of any size (50 GB+) are streamed in 64KB slices with 2MB chunked writing directly to the target system's filesystem.</p>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
   <footer class="w-full max-w-4xl mx-auto py-5 px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 border-t border-slate-900">
     <div class="flex items-center gap-2">
       <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-500"></i>
