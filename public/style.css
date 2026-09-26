@@ -1,0 +1,37 @@
+/* Scanner Controls & Flip Button */
+.scanner-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.btn-switch {
+  flex: 1;
+  background: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.btn-switch:hover {
+  background: #2563eb;
+}
+
+.switch-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-cancel {
+  flex: 1;
+  background: #ef4444;
+  color: white;
+  padding: 0.75rem 1rem;
+}
+
+.btn-cancel:hover {
+  background: #dc2626;
+}

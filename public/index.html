@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P Direct File Beam</title>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      letter-spacing: -0.05em;
+      color: var(--text-main);
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 0.75rem;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      background-color: rgba(56, 189, 248, 0.05);
+    }
+
+    .drop-zone svg.icon {
+      width: 48px !important;
+      height: 48px !important;
+      max-width: 48px !important;
+      max-height: 48px !important;
+      stroke: var(--accent);
+      margin: 0 auto 0.75rem auto;
+      display: block;
+    }
+
+    .file-label {
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .divider span {
+      padding: 0 0.75rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .receive-box {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: #0b1120;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      color: var(--text-main);
+      text-align: center;
+      font-size: 1.125rem;
+      font-weight: 600;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #0f172a;
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: #334155;
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    .camera-icon {
+      width: 20px;
+      height: 20px;
+      stroke: var(--accent);
+    }
+
+    .scanner-wrapper {
+      margin-top: 1rem;
+      background: #0b1120;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    #qr-reader {
+      width: 100%;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .scanner-controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .btn-switch {
+      flex: 1;
+      background: #3b82f6;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+    }
+
+    .btn-switch:hover {
+      background: #2563eb;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      background: #ef4444;
+      color: white;
+      padding: 0.75rem;
+    }
+
+    .btn-cancel:hover {
+      background: #dc2626;
+    }
+
+    .pairing-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .room-code-display {
+      text-align: center;
+    }
+
+    .room-code-display label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .room-code-display span {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: 0.25em;
+      color: var(--accent);
+    }
+
+    .qrcode-wrapper {
+      background: white;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+    }
+
+    .file-details {
+      display: flex;
+      justify-content: space-between;
+      background: #0b1120;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+    }
+
+    .file-details .name {
+      max-width: 70%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-details .size {
+      color: var(--text-muted);
+    }
+
+    .instruction {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 12px;
+      background: #0b1120;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 1.5rem 0 0.75rem;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.1s linear;
+    }
+
+    .metrics {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .status-msg {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--accent);
+    }
+  </style>
+
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Direct Beam</h1>
+      <p class="subtitle">Zero-cloud, high-throughput WebRTC direct disk-to-disk transfer</p>
+    </header>
+
+    <main class="card">
+      <section id="selection-view" class="view">
+        <div id="drop-zone" class="drop-zone">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <p class="primary-text">Drag & drop large files (1GB - 50GB+)</p>
+          <p class="secondary-text">or <label for="file-input" class="file-label">browse file</label></p>
+          <input type="file" id="file-input" style="display: none;" />
+        </div>
+
+        <div class="divider"><span>OR RECEIVE</span></div>
+
+        <div class="receive-box">
+          <input type="text" id="manual-code-input" placeholder="Enter 6-digit code" maxlength="6" inputmode="numeric">
+          <button id="join-btn" class="btn">Connect</button>
+          <button id="scan-qr-btn" class="btn btn-secondary" title="Scan QR with Camera" type="button">
+            <svg class="camera-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+
+        <div id="scanner-wrapper" class="scanner-wrapper hidden">
+          <div id="qr-reader"></div>
+          <div class="scanner-controls">
+            <button id="flip-camera-btn" class="btn btn-switch" type="button">Flip Camera</button>
+            <button id="close-scanner-btn" class="btn btn-cancel" type="button">Cancel</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="sender-view" class="view hidden">
+        <h2>Ready to Send</h2>
+        <div class="file-details">
+          <span id="sender-file-name" class="name">--</span>
+          <span id="sender-file-size" class="size">--</span>
+        </div>
+
+        <div class="pairing-container">
+          <div class="room-code-display">
+            <label>Share this 6-digit code:</label>
+            <span id="display-code">------</span>
+          </div>
+          <div id="qrcode" class="qrcode-wrapper"></div>
+        </div>
+        <p class="instruction">Keep this tab open. Transfer starts as soon as receiver connects.</p>
+      </section>
+
+      <section id="transfer-view" class="view hidden">
+        <h2 id="transfer-status-text">Transferring...</h2>
+        <div class="file-details">
+          <span id="transfer-file-name" class="name">--</span>
+          <span id="transfer-file-size" class="size">--</span>
+        </div>
+
+        <div class="progress-bar-container">
+          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+
+        <div class="metrics">
+          <span id="percentage-text">0%</span>
+          <span id="speed-text">0.00 MB/s</span>
+        </div>
+
+        <p id="system-status" class="status-msg">Establishing direct WebRTC peer connection...</p>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
