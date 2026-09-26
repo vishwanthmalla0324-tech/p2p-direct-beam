@@ -1,3 +1,4 @@
+// Render-resilient Socket connection
 const socket = io({
   reconnection: true,
   reconnectionAttempts: 10,
@@ -5,12 +6,26 @@ const socket = io({
   transports: ['websocket', 'polling']
 });
 
-// WebRTC & Backpressure Constants
-const CHUNK_SIZE = 64 * 1024; // 64 KB per network packet
-const BUFFER_THRESHOLD = 8 * 1024 * 1024; // 8 MB backpressure threshold
+// Watchdog for Render Free Tier Cold Starts
+let coldStartTimer = setTimeout(() => {
+  const banner = document.getElementById('cold-start-banner');
+  if (banner && !socket.connected) {
+    banner.classList.remove('hidden');
+  }
+}, 3000);
+
+socket.on('connect', () => {
+  clearTimeout(coldStartTimer);
+  const banner = document.getElementById('cold-start-banner');
+  if (banner) banner.classList.add('hidden');
+});
+
+// WebRTC Constants
+const CHUNK_SIZE = 64 * 1024;
+const BUFFER_THRESHOLD = 8 * 1024 * 1024;
 
 // Application State
-let fileQueue = []; // Queue: Array of { id, file, name, size, type }
+let fileQueue = [];
 let currentRoomId = null;
 let isInitiator = false;
 let isTransferring = false;
@@ -29,11 +44,11 @@ let speedSamples = [];
 let totalBatchBytes = 0;
 let totalBatchBytesTransferred = 0;
 
-// Receiver Batch Engine State
+// Receiver Batch State
 let incomingManifest = [];
 let currentReceivingFile = null;
-let receivedFileChunks = []; // In-memory chunks for active file
-let completedFiles = []; // Array of { name, blob, url }
+let receivedFileChunks = [];
+let completedFiles = [];
 
 // Scanner
 let html5QrScanner = null;
@@ -48,7 +63,7 @@ const rtcConfig = {
   ]
 };
 
-// UI Elements
+// UI Bindings
 const selectionView = document.getElementById('selection-view');
 const senderView = document.getElementById('sender-view');
 const transferView = document.getElementById('transfer-view');
@@ -83,8 +98,9 @@ const cancelTransferBtn = document.getElementById('cancel-transfer-btn');
 const downloadZipBtn = document.getElementById('download-zip-btn');
 const individualDownloadsContainer = document.getElementById('individual-downloads-container');
 
+// Navigation Bindings
 const brandHomeLink = document.getElementById('brand-home-link');
-const navBackHomeBtn = document.getElementById('nav-back-home-btn');
+const btnBackHome = document.getElementById('btn-back-home');
 const sendAnotherBtn = document.getElementById('send-another-btn');
 const completeBackHomeBtn = document.getElementById('complete-back-home-btn');
 
@@ -93,11 +109,10 @@ const scannerWrapper = document.getElementById('scanner-wrapper');
 const closeScannerBtn = document.getElementById('close-scanner-btn');
 const flipCameraBtn = document.getElementById('flip-camera-btn');
 
-// ================= FILE TYPE ICON DETECTOR =================
+// ================= UTILITIES =================
 
-function getFileIcon(fileName, mimeType) {
+function getFileIcon(fileName, mimeType = '') {
   const ext = fileName.split('.').pop().toLowerCase();
-
   if (['mp4', 'mkv', 'avi', 'mov', 'webm'].includes(ext) || mimeType.startsWith('video/')) {
     return '<i data-lucide="video" class="w-4 h-4 text-purple-400"></i>';
   }
@@ -138,10 +153,10 @@ function showToast(message) {
 }
 
 function updateNavState(activeViewId) {
-  navBackHomeBtn.classList.toggle('hidden', activeViewId === 'selection-view');
+  btnBackHome.classList.toggle('hidden', activeViewId === 'selection-view');
 }
 
-// ================= QUEUE MANAGEMENT (SENDER) =================
+// ================= SENDER QUEUE =================
 
 dropZone.addEventListener('click', (e) => {
   if (e.target !== fileInput) fileInput.click();
@@ -190,7 +205,6 @@ function appendFilesToQueue(newFiles) {
     currentRoomId = Math.floor(100000 + Math.random() * 900000).toString();
     displayCode.textContent = currentRoomId;
 
-    // Render Canvas QR Code
     qrcodeBox.innerHTML = '';
     const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
     new QRCode(qrcodeBox, {
@@ -256,7 +270,6 @@ function renderQueueUI() {
   lucide.createIcons();
 }
 
-// Copy URL Action
 copyLinkBtn.addEventListener('click', () => {
   const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
   navigator.clipboard.writeText(shareUrl).then(() => {
@@ -270,7 +283,7 @@ toggleQrBtn.addEventListener('click', () => {
   qrModalContainer.classList.toggle('hidden');
 });
 
-// ================= QR SCANNER & MANUAL CONNECT =================
+// ================= QR SCANNER =================
 
 scanQrBtn.addEventListener('click', async () => {
   scannerWrapper.classList.remove('hidden');
@@ -357,12 +370,11 @@ function initiateReceiver(roomId) {
   updateNavState('transfer-view');
 
   document.getElementById('transfer-role-text').textContent = 'Connecting to Sender...';
-  overallBatchSubtitle.textContent = 'Waiting for sender manifest handshake...';
+  overallBatchSubtitle.textContent = 'Awaiting batch handshake...';
 
   socket.emit('join-room', currentRoomId);
 }
 
-// Auto-Join by ?room= URL Parameter
 window.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const room = urlParams.get('room');
@@ -372,7 +384,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ================= WEBRTC PEER CONNECTION =================
+// ================= WEBRTC HANDSHAKE =================
 
 socket.on('peer-joined', async (peerId) => {
   remotePeerId = peerId;
@@ -436,11 +448,11 @@ socket.on('ice-candidate', async ({ candidate }) => {
   }
 });
 
-// ================= SENDER: MULTI-FILE STREAMING ENGINE =================
+// ================= SENDER ENGINE =================
 
 startBeamBtn.addEventListener('click', () => {
   if (!dataChannel || dataChannel.readyState !== 'open') {
-    showToast('Data channel is establishing...');
+    showToast('Direct channel connecting...');
     return;
   }
   startBroadcastingBatch();
@@ -458,7 +470,6 @@ async function startBroadcastingBatch() {
   totalBatchBytes = fileQueue.reduce((acc, f) => acc + f.size, 0);
   totalBatchBytesTransferred = 0;
 
-  // Build manifest representation
   const manifest = fileQueue.map(item => ({
     id: item.id,
     name: item.name,
@@ -468,7 +479,6 @@ async function startBroadcastingBatch() {
 
   renderManifestUI(manifest);
 
-  // Send Metadata Manifest Handshake
   dataChannel.send(JSON.stringify({
     type: 'manifest',
     totalFiles: fileQueue.length,
@@ -476,7 +486,6 @@ async function startBroadcastingBatch() {
     files: manifest
   }));
 
-  // Sequentially stream each file in the queue
   for (let i = 0; i < fileQueue.length; i++) {
     if (abortRequested || !isTransferring) break;
     const item = fileQueue[i];
@@ -515,7 +524,6 @@ function streamSingleFile(item) {
         return;
       }
 
-      // Check Backpressure
       if (dataChannel.bufferedAmount > BUFFER_THRESHOLD) {
         dataChannel.onbufferedamountlow = () => {
           dataChannel.onbufferedamountlow = null;
@@ -540,13 +548,12 @@ function streamSingleFile(item) {
           totalBatchBytesTransferred += bytesRead;
           bytesTransferredLastInterval += bytesRead;
 
-          updateProgressTelemetry(totalBatchBytesTransferred, totalBatchBytes, item.id, offset, total);
+          updateProgressTelemetry(totalBatchBytesTransferred, totalBatchBytes);
           readNextSlice();
         };
 
         reader.readAsArrayBuffer(slice);
       } else {
-        // Send delimiter for this file
         dataChannel.send(JSON.stringify({ type: 'file-end', id: item.id }));
         resolve();
       }
@@ -556,7 +563,7 @@ function streamSingleFile(item) {
   });
 }
 
-// ================= RECEIVER: MULTI-FILE DESERIALIZER =================
+// ================= RECEIVER ENGINE =================
 
 function setupReceiverDataChannel() {
   dataChannel.onmessage = async (event) => {
@@ -581,12 +588,11 @@ function setupReceiverDataChannel() {
         updateManifestRowStatus(msg.id, 'streaming');
       }
       else if (msg.type === 'file-end') {
-        // Finalize completed file
         const blob = new Blob(receivedFileChunks, { type: currentReceivingFile.type });
         const url = URL.createObjectURL(blob);
         completedFiles.push({ name: currentReceivingFile.name, blob, url });
 
-        // Auto trigger individual download fallback
+        // Auto trigger file save
         const a = document.createElement('a');
         a.href = url;
         a.download = currentReceivingFile.name;
@@ -607,7 +613,7 @@ function setupReceiverDataChannel() {
       return;
     }
 
-    // Binary Chunk received for current file
+    // Binary Chunk
     const chunk = event.data;
     receivedFileChunks.push(chunk);
 
@@ -695,8 +701,6 @@ function updateManifestRowStatus(fileId, status) {
   }
 }
 
-// ================= COMPLETION & ZIP DOWNLOAD =================
-
 function renderCompletedReceiverDownloads() {
   if (completedFiles.length === 0) return;
 
@@ -762,7 +766,7 @@ function finishTransferSuccess(fileCount) {
   lucide.createIcons();
 }
 
-// ================= RESET STATE =================
+// ================= RESET STATE & ROOM CLEANUP =================
 
 function resetApplicationState(confirmIfBusy = false) {
   if (confirmIfBusy && isTransferring) {
@@ -814,8 +818,9 @@ function resetApplicationState(confirmIfBusy = false) {
   lucide.createIcons();
 }
 
+// Event Bindings
+btnBackHome.addEventListener('click', () => resetApplicationState(true));
 brandHomeLink.addEventListener('click', () => resetApplicationState(true));
-navBackHomeBtn.addEventListener('click', () => resetApplicationState(true));
 cancelTransferBtn.addEventListener('click', () => resetApplicationState(true));
 completeBackHomeBtn.addEventListener('click', () => resetApplicationState(false));
 
