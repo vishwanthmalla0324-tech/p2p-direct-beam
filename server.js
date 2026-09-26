@@ -6,6 +6,7 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
+// Keep-alive heartbeat: pingInterval 20s prevents Render's 55s idle proxy disconnect
 const io = new Server(server, {
   cors: { origin: '*' },
   pingInterval: 20000,
@@ -15,6 +16,7 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Lightweight health check endpoint for uptime monitors
 app.get('/healthz', (req, res) => {
   res.status(200).send('OK');
 });
@@ -35,8 +37,12 @@ io.on('connection', (socket) => {
     const clients = rooms.get(roomId);
     clients.add(socket.id);
 
-    // Notify existing peers that a new device joined
+    // Notify other peers in this room
     socket.to(roomId).emit('peer-joined', socket.id);
+
+    if (clients.size > 1) {
+      socket.emit('ready');
+    }
   });
 
   socket.on('leave-room', (roomId) => {
@@ -54,7 +60,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Targeted signaling to individual peers
   socket.on('offer', ({ target, sdp }) => {
     io.to(target).emit('offer', { sender: socket.id, sdp });
   });
@@ -82,5 +87,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Direct Beam multi-peer signaling running on port ${PORT}`);
+  console.log(`Direct Beam server running on port ${PORT}`);
 });

@@ -40,7 +40,7 @@
       border-radius: 4px;
     }
 
-    /* 1. ADAPTED UIVERSE COMPONENT: RADAR / SIGNAL LOADER */
+    /* 1. RADAR / SIGNAL LOADER */
     .radar-loader {
       position: relative;
       width: 38px;
@@ -90,7 +90,7 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* 2. ADAPTED UIVERSE COMPONENT: RESPONSIVE NEON BORDER-BEAM CARD */
+    /* 2. RESPONSIVE NEON BORDER-BEAM CARD */
     .neon-card {
       position: relative;
       background-color: #030712;
@@ -123,7 +123,7 @@
       opacity: 0.55;
     }
 
-    /* 3. ADAPTED UIVERSE COMPONENT: DANGER LIGHT-SWEEP CANCEL BUTTON */
+    /* 3. DANGER LIGHT-SWEEP CANCEL BUTTON */
     .btn-cancel-sweep {
       position: relative;
       padding: 12px 24px;
@@ -188,7 +188,7 @@
   <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 text-center relative">
     <div class="flex items-center justify-between mb-4">
       
-      <!-- 4. ADAPTED UIVERSE COMPONENT: EXPANDING "BACK TO HOME" BUTTON -->
+      <!-- EXPANDING "BACK TO HOME" BUTTON -->
       <button id="btn-back-home" type="button" class="hidden bg-slate-900 border border-slate-800 text-center w-40 rounded-xl h-10 relative text-slate-200 text-xs font-semibold group transition-all hover:border-slate-700 active:scale-95 shadow-md">
         <div class="bg-cyan-500 rounded-lg h-8 w-8 flex items-center justify-center absolute left-1 top-[3px] group-hover:w-[150px] z-10 duration-300 transition-all shadow-md shadow-cyan-500/30">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" height="15px" width="15px" class="fill-slate-950">
@@ -228,7 +228,7 @@
     </div>
   </header>
 
-  <!-- Workstation Container with Adapted Responsive Neon Card -->
+  <!-- Workstation Container with Responsive Neon Card -->
   <main class="w-full max-w-xl mx-auto px-4 flex-1 flex flex-col justify-center py-6">
     <div class="neon-card w-full shadow-2xl backdrop-blur-xl relative">
 
@@ -327,7 +327,7 @@
         <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 space-y-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <!-- Integrated Radar Loader Next to Header -->
+              <!-- Inline Radar Loader -->
               <div class="radar-loader">
                 <span></span>
               </div>
@@ -361,7 +361,7 @@
           <ul id="transfer-manifest-list" class="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pr-1 text-xs"></ul>
         </div>
 
-        <!-- Integrated Danger Light-Sweep Cancel Button -->
+        <!-- Danger Light-Sweep Cancel Button -->
         <button id="cancel-transfer-btn" class="btn-cancel-sweep">
           Cancel Transfer
         </button>
@@ -397,14 +397,98 @@
     </div>
   </main>
 
-  <footer class="w-full max-w-4xl mx-auto py-5 px-4 flex items-center justify-between text-xs text-slate-500 border-t border-slate-900">
-    <div class="flex items-center gap-2">
-      <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-500"></i>
-      <span>Sequential Multi-File Framing Protocol</span>
+  <!-- ================= SLEEK SOCIAL DOCK & FOOTER ================= -->
+  <footer class="w-full max-w-4xl mx-auto py-8 px-4 flex flex-col items-center gap-5 border-t border-slate-900/80 text-xs text-slate-500">
+    
+    <!-- Interactive Frosted-Glass Social Dock -->
+    <div class="relative group/dock flex items-center gap-2 sm:gap-3 bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 shadow-2xl">
+      
+      <!-- Label (Desktop view) -->
+      <span class="hidden sm:inline-block text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-1 pr-2 border-r border-slate-800/80">
+        Let's Connect
+      </span>
+
+      <!-- GitHub -->
+      <div class="relative group flex items-center justify-center">
+        <a href="https://github.com/vishwanthmalla0324-tech" target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile"
+          class="w-9 h-9 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-400 hover:-translate-y-1 hover:shadow-[0_0_14px_rgba(255,255,255,0.22)] transition-all duration-200 active:scale-95">
+          <i data-lucide="github" class="w-4 h-4"></i>
+        </a>
+        <span class="pointer-events-none absolute -top-8 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-200 bg-slate-950/90 border border-slate-800 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-30">
+          GitHub
+        </span>
+      </div>
+
+      <!-- X (Twitter) -->
+      <div class="relative group flex items-center justify-center">
+        <a href="https://x.com/vishwanth0124?s=11" target="_blank" rel="noopener noreferrer" aria-label="X Profile"
+          class="w-9 h-9 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-cyan-300 hover:border-cyan-400 hover:-translate-y-1 hover:shadow-[0_0_14px_rgba(6,182,212,0.35)] transition-all duration-200 active:scale-95">
+          <i data-lucide="twitter" class="w-4 h-4"></i>
+        </a>
+        <span class="pointer-events-none absolute -top-8 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-200 bg-slate-950/90 border border-slate-800 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-30">
+          X / Twitter
+        </span>
+      </div>
+
+      <!-- Instagram -->
+      <div class="relative group flex items-center justify-center">
+        <a href="https://www.instagram.com/vishwanth___24?stkn=MTF2Mm1jMGE1dTZ6cQ==" target="_blank" rel="noopener noreferrer" aria-label="Instagram Profile"
+          class="w-9 h-9 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-pink-400 hover:border-pink-500 hover:-translate-y-1 hover:shadow-[0_0_14px_rgba(236,72,153,0.35)] transition-all duration-200 active:scale-95">
+          <i data-lucide="instagram" class="w-4 h-4"></i>
+        </a>
+        <span class="pointer-events-none absolute -top-8 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-200 bg-slate-950/90 border border-slate-800 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-30">
+          Instagram
+        </span>
+      </div>
+
+      <!-- WhatsApp Direct Chat -->
+      <div class="relative group flex items-center justify-center">
+        <a href="https://wa.me/918501820073" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp"
+          class="w-9 h-9 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-emerald-400 hover:border-emerald-500 hover:-translate-y-1 hover:shadow-[0_0_14px_rgba(16,185,129,0.35)] transition-all duration-200 active:scale-95">
+          <i data-lucide="message-circle" class="w-4 h-4"></i>
+        </a>
+        <span class="pointer-events-none absolute -top-8 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-200 bg-slate-950/90 border border-slate-800 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-30">
+          WhatsApp
+        </span>
+      </div>
+
+      <div class="h-4 w-[1px] bg-slate-800/80 mx-0.5"></div>
+
+      <!-- Direct Email Client -->
+      <div class="relative group flex items-center justify-center">
+        <a href="mailto:vishwanthmalla0324@gmail.com" aria-label="Send Email"
+          class="w-9 h-9 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-amber-400 hover:border-amber-500 hover:-translate-y-1 hover:shadow-[0_0_14px_rgba(245,158,11,0.35)] transition-all duration-200 active:scale-95">
+          <i data-lucide="mail" class="w-4 h-4"></i>
+        </a>
+        <span class="pointer-events-none absolute -top-8 opacity-0 group-hover:opacity-100 group-hover:-translate-y-1 transition-all duration-200 bg-slate-950/90 border border-slate-800 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-30">
+          Send Email
+        </span>
+      </div>
+
+      <!-- Copy Email Button with Animated Micro-Tooltip -->
+      <div class="relative flex items-center justify-center">
+        <button id="copy-email-dock-btn" type="button" aria-label="Copy Email Address"
+          data-email="vishwanthmalla0324@gmail.com"
+          class="group/copy w-9 h-9 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500 hover:-translate-y-1 hover:shadow-[0_0_14px_rgba(6,182,212,0.35)] transition-all duration-200 active:scale-95">
+          <i data-lucide="copy" class="w-4 h-4 transition-transform group-active/copy:scale-90"></i>
+        </button>
+        <span id="copy-email-tooltip" class="pointer-events-none absolute -top-8 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-slate-950/90 border border-slate-800 text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-30">
+          Copy Email
+        </span>
+      </div>
+
     </div>
-    <a href="https://github.com/vishwanthmalla0324-tech/p2p-direct-beam" target="_blank" rel="noopener noreferrer" class="hover:text-slate-300 flex items-center gap-1 transition">
-      <i data-lucide="github" class="w-3.5 h-3.5"></i> GitHub
-    </a>
+
+    <!-- Secondary Meta Row -->
+    <div class="flex flex-col sm:flex-row items-center justify-between w-full text-[11px] gap-2 text-slate-500">
+      <div class="flex items-center gap-1.5">
+        <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-500"></i>
+        <span>Sequential Multi-File Framing Protocol</span>
+      </div>
+      <div>
+        <span>Direct Beam &copy; 2026 • Built by Vishwanth</span>
+      </div>
+    </div>
   </footer>
 
   <script src="/app.js"></script>

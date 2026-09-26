@@ -109,6 +109,10 @@ const scannerWrapper = document.getElementById('scanner-wrapper');
 const closeScannerBtn = document.getElementById('close-scanner-btn');
 const flipCameraBtn = document.getElementById('flip-camera-btn');
 
+// Social Dock Clipboard Bindings
+const copyEmailDockBtn = document.getElementById('copy-email-dock-btn');
+const copyEmailTooltip = document.getElementById('copy-email-tooltip');
+
 // ================= UTILITIES =================
 
 function getFileIcon(fileName, mimeType = '') {
@@ -592,7 +596,7 @@ function setupReceiverDataChannel() {
         const url = URL.createObjectURL(blob);
         completedFiles.push({ name: currentReceivingFile.name, blob, url });
 
-        // Auto trigger file save
+        // Direct download trigger fallback
         const a = document.createElement('a');
         a.href = url;
         a.download = currentReceivingFile.name;
@@ -828,3 +832,31 @@ sendAnotherBtn.addEventListener('click', () => {
   resetApplicationState(false);
   fileInput.click();
 });
+
+// ================= SOCIAL DOCK: COPY EMAIL HANDLER =================
+if (copyEmailDockBtn) {
+  copyEmailDockBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const emailToCopy = copyEmailDockBtn.getAttribute('data-email') || 'vishwanthmalla0324@gmail.com';
+
+    try {
+      await navigator.clipboard.writeText(emailToCopy);
+      
+      if (copyEmailTooltip) {
+        copyEmailTooltip.textContent = 'Copied!';
+        copyEmailTooltip.classList.remove('opacity-0');
+        copyEmailTooltip.classList.add('opacity-100', 'text-emerald-400', 'border-emerald-500/40');
+
+        setTimeout(() => {
+          copyEmailTooltip.textContent = 'Copy Email';
+          copyEmailTooltip.classList.remove('text-emerald-400', 'border-emerald-500/40');
+          copyEmailTooltip.classList.add('opacity-0');
+        }, 1800);
+      }
+
+      showToast('Email address copied to clipboard');
+    } catch (_) {
+      showToast('Could not copy email');
+    }
+  });
+}
