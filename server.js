@@ -6,7 +6,7 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Keep-alive heartbeat: pingInterval 20s prevents Render's 55s idle proxy disconnect
+// Keep-alive heartbeat: pingInterval 20s stops Render's 55s idle proxy disconnect
 const io = new Server(server, {
   cors: { origin: '*' },
   pingInterval: 20000,
@@ -26,7 +26,7 @@ const activeRooms = new Map();
 io.on('connection', (socket) => {
   let joinedRoomId = null;
 
-  // 1. Host creates a persistent file room
+  // Host registers a persistent room
   socket.on('create-room', (roomId) => {
     joinedRoomId = roomId;
     socket.join(roomId);
@@ -34,7 +34,7 @@ io.on('connection', (socket) => {
     socket.emit('room-created', roomId);
   });
 
-  // 2. Receiver joins an existing room
+  // Receiver joins an existing room
   socket.on('join-room', (roomId) => {
     joinedRoomId = roomId;
     const room = activeRooms.get(roomId);
@@ -47,12 +47,12 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     room.receivers.add(socket.id);
 
-    // Notify the host that a new receiver wants to pull files
+    // Notify the host that a new receiver is requesting an independent pipe
     io.to(room.hostId).emit('receiver-joined', { receiverId: socket.id });
     socket.emit('joined-successfully', { hostId: room.hostId });
   });
 
-  // 3. Direct signaling routing between host and individual receivers
+  // Targeted point-to-point signaling
   socket.on('signal-offer', ({ target, sdp }) => {
     io.to(target).emit('signal-offer', { sender: socket.id, sdp });
   });
@@ -65,7 +65,7 @@ io.on('connection', (socket) => {
     io.to(target).emit('signal-ice', { sender: socket.id, candidate });
   });
 
-  // 4. Host leaves or closes tab -> tear down the room
+  // Explicit host teardown
   socket.on('destroy-room', (roomId) => {
     if (activeRooms.has(roomId)) {
       const room = activeRooms.get(roomId);
@@ -80,12 +80,12 @@ io.on('connection', (socket) => {
     if (joinedRoomId && activeRooms.has(joinedRoomId)) {
       const room = activeRooms.get(joinedRoomId);
 
-      // If the host drops, close the session for all receivers
+      // If the host drops, teardown the session for all connected receivers
       if (room.hostId === socket.id) {
         socket.to(joinedRoomId).emit('host-offline');
         activeRooms.delete(joinedRoomId);
       } else {
-        // If a receiver drops, inform the host to clean up only that peer
+        // If a single receiver leaves, only clean up their instance
         room.receivers.delete(socket.id);
         io.to(room.hostId).emit('receiver-disconnected', { receiverId: socket.id });
       }
@@ -95,5 +95,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Direct Beam P2P Host Server running on port ${PORT}`);
+  console.log(`Direct Beam persistent signaling server running on port ${PORT}`);
 });

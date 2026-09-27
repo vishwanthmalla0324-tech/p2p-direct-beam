@@ -19,18 +19,18 @@ socket.on('connect', () => {
 });
 
 // High-Throughput Constants
-const CHUNK_SIZE = 64 * 1024; // 64 KB slices
-const BUFFER_THRESHOLD = 4 * 1024 * 1024; // 4 MB backpressure threshold per peer
+const CHUNK_SIZE = 64 * 1024;
+const BUFFER_THRESHOLD = 4 * 1024 * 1024;
 
-// Application Role & State
+// Application State
 let isHost = false;
 let currentRoomId = null;
 let fileQueue = [];
 
-// SENDER STATE: Map<receiverId, { pc, dc, bytesSent, progress, isStreaming }>
+// SENDER: Map<receiverId, { pc, dc, bytesSent, progress, isStreaming }>
 const receiverPeers = new Map();
 
-// RECEIVER STATE: Single peer connection pulling from persistent sender
+// RECEIVER: Single peer connection pulling from persistent host
 let receiverPC = null;
 let receiverDC = null;
 let incomingManifest = [];
@@ -38,7 +38,7 @@ let currentReceivingFile = null;
 let receivedFileChunks = [];
 let completedFiles = [];
 
-// Receiver Metrics
+// Metrics
 let bytesTransferredLastInterval = 0;
 let lastSpeedCalcTime = Date.now();
 const SPEED_WINDOW_SIZE = 5;
@@ -91,9 +91,9 @@ const receiverCompleteCard = document.getElementById('receiver-complete-card');
 const downloadZipBtn = document.getElementById('download-zip-btn');
 const cancelReceiverBtn = document.getElementById('cancel-receiver-btn');
 
-// Navigation & Scanner
+// Navigation & Brand
 const brandHomeLink = document.getElementById('brand-home-link');
-const btnBackHome = document.getElementById('btn-back-home');
+const navBeamBtn = document.getElementById('nav-beam-btn');
 const scanQrBtn = document.getElementById('scan-qr-btn');
 const scannerWrapper = document.getElementById('scanner-wrapper');
 const closeScannerBtn = document.getElementById('close-scanner-btn');
@@ -103,14 +103,25 @@ const flipCameraBtn = document.getElementById('flip-camera-btn');
 const copyEmailDockBtn = document.getElementById('copy-email-dock-btn');
 const copyEmailTooltip = document.getElementById('copy-email-tooltip');
 
-// Founder Modal Controls
+// Modals
 const founderModal = document.getElementById('founder-modal');
 const founderModalContent = document.getElementById('founder-modal-content');
 const founderModalBackdrop = document.getElementById('founder-modal-backdrop');
 const openFounderModalBtn = document.getElementById('open-founder-modal-btn');
+const navFounderBtn = document.getElementById('nav-founder-btn');
 const closeFounderModalBtn = document.getElementById('close-founder-modal-btn');
 const modalCopyEmailBtn = document.getElementById('modal-copy-email-btn');
 const modalEmailTooltip = document.getElementById('modal-email-tooltip');
+
+const faqModal = document.getElementById('faq-modal');
+const faqModalBackdrop = document.getElementById('faq-modal-backdrop');
+const navFaqBtn = document.getElementById('nav-faq-btn');
+const closeFaqModalBtn = document.getElementById('close-faq-modal-btn');
+
+const securityModal = document.getElementById('security-modal');
+const securityModalBackdrop = document.getElementById('security-modal-backdrop');
+const navSecurityBtn = document.getElementById('nav-security-btn');
+const closeSecurityModalBtn = document.getElementById('close-security-modal-btn');
 
 // ================= UTILITIES =================
 
@@ -214,7 +225,6 @@ function initiateReceiver(roomId) {
   selectionView.classList.add('hidden');
   senderView.classList.add('hidden');
   receiverView.classList.remove('hidden');
-  btnBackHome.classList.remove('hidden');
 
   receiverBatchSubtitle.textContent = 'Connecting to sender host...';
   socket.emit('join-room', currentRoomId);
@@ -265,6 +275,7 @@ function handleHostFiles(files) {
 
   displayCode.textContent = currentRoomId;
 
+  // Render QR Code
   qrcodeBox.innerHTML = '';
   const shareUrl = `${window.location.origin}/#${currentRoomId}`;
   new QRCode(qrcodeBox, {
@@ -275,6 +286,8 @@ function handleHostFiles(files) {
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.M
   });
+
+  setupSocialShareButtons(shareUrl);
 
   const totalBytes = fileQueue.reduce((acc, f) => acc + f.size, 0);
   queueSummaryCount.textContent = `${fileQueue.length} file${fileQueue.length === 1 ? '' : 's'}`;
@@ -293,10 +306,31 @@ function handleHostFiles(files) {
   selectionView.classList.add('hidden');
   receiverView.classList.add('hidden');
   senderView.classList.remove('hidden');
-  btnBackHome.classList.remove('hidden');
 
   socket.emit('create-room', currentRoomId);
   lucide.createIcons();
+}
+
+function setupSocialShareButtons(shareUrl) {
+  const encUrl = encodeURIComponent(shareUrl);
+  const textMsg = encodeURIComponent(`Direct Beam P2P: Download my files directly: ${shareUrl}`);
+
+  document.getElementById('share-wa').onclick = () => window.open(`https://api.whatsapp.com/send?text=${textMsg}`, '_blank');
+  document.getElementById('share-fb').onclick = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encUrl}`, '_blank');
+  document.getElementById('share-x').onclick = () => window.open(`https://twitter.com/intent/tweet?text=${textMsg}`, '_blank');
+  document.getElementById('share-li').onclick = () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encUrl}`, '_blank');
+  document.getElementById('share-gmail').onclick = () => window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=Direct+Beam+Files&body=${textMsg}`, '_blank');
+  document.getElementById('share-email').onclick = () => window.open(`mailto:?subject=Direct Beam File Share&body=${textMsg}`, '_self');
+  document.getElementById('share-native').onclick = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Direct Beam P2P', text: 'Download files directly peer-to-peer:', url: shareUrl });
+      } catch (_) {}
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      showToast('Link copied to clipboard');
+    }
+  };
 }
 
 toggleManifestBtn.addEventListener('click', () => {
@@ -386,7 +420,7 @@ function stopScanner() {
   }
 }
 
-// ================= MULTI-PEER ASYNCHRONOUS WEBRTC ROUTING =================
+// ================= MULTI-PEER WEBRTC ENGINE =================
 
 socket.on('receiver-joined', async ({ receiverId }) => {
   if (!isHost) return;
@@ -396,14 +430,7 @@ socket.on('receiver-joined', async ({ receiverId }) => {
   dc.binaryType = 'arraybuffer';
   dc.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
 
-  receiverPeers.set(receiverId, {
-    pc,
-    dc,
-    bytesSent: 0,
-    progress: 0,
-    isStreaming: false
-  });
-
+  receiverPeers.set(receiverId, { pc, dc, bytesSent: 0, progress: 0, isStreaming: false });
   updateSenderActivityFeed();
 
   pc.onicecandidate = (event) => {
@@ -467,9 +494,7 @@ socket.on('signal-ice', async ({ sender, candidate }) => {
 });
 
 socket.on('receiver-disconnected', ({ receiverId }) => {
-  if (isHost) {
-    cleanupReceiverPeer(receiverId);
-  }
+  if (isHost) cleanupReceiverPeer(receiverId);
 });
 
 socket.on('host-offline', () => {
@@ -496,7 +521,7 @@ function cleanupReceiverPeer(receiverId) {
 
 function updateSenderActivityFeed() {
   const count = receiverPeers.size;
-  connectedCountPill.textContent = `${count} device${count === 1 ? '' : 's'} connected`;
+  connectedCountPill.textContent = `${count} devices connected`;
 
   if (count === 0) {
     receiversActivityFeed.innerHTML = `<p class="text-slate-500 italic text-[11px]">Waiting for peers to open the link...</p>`;
@@ -523,7 +548,7 @@ function updateSenderActivityFeed() {
   receiversActivityFeed.innerHTML = html;
 }
 
-// ================= SENDER ISOLATED WORKER (READS FROM BYTE 0 PER PEER) =================
+// ================= ISOLATED SENDER STREAM WORKER =================
 
 async function startIsolatedStreamToReceiver(receiverId) {
   if (!receiverPeers.has(receiverId) || fileQueue.length === 0) return;
@@ -818,20 +843,9 @@ function resetStateAndGoHome() {
   receiverView.classList.add('hidden');
   senderView.classList.add('hidden');
   selectionView.classList.remove('hidden');
-  btnBackHome.classList.add('hidden');
 
   lucide.createIcons();
 }
-
-btnBackHome.addEventListener('click', () => {
-  if (isHost) {
-    if (confirm('Closing home stops file sharing for all devices. Continue?')) {
-      resetStateAndGoHome();
-    }
-  } else {
-    resetStateAndGoHome();
-  }
-});
 
 brandHomeLink.addEventListener('click', () => {
   if (isHost) {
@@ -841,9 +855,64 @@ brandHomeLink.addEventListener('click', () => {
   }
 });
 
+navBeamBtn.addEventListener('click', () => {
+  if (isHost) {
+    senderView.classList.remove('hidden');
+    selectionView.classList.add('hidden');
+    receiverView.classList.add('hidden');
+  } else {
+    resetStateAndGoHome();
+  }
+});
+
 cancelReceiverBtn.addEventListener('click', resetStateAndGoHome);
 
+// ================= MODAL CONTROLLERS =================
+
+function setupModal(modal, backdrop, openBtn, closeBtn) {
+  function open() {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    const content = modal.querySelector('div[id$="-content"]') || modal.querySelector('.relative');
+    if (content) {
+      requestAnimationFrame(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+      });
+    }
+    lucide.createIcons();
+  }
+
+  function close() {
+    const content = modal.querySelector('div[id$="-content"]') || modal.querySelector('.relative');
+    if (content) {
+      content.classList.remove('scale-100', 'opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+    }
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }, 200);
+  }
+
+  if (openBtn) openBtn.addEventListener('click', open);
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  if (backdrop) backdrop.addEventListener('click', close);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+      close();
+    }
+  });
+}
+
+setupModal(founderModal, founderModalBackdrop, openFounderModalBtn, closeFounderModalBtn);
+setupModal(founderModal, founderModalBackdrop, navFounderBtn, closeFounderModalBtn);
+setupModal(faqModal, faqModalBackdrop, navFaqBtn, closeFaqModalBtn);
+setupModal(securityModal, securityModalBackdrop, navSecurityBtn, closeSecurityModalBtn);
+
 // ================= SOCIAL DOCK CLIPBOARD =================
+
 if (copyEmailDockBtn) {
   copyEmailDockBtn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -868,40 +937,6 @@ if (copyEmailDockBtn) {
   });
 }
 
-// ================= FOUNDER PROFILE MODAL =================
-function openFounderModal() {
-  if (!founderModal) return;
-  founderModal.classList.remove('hidden');
-  founderModal.classList.add('flex');
-
-  requestAnimationFrame(() => {
-    founderModalContent.classList.remove('scale-95', 'opacity-0');
-    founderModalContent.classList.add('scale-100', 'opacity-100');
-  });
-  lucide.createIcons();
-}
-
-function closeFounderModal() {
-  if (!founderModal) return;
-  founderModalContent.classList.remove('scale-100', 'opacity-100');
-  founderModalContent.classList.add('scale-95', 'opacity-0');
-
-  setTimeout(() => {
-    founderModal.classList.add('hidden');
-    founderModal.classList.remove('flex');
-  }, 200);
-}
-
-if (openFounderModalBtn) openFounderModalBtn.addEventListener('click', openFounderModal);
-if (closeFounderModalBtn) closeFounderModalBtn.addEventListener('click', closeFounderModal);
-if (founderModalBackdrop) founderModalBackdrop.addEventListener('click', closeFounderModal);
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && founderModal && !founderModal.classList.contains('hidden')) {
-    closeFounderModal();
-  }
-});
-
 if (modalCopyEmailBtn) {
   modalCopyEmailBtn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -909,19 +944,16 @@ if (modalCopyEmailBtn) {
 
     try {
       await navigator.clipboard.writeText(email);
-
       if (modalEmailTooltip) {
         modalEmailTooltip.textContent = 'Copied!';
         modalEmailTooltip.classList.remove('opacity-0');
         modalEmailTooltip.classList.add('opacity-100', 'text-emerald-400', 'border-emerald-500/40');
-
         setTimeout(() => {
           modalEmailTooltip.textContent = 'Copy Email';
           modalEmailTooltip.classList.remove('text-emerald-400', 'border-emerald-500/40');
           modalEmailTooltip.classList.add('opacity-0');
         }, 1800);
       }
-
       showToast('Email address copied to clipboard');
     } catch (_) {
       showToast('Could not copy email');
