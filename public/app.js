@@ -21,8 +21,8 @@ socket.on('connect', () => {
 });
 
 // WebRTC Constants
-const CHUNK_SIZE = 64 * 1024;
-const BUFFER_THRESHOLD = 8 * 1024 * 1024;
+const CHUNK_SIZE = 64 * 1024; // 64 KB slices
+const BUFFER_THRESHOLD = 8 * 1024 * 1024; // 8 MB backpressure threshold
 
 // Application State
 let fileQueue = [];
@@ -31,12 +31,12 @@ let isInitiator = false;
 let isTransferring = false;
 let abortRequested = false;
 
-// Peer Connection
+// WebRTC State
 let peerConnection = null;
 let dataChannel = null;
 let remotePeerId = null;
 
-// Metrics
+// Telemetry & Metrics
 let bytesTransferredLastInterval = 0;
 let lastSpeedCalcTime = Date.now();
 const SPEED_WINDOW_SIZE = 5;
@@ -44,7 +44,7 @@ let speedSamples = [];
 let totalBatchBytes = 0;
 let totalBatchBytesTransferred = 0;
 
-// Receiver Batch State
+// Receiver State
 let incomingManifest = [];
 let currentReceivingFile = null;
 let receivedFileChunks = [];
@@ -109,11 +109,11 @@ const scannerWrapper = document.getElementById('scanner-wrapper');
 const closeScannerBtn = document.getElementById('close-scanner-btn');
 const flipCameraBtn = document.getElementById('flip-camera-btn');
 
-// Social Dock Clipboard Bindings
+// Social Dock
 const copyEmailDockBtn = document.getElementById('copy-email-dock-btn');
 const copyEmailTooltip = document.getElementById('copy-email-tooltip');
 
-// ================= UTILITIES =================
+// ================= UTILITIES & FEEDBACK =================
 
 function getFileIcon(fileName, mimeType = '') {
   const ext = fileName.split('.').pop().toLowerCase();
@@ -160,7 +160,73 @@ function updateNavState(activeViewId) {
   btnBackHome.classList.toggle('hidden', activeViewId === 'selection-view');
 }
 
-// ================= SENDER QUEUE =================
+// Shake animation for error validation
+function triggerInputError(message) {
+  showToast(message);
+  manualCodeInput.classList.add('border-rose-500', 'animate-bounce');
+  setTimeout(() => {
+    manualCodeInput.classList.remove('border-rose-500', 'animate-bounce');
+    manualCodeInput.value = '';
+    manualCodeInput.focus();
+  }, 900);
+}
+
+// ================= ZERO-CLICK RECEIVER DETECTION =================
+
+// 1. Monitor 6-digit code input: Automatically submit on 6th character
+manualCodeInput.addEventListener('input', (e) => {
+  const cleanCode = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+  e.target.value = cleanCode;
+
+  if (cleanCode.length === 6) {
+    initiateReceiver(cleanCode);
+  }
+});
+
+joinBtn.addEventListener('click', () => {
+  const code = manualCodeInput.value.trim();
+  if (code.length === 6) {
+    initiateReceiver(code);
+  } else {
+    triggerInputError('Enter a valid 6-digit code');
+  }
+});
+
+// 2. Parse URL hash (#XXXXXX) or query params (?room=XXXXXX) on load
+window.addEventListener('DOMContentLoaded', () => {
+  // Check hash: https://site.com/#123456
+  const hash = window.location.hash.replace('#', '').trim();
+  if (hash && hash.length === 6 && /^\d+$/.test(hash)) {
+    manualCodeInput.value = hash;
+    initiateReceiver(hash);
+    return;
+  }
+
+  // Check query parameter fallback: https://site.com/?room=123456
+  const urlParams = new URLSearchParams(window.location.search);
+  const room = urlParams.get('room');
+  if (room && room.length === 6 && /^\d+$/.test(room)) {
+    manualCodeInput.value = room;
+    initiateReceiver(room);
+  }
+});
+
+function initiateReceiver(roomId) {
+  currentRoomId = roomId;
+  isInitiator = false;
+  abortRequested = false;
+
+  selectionView.classList.add('hidden');
+  transferView.classList.remove('hidden');
+  updateNavState('transfer-view');
+
+  document.getElementById('transfer-role-text').textContent = 'Connecting to Sender...';
+  overallBatchSubtitle.textContent = 'Room joined — waiting for automatic P2P stream...';
+
+  socket.emit('join-room', currentRoomId);
+}
+
+// ================= SENDER QUEUE SETUP =================
 
 dropZone.addEventListener('click', (e) => {
   if (e.target !== fileInput) fileInput.click();
@@ -210,7 +276,8 @@ function appendFilesToQueue(newFiles) {
     displayCode.textContent = currentRoomId;
 
     qrcodeBox.innerHTML = '';
-    const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
+    // Share URL points directly to hash route for zero-click receiver initiation
+    const shareUrl = `${window.location.origin}/#${currentRoomId}`;
     new QRCode(qrcodeBox, {
       text: shareUrl,
       width: 140,
@@ -271,13 +338,17 @@ function renderQueueUI() {
     });
   });
 
+  if (startBeamBtn) {
+    startBeamBtn.textContent = 'Auto-beam ready: waiting for peer...';
+  }
+
   lucide.createIcons();
 }
 
 copyLinkBtn.addEventListener('click', () => {
-  const shareUrl = `${window.location.origin}/?room=${currentRoomId}`;
+  const shareUrl = `${window.location.origin}/#${currentRoomId}`;
   navigator.clipboard.writeText(shareUrl).then(() => {
-    showToast('Share link copied to clipboard');
+    showToast('Direct room URL copied to clipboard');
   }).catch(() => {
     showToast('Failed to copy link');
   });
@@ -331,9 +402,9 @@ async function startActiveCamera() {
 
       if (code.length === 6) {
         manualCodeInput.value = code;
-        initiateReceiver(code);
+        initiateReceiver(code); // Zero-click auto join after scan
       } else {
-        showToast('Invalid QR Code');
+        triggerInputError('Scanned QR does not contain a valid room code');
       }
     },
     () => {}
@@ -355,47 +426,12 @@ function stopScanner() {
   }
 }
 
-joinBtn.addEventListener('click', () => {
-  const code = manualCodeInput.value.trim();
-  if (code.length === 6) {
-    stopScanner();
-    initiateReceiver(code);
-  } else {
-    showToast('Please enter a valid 6-digit key');
-  }
-});
-
-function initiateReceiver(roomId) {
-  currentRoomId = roomId;
-  isInitiator = false;
-  abortRequested = false;
-  selectionView.classList.add('hidden');
-  transferView.classList.remove('hidden');
-  updateNavState('transfer-view');
-
-  document.getElementById('transfer-role-text').textContent = 'Connecting to Sender...';
-  overallBatchSubtitle.textContent = 'Awaiting batch handshake...';
-
-  socket.emit('join-room', currentRoomId);
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const room = urlParams.get('room');
-  if (room && room.length === 6) {
-    manualCodeInput.value = room;
-    initiateReceiver(room);
-  }
-});
-
-// ================= WEBRTC HANDSHAKE =================
+// ================= WEBRTC HANDSHAKE & AUTO-STREAM TRIGGER =================
 
 socket.on('peer-joined', async (peerId) => {
   remotePeerId = peerId;
-  senderStatusPill.textContent = 'Peer Connected';
+  senderStatusPill.textContent = 'Peer Connected — Auto-Streaming...';
   senderStatusPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-  startBeamBtn.disabled = false;
-  startBeamBtn.textContent = `Beam ${fileQueue.length} File${fileQueue.length === 1 ? '' : 's'}`;
 
   if (isInitiator) {
     peerConnection = new RTCPeerConnection(rtcConfig);
@@ -407,6 +443,11 @@ socket.on('peer-joined', async (peerId) => {
       if (event.candidate) {
         socket.emit('ice-candidate', { target: peerId, candidate: event.candidate });
       }
+    };
+
+    // ZERO-CLICK AUTO-TRANSMIT AS SOON AS DATA CHANNEL OPENS
+    dataChannel.onopen = () => {
+      startBroadcastingBatchAuto();
     };
 
     const offer = await peerConnection.createOffer();
@@ -452,19 +493,19 @@ socket.on('ice-candidate', async ({ candidate }) => {
   }
 });
 
-// ================= SENDER ENGINE =================
-
-startBeamBtn.addEventListener('click', () => {
-  if (!dataChannel || dataChannel.readyState !== 'open') {
-    showToast('Direct channel connecting...');
-    return;
-  }
-  startBroadcastingBatch();
+socket.on('room-error', (msg) => {
+  triggerInputError(msg || 'Room does not exist or expired');
+  resetApplicationState(false);
 });
 
-async function startBroadcastingBatch() {
+// ================= ZERO-CLICK SENDER AUTO-STREAM =================
+
+async function startBroadcastingBatchAuto() {
+  if (fileQueue.length === 0 || isTransferring) return;
+
   isTransferring = true;
   abortRequested = false;
+
   senderView.classList.add('hidden');
   transferView.classList.remove('hidden');
   updateNavState('transfer-view');
@@ -483,6 +524,7 @@ async function startBroadcastingBatch() {
 
   renderManifestUI(manifest);
 
+  // Send Metadata Handshake immediately
   dataChannel.send(JSON.stringify({
     type: 'manifest',
     totalFiles: fileQueue.length,
@@ -490,6 +532,7 @@ async function startBroadcastingBatch() {
     files: manifest
   }));
 
+  // Auto-stream each file in queue sequentially
   for (let i = 0; i < fileQueue.length; i++) {
     if (abortRequested || !isTransferring) break;
     const item = fileQueue[i];
@@ -528,6 +571,7 @@ function streamSingleFile(item) {
         return;
       }
 
+      // Respect DataChannel backpressure
       if (dataChannel.bufferedAmount > BUFFER_THRESHOLD) {
         dataChannel.onbufferedamountlow = () => {
           dataChannel.onbufferedamountlow = null;
@@ -567,7 +611,7 @@ function streamSingleFile(item) {
   });
 }
 
-// ================= RECEIVER ENGINE =================
+// ================= ZERO-CLICK RECEIVER AUTO-DOWNLOAD =================
 
 function setupReceiverDataChannel() {
   dataChannel.onmessage = async (event) => {
@@ -582,8 +626,8 @@ function setupReceiverDataChannel() {
         totalBatchBytesTransferred = 0;
         completedFiles = [];
 
-        document.getElementById('transfer-role-text').textContent = 'Receiving Batch';
-        overallBatchSubtitle.textContent = `0 of ${incomingManifest.length} files received`;
+        document.getElementById('transfer-role-text').textContent = 'Receiving Auto-Stream';
+        overallBatchSubtitle.textContent = `Peer connected — streaming 0 of ${incomingManifest.length} files`;
         renderManifestUI(incomingManifest);
       }
       else if (msg.type === 'file-start') {
@@ -592,17 +636,19 @@ function setupReceiverDataChannel() {
         updateManifestRowStatus(msg.id, 'streaming');
       }
       else if (msg.type === 'file-end') {
+        // Build file Blob immediately
         const blob = new Blob(receivedFileChunks, { type: currentReceivingFile.type });
         const url = URL.createObjectURL(blob);
         completedFiles.push({ name: currentReceivingFile.name, blob, url });
 
-        // Direct download trigger fallback
+        // AUTOMATIC INSTANT DISK DOWNLOAD TRIGGER (ZERO-CLICK)
         const a = document.createElement('a');
+        a.style.display = 'none';
         a.href = url;
         a.download = currentReceivingFile.name;
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        setTimeout(() => document.body.removeChild(a), 500);
 
         updateManifestRowStatus(currentReceivingFile.id, 'complete');
         receivedFileChunks = [];
@@ -617,7 +663,7 @@ function setupReceiverDataChannel() {
       return;
     }
 
-    // Binary Chunk
+    // Binary Chunk received
     const chunk = event.data;
     receivedFileChunks.push(chunk);
 
@@ -700,7 +746,7 @@ function updateManifestRowStatus(fileId, status) {
     indicator.textContent = 'streaming';
     indicator.className = 'status-indicator text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 animate-pulse';
   } else if (status === 'complete') {
-    indicator.textContent = 'done';
+    indicator.textContent = 'downloaded';
     indicator.className = 'status-indicator text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
   }
 }
@@ -736,7 +782,7 @@ function renderCompletedReceiverDownloads() {
     <div class="flex items-center justify-between bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
       <span class="truncate text-slate-300 text-xs">${f.name}</span>
       <a href="${f.url}" download="${f.name}" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1">
-        <i data-lucide="download" class="w-3 h-3"></i> save
+        <i data-lucide="download" class="w-3 h-3"></i> re-download
       </a>
     </div>
   `).join('');
@@ -770,7 +816,7 @@ function finishTransferSuccess(fileCount) {
   lucide.createIcons();
 }
 
-// ================= RESET STATE & ROOM CLEANUP =================
+// ================= RESET STATE =================
 
 function resetApplicationState(confirmIfBusy = false) {
   if (confirmIfBusy && isTransferring) {
@@ -833,7 +879,7 @@ sendAnotherBtn.addEventListener('click', () => {
   fileInput.click();
 });
 
-// ================= SOCIAL DOCK: COPY EMAIL HANDLER =================
+// Social Dock Clipboard Handler
 if (copyEmailDockBtn) {
   copyEmailDockBtn.addEventListener('click', async (e) => {
     e.preventDefault();
