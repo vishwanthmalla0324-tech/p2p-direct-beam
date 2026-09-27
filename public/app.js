@@ -22,7 +22,7 @@ socket.on('connect', () => {
 
 // WebRTC Constants
 const CHUNK_SIZE = 64 * 1024; // 64 KB slices
-const BUFFER_THRESHOLD = 8 * 1024 * 1024; // 8 MB backpressure threshold
+const BUFFER_THRESHOLD = 4 * 1024 * 1024; // 4 MB backpressure threshold
 
 // Application State
 let fileQueue = [];
@@ -31,10 +31,16 @@ let isInitiator = false;
 let isTransferring = false;
 let abortRequested = false;
 
-// WebRTC State
-let peerConnection = null;
-let dataChannel = null;
-let remotePeerId = null;
+// Multi-Peer Connection Map: peerId -> { pc, dc, isTransferring }
+const activePeers = new Map();
+
+// Receiver-specific State (When this device is receiving)
+let receiverPC = null;
+let receiverDC = null;
+let incomingManifest = [];
+let currentReceivingFile = null;
+let receivedFileChunks = [];
+let completedFiles = [];
 
 // Telemetry & Metrics
 let bytesTransferredLastInterval = 0;
@@ -43,12 +49,6 @@ const SPEED_WINDOW_SIZE = 5;
 let speedSamples = [];
 let totalBatchBytes = 0;
 let totalBatchBytesTransferred = 0;
-
-// Receiver State
-let incomingManifest = [];
-let currentReceivingFile = null;
-let receivedFileChunks = [];
-let completedFiles = [];
 
 // Scanner
 let html5QrScanner = null;
@@ -113,7 +113,7 @@ const flipCameraBtn = document.getElementById('flip-camera-btn');
 const copyEmailDockBtn = document.getElementById('copy-email-dock-btn');
 const copyEmailTooltip = document.getElementById('copy-email-tooltip');
 
-// ================= UTILITIES & FEEDBACK =================
+// ================= UTILITIES & HELPERS =================
 
 function getFileIcon(fileName, mimeType = '') {
   const ext = fileName.split('.').pop().toLowerCase();
@@ -160,7 +160,6 @@ function updateNavState(activeViewId) {
   btnBackHome.classList.toggle('hidden', activeViewId === 'selection-view');
 }
 
-// Shake animation for error validation
 function triggerInputError(message) {
   showToast(message);
   manualCodeInput.classList.add('border-rose-500', 'animate-bounce');
@@ -171,9 +170,8 @@ function triggerInputError(message) {
   }, 900);
 }
 
-// ================= ZERO-CLICK RECEIVER DETECTION =================
+// ================= ZERO-CLICK RECEIVER SUBMISSION =================
 
-// 1. Monitor 6-digit code input: Automatically submit on 6th character
 manualCodeInput.addEventListener('input', (e) => {
   const cleanCode = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
   e.target.value = cleanCode;
@@ -192,9 +190,7 @@ joinBtn.addEventListener('click', () => {
   }
 });
 
-// 2. Parse URL hash (#XXXXXX) or query params (?room=XXXXXX) on load
 window.addEventListener('DOMContentLoaded', () => {
-  // Check hash: https://site.com/#123456
   const hash = window.location.hash.replace('#', '').trim();
   if (hash && hash.length === 6 && /^\d+$/.test(hash)) {
     manualCodeInput.value = hash;
@@ -202,7 +198,6 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Check query parameter fallback: https://site.com/?room=123456
   const urlParams = new URLSearchParams(window.location.search);
   const room = urlParams.get('room');
   if (room && room.length === 6 && /^\d+$/.test(room)) {
@@ -221,12 +216,12 @@ function initiateReceiver(roomId) {
   updateNavState('transfer-view');
 
   document.getElementById('transfer-role-text').textContent = 'Connecting to Sender...';
-  overallBatchSubtitle.textContent = 'Room joined — waiting for automatic P2P stream...';
+  overallBatchSubtitle.textContent = 'Room joined — establishing direct P2P data stream...';
 
   socket.emit('join-room', currentRoomId);
 }
 
-// ================= SENDER QUEUE SETUP =================
+// ================= SENDER QUEUE CREATION =================
 
 dropZone.addEventListener('click', (e) => {
   if (e.target !== fileInput) fileInput.click();
@@ -276,7 +271,6 @@ function appendFilesToQueue(newFiles) {
     displayCode.textContent = currentRoomId;
 
     qrcodeBox.innerHTML = '';
-    // Share URL points directly to hash route for zero-click receiver initiation
     const shareUrl = `${window.location.origin}/#${currentRoomId}`;
     new QRCode(qrcodeBox, {
       text: shareUrl,
@@ -338,10 +332,6 @@ function renderQueueUI() {
     });
   });
 
-  if (startBeamBtn) {
-    startBeamBtn.textContent = 'Auto-beam ready: waiting for peer...';
-  }
-
   lucide.createIcons();
 }
 
@@ -402,9 +392,9 @@ async function startActiveCamera() {
 
       if (code.length === 6) {
         manualCodeInput.value = code;
-        initiateReceiver(code); // Zero-click auto join after scan
+        initiateReceiver(code);
       } else {
-        triggerInputError('Scanned QR does not contain a valid room code');
+        triggerInputError('Invalid QR format');
       }
     },
     () => {}
@@ -426,94 +416,115 @@ function stopScanner() {
   }
 }
 
-// ================= WEBRTC HANDSHAKE & AUTO-STREAM TRIGGER =================
+// ================= MULTI-PEER WEBRTC PIPELINE =================
 
+// When any receiver joins, sender sets up an ISOLATED connection for that specific peer
 socket.on('peer-joined', async (peerId) => {
-  remotePeerId = peerId;
-  senderStatusPill.textContent = 'Peer Connected — Auto-Streaming...';
-  senderStatusPill.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-
   if (isInitiator) {
-    peerConnection = new RTCPeerConnection(rtcConfig);
-    dataChannel = peerConnection.createDataChannel('multiFileTransfer', { ordered: true });
-    dataChannel.binaryType = 'arraybuffer';
-    dataChannel.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
+    const pc = new RTCPeerConnection(rtcConfig);
+    const dc = pc.createDataChannel('fileStream', { ordered: true });
+    dc.binaryType = 'arraybuffer';
+    dc.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
 
-    peerConnection.onicecandidate = (event) => {
+    activePeers.set(peerId, { pc, dc, isTransferring: false });
+
+    pc.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('ice-candidate', { target: peerId, candidate: event.candidate });
       }
     };
 
-    // ZERO-CLICK AUTO-TRANSMIT AS SOON AS DATA CHANNEL OPENS
-    dataChannel.onopen = () => {
-      startBroadcastingBatchAuto();
+    // When this specific device opens its DataChannel, immediately launch its dedicated stream worker
+    dc.onopen = () => {
+      startIsolatedSenderStream(peerId);
+      updateSenderCountUI();
     };
 
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
+    dc.onclose = () => {
+      activePeers.delete(peerId);
+      updateSenderCountUI();
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
     socket.emit('offer', { target: peerId, sdp: offer });
+    updateSenderCountUI();
   }
 });
 
+// Receiver handles offer from sender
 socket.on('offer', async ({ sender, sdp }) => {
-  remotePeerId = sender;
-  peerConnection = new RTCPeerConnection(rtcConfig);
+  if (!isInitiator) {
+    receiverPC = new RTCPeerConnection(rtcConfig);
 
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) {
-      socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
+    receiverPC.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', { target: sender, candidate: event.candidate });
+      }
+    };
+
+    receiverPC.ondatachannel = (event) => {
+      receiverDC = event.channel;
+      receiverDC.binaryType = 'arraybuffer';
+      setupReceiverDataChannel(receiverDC);
+    };
+
+    await receiverPC.setRemoteDescription(new RTCSessionDescription(sdp));
+    const answer = await receiverPC.createAnswer();
+    await receiverPC.setLocalDescription(answer);
+
+    socket.emit('answer', { target: sender, sdp: answer });
+  }
+});
+
+// Sender receives answer for a specific peer
+socket.on('answer', async ({ sender, sdp }) => {
+  if (isInitiator && activePeers.has(sender)) {
+    const peer = activePeers.get(sender);
+    await peer.pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  }
+});
+
+socket.on('ice-candidate', async ({ sender, candidate }) => {
+  try {
+    if (isInitiator && activePeers.has(sender)) {
+      await activePeers.get(sender).pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } else if (!isInitiator && receiverPC) {
+      await receiverPC.addIceCandidate(new RTCIceCandidate(candidate));
     }
-  };
-
-  peerConnection.ondatachannel = (event) => {
-    dataChannel = event.channel;
-    dataChannel.binaryType = 'arraybuffer';
-    setupReceiverDataChannel();
-  };
-
-  await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
-  const answer = await peerConnection.createAnswer();
-  await peerConnection.setLocalDescription(answer);
-
-  socket.emit('answer', { target: sender, sdp: answer });
+  } catch (_) {}
 });
 
-socket.on('answer', async ({ sdp }) => {
-  if (peerConnection) {
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+socket.on('peer-disconnected', (peerId) => {
+  if (isInitiator && activePeers.has(peerId)) {
+    const p = activePeers.get(peerId);
+    try { p.dc?.close(); } catch (_) {}
+    try { p.pc?.close(); } catch (_) {}
+    activePeers.delete(peerId);
+    updateSenderCountUI();
   }
 });
 
-socket.on('ice-candidate', async ({ candidate }) => {
-  if (candidate && peerConnection) {
-    try {
-      await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-    } catch (_) {}
-  }
-});
+function updateSenderCountUI() {
+  const count = activePeers.size;
+  senderStatusPill.textContent = `${count} Device${count === 1 ? '' : 's'} Connected`;
+  senderStatusPill.className = count > 0 
+    ? 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+    : 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20';
+}
 
-socket.on('room-error', (msg) => {
-  triggerInputError(msg || 'Room does not exist or expired');
-  resetApplicationState(false);
-});
+// ================= ISOLATED SENDER STREAM WORKER =================
 
-// ================= ZERO-CLICK SENDER AUTO-STREAM =================
+async function startIsolatedSenderStream(peerId) {
+  if (!activePeers.has(peerId) || fileQueue.length === 0) return;
+  const peer = activePeers.get(peerId);
+  if (peer.isTransferring) return;
+  peer.isTransferring = true;
 
-async function startBroadcastingBatchAuto() {
-  if (fileQueue.length === 0 || isTransferring) return;
-
-  isTransferring = true;
-  abortRequested = false;
-
+  // Show sender transfer UI
   senderView.classList.add('hidden');
   transferView.classList.remove('hidden');
   updateNavState('transfer-view');
-
-  document.getElementById('transfer-role-text').textContent = 'Broadcasting Batch';
-
-  totalBatchBytes = fileQueue.reduce((acc, f) => acc + f.size, 0);
-  totalBatchBytesTransferred = 0;
 
   const manifest = fileQueue.map(item => ({
     id: item.id,
@@ -522,40 +533,45 @@ async function startBroadcastingBatchAuto() {
     type: item.type
   }));
 
+  totalBatchBytes = fileQueue.reduce((acc, f) => acc + f.size, 0);
   renderManifestUI(manifest);
 
-  // Send Metadata Handshake immediately
-  dataChannel.send(JSON.stringify({
+  // 1. Send initial Manifest to this specific peer
+  peer.dc.send(JSON.stringify({
     type: 'manifest',
     totalFiles: fileQueue.length,
     totalBytes: totalBatchBytes,
     files: manifest
   }));
 
-  // Auto-stream each file in queue sequentially
+  // 2. Stream all files in order specifically to this peer
   for (let i = 0; i < fileQueue.length; i++) {
-    if (abortRequested || !isTransferring) break;
+    if (abortRequested || !activePeers.has(peerId)) break;
     const item = fileQueue[i];
 
     overallBatchSubtitle.textContent = `Streaming file ${i + 1} of ${fileQueue.length}`;
     updateManifestRowStatus(item.id, 'streaming');
 
-    await streamSingleFile(item);
+    await streamSingleFileToPeer(peer.dc, item);
     updateManifestRowStatus(item.id, 'complete');
   }
 
-  if (!abortRequested && isTransferring) {
-    dataChannel.send(JSON.stringify({ type: 'batch-complete' }));
-    finishTransferSuccess(fileQueue.length);
+  // 3. Send final batch-complete to this specific peer
+  if (!abortRequested && activePeers.has(peerId) && peer.dc.readyState === 'open') {
+    peer.dc.send(JSON.stringify({ type: 'batch-complete' }));
   }
+
+  finishTransferSuccess(fileQueue.length);
 }
 
-function streamSingleFile(item) {
+function streamSingleFileToPeer(dc, item) {
   return new Promise((resolve) => {
-    dataChannel.send(JSON.stringify({
-      type: 'file-start',
-      id: item.id
-    }));
+    if (dc.readyState !== 'open') {
+      resolve();
+      return;
+    }
+
+    dc.send(JSON.stringify({ type: 'file-start', id: item.id }));
 
     let offset = 0;
     const file = item.file;
@@ -563,18 +579,17 @@ function streamSingleFile(item) {
 
     lastSpeedCalcTime = Date.now();
     bytesTransferredLastInterval = 0;
-    speedSamples = [];
 
     function readNextSlice() {
-      if (abortRequested || !isTransferring) {
+      if (abortRequested || dc.readyState !== 'open') {
         resolve();
         return;
       }
 
-      // Respect DataChannel backpressure
-      if (dataChannel.bufferedAmount > BUFFER_THRESHOLD) {
-        dataChannel.onbufferedamountlow = () => {
-          dataChannel.onbufferedamountlow = null;
+      // Check Backpressure on this specific peer's DataChannel
+      if (dc.bufferedAmount > BUFFER_THRESHOLD) {
+        dc.onbufferedamountlow = () => {
+          dc.onbufferedamountlow = null;
           readNextSlice();
         };
         return;
@@ -585,12 +600,12 @@ function streamSingleFile(item) {
         const reader = new FileReader();
 
         reader.onload = (e) => {
-          if (abortRequested || !isTransferring) {
+          if (abortRequested || dc.readyState !== 'open') {
             resolve();
             return;
           }
 
-          dataChannel.send(e.target.result);
+          dc.send(e.target.result);
           const bytesRead = e.target.result.byteLength;
           offset += bytesRead;
           totalBatchBytesTransferred += bytesRead;
@@ -602,7 +617,7 @@ function streamSingleFile(item) {
 
         reader.readAsArrayBuffer(slice);
       } else {
-        dataChannel.send(JSON.stringify({ type: 'file-end', id: item.id }));
+        dc.send(JSON.stringify({ type: 'file-end', id: item.id }));
         resolve();
       }
     }
@@ -611,10 +626,10 @@ function streamSingleFile(item) {
   });
 }
 
-// ================= ZERO-CLICK RECEIVER AUTO-DOWNLOAD =================
+// ================= RECEIVER ENGINE =================
 
-function setupReceiverDataChannel() {
-  dataChannel.onmessage = async (event) => {
+function setupReceiverDataChannel(channel) {
+  channel.onmessage = async (event) => {
     if (typeof event.data === 'string') {
       const msg = JSON.parse(event.data);
 
@@ -627,7 +642,7 @@ function setupReceiverDataChannel() {
         completedFiles = [];
 
         document.getElementById('transfer-role-text').textContent = 'Receiving Auto-Stream';
-        overallBatchSubtitle.textContent = `Peer connected — streaming 0 of ${incomingManifest.length} files`;
+        overallBatchSubtitle.textContent = `Streaming 0 of ${incomingManifest.length} files`;
         renderManifestUI(incomingManifest);
       }
       else if (msg.type === 'file-start') {
@@ -636,12 +651,13 @@ function setupReceiverDataChannel() {
         updateManifestRowStatus(msg.id, 'streaming');
       }
       else if (msg.type === 'file-end') {
-        // Build file Blob immediately
+        if (!currentReceivingFile) return;
+
         const blob = new Blob(receivedFileChunks, { type: currentReceivingFile.type });
         const url = URL.createObjectURL(blob);
         completedFiles.push({ name: currentReceivingFile.name, blob, url });
 
-        // AUTOMATIC INSTANT DISK DOWNLOAD TRIGGER (ZERO-CLICK)
+        // Auto-download each file
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
@@ -671,15 +687,14 @@ function setupReceiverDataChannel() {
     totalBatchBytesTransferred += chunkSize;
     bytesTransferredLastInterval += chunkSize;
 
-    if (currentReceivingFile) {
-      updateProgressTelemetry(totalBatchBytesTransferred, totalBatchBytes);
-    }
+    updateProgressTelemetry(totalBatchBytesTransferred, totalBatchBytes);
   };
 }
 
 // ================= PROGRESS & METRICS =================
 
 function updateProgressTelemetry(batchCurrent, batchTotal) {
+  if (!batchTotal || batchTotal === 0) return;
   const percent = Math.min(100, (batchCurrent / batchTotal) * 100);
   overallProgressBar.style.width = `${percent}%`;
   overallPercentage.textContent = `${percent.toFixed(1)}%`;
@@ -827,13 +842,19 @@ function resetApplicationState(confirmIfBusy = false) {
   abortRequested = true;
   isTransferring = false;
 
-  if (dataChannel) {
-    try { dataChannel.close(); } catch (_) {}
-    dataChannel = null;
+  for (const [id, p] of activePeers) {
+    try { p.dc?.close(); } catch (_) {}
+    try { p.pc?.close(); } catch (_) {}
   }
-  if (peerConnection) {
-    try { peerConnection.close(); } catch (_) {}
-    peerConnection = null;
+  activePeers.clear();
+
+  if (receiverDC) {
+    try { receiverDC.close(); } catch (_) {}
+    receiverDC = null;
+  }
+  if (receiverPC) {
+    try { receiverPC.close(); } catch (_) {}
+    receiverPC = null;
   }
 
   if (currentRoomId && socket.connected) {
@@ -868,7 +889,7 @@ function resetApplicationState(confirmIfBusy = false) {
   lucide.createIcons();
 }
 
-// Event Bindings
+// Navigation & Actions
 btnBackHome.addEventListener('click', () => resetApplicationState(true));
 brandHomeLink.addEventListener('click', () => resetApplicationState(true));
 cancelTransferBtn.addEventListener('click', () => resetApplicationState(true));
@@ -879,7 +900,7 @@ sendAnotherBtn.addEventListener('click', () => {
   fileInput.click();
 });
 
-// Social Dock Clipboard Handler
+// Social Dock Clipboard
 if (copyEmailDockBtn) {
   copyEmailDockBtn.addEventListener('click', async (e) => {
     e.preventDefault();
