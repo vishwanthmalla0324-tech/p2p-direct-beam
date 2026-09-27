@@ -25,12 +25,12 @@ const BUFFER_THRESHOLD = 4 * 1024 * 1024; // 4 MB backpressure threshold per pee
 // Application Role & State
 let isHost = false;
 let currentRoomId = null;
-let fileQueue = []; // Files held in sender's memory: Array of { id, file, name, size, type }
+let fileQueue = [];
 
 // SENDER STATE: Map<receiverId, { pc, dc, bytesSent, progress, isStreaming }>
 const receiverPeers = new Map();
 
-// RECEIVER STATE: Single peer connection pulling from the persistent sender
+// RECEIVER STATE: Single peer connection pulling from persistent sender
 let receiverPC = null;
 let receiverDC = null;
 let incomingManifest = [];
@@ -103,6 +103,15 @@ const flipCameraBtn = document.getElementById('flip-camera-btn');
 const copyEmailDockBtn = document.getElementById('copy-email-dock-btn');
 const copyEmailTooltip = document.getElementById('copy-email-tooltip');
 
+// Founder Modal Controls
+const founderModal = document.getElementById('founder-modal');
+const founderModalContent = document.getElementById('founder-modal-content');
+const founderModalBackdrop = document.getElementById('founder-modal-backdrop');
+const openFounderModalBtn = document.getElementById('open-founder-modal-btn');
+const closeFounderModalBtn = document.getElementById('close-founder-modal-btn');
+const modalCopyEmailBtn = document.getElementById('modal-copy-email-btn');
+const modalEmailTooltip = document.getElementById('modal-email-tooltip');
+
 // ================= UTILITIES =================
 
 function getFileIcon(fileName, mimeType = '') {
@@ -156,7 +165,6 @@ function triggerInputError(message) {
   }, 900);
 }
 
-// Background Tab Warning
 window.addEventListener('beforeunload', (e) => {
   if (isHost && fileQueue.length > 0) {
     e.preventDefault();
@@ -257,7 +265,6 @@ function handleHostFiles(files) {
 
   displayCode.textContent = currentRoomId;
 
-  // Render QR Code
   qrcodeBox.innerHTML = '';
   const shareUrl = `${window.location.origin}/#${currentRoomId}`;
   new QRCode(qrcodeBox, {
@@ -269,7 +276,6 @@ function handleHostFiles(files) {
     correctLevel: QRCode.CorrectLevel.M
   });
 
-  // Calculate file summary
   const totalBytes = fileQueue.reduce((acc, f) => acc + f.size, 0);
   queueSummaryCount.textContent = `${fileQueue.length} file${fileQueue.length === 1 ? '' : 's'}`;
   queueSummarySize.textContent = formatBytes(totalBytes);
@@ -284,7 +290,6 @@ function handleHostFiles(files) {
     </li>
   `).join('');
 
-  // SENDER NEVER LEAVES THIS SCREEN
   selectionView.classList.add('hidden');
   receiverView.classList.add('hidden');
   senderView.classList.remove('hidden');
@@ -307,7 +312,6 @@ copyLinkBtn.addEventListener('click', () => {
   });
 });
 
-// Stop Sharing / Teardown Session
 stopSharingBtn.addEventListener('click', () => {
   if (confirm('Stop sharing files and close this session for all receivers?')) {
     resetStateAndGoHome();
@@ -384,7 +388,6 @@ function stopScanner() {
 
 // ================= MULTI-PEER ASYNCHRONOUS WEBRTC ROUTING =================
 
-// 1. SENDER: Handles new receiver connection request
 socket.on('receiver-joined', async ({ receiverId }) => {
   if (!isHost) return;
 
@@ -393,7 +396,6 @@ socket.on('receiver-joined', async ({ receiverId }) => {
   dc.binaryType = 'arraybuffer';
   dc.bufferedAmountLowThreshold = BUFFER_THRESHOLD / 2;
 
-  // Register in isolated receiver map
   receiverPeers.set(receiverId, {
     pc,
     dc,
@@ -410,7 +412,6 @@ socket.on('receiver-joined', async ({ receiverId }) => {
     }
   };
 
-  // Launch isolated streaming worker once the peer's data channel opens
   dc.onopen = () => {
     startIsolatedStreamToReceiver(receiverId);
   };
@@ -424,7 +425,6 @@ socket.on('receiver-joined', async ({ receiverId }) => {
   socket.emit('signal-offer', { target: receiverId, sdp: offer });
 });
 
-// 2. RECEIVER: Handles offer from sender host
 socket.on('signal-offer', async ({ sender, sdp }) => {
   if (isHost) return;
 
@@ -449,7 +449,6 @@ socket.on('signal-offer', async ({ sender, sdp }) => {
   socket.emit('signal-answer', { target: sender, sdp: answer });
 });
 
-// 3. SENDER: Handles answer from receiver
 socket.on('signal-answer', async ({ sender, sdp }) => {
   if (isHost && receiverPeers.has(sender)) {
     const peer = receiverPeers.get(sender);
@@ -457,7 +456,6 @@ socket.on('signal-answer', async ({ sender, sdp }) => {
   }
 });
 
-// 4. ICE Candidates
 socket.on('signal-ice', async ({ sender, candidate }) => {
   try {
     if (isHost && receiverPeers.has(sender)) {
@@ -468,7 +466,6 @@ socket.on('signal-ice', async ({ sender, candidate }) => {
   } catch (_) {}
 });
 
-// 5. Handling Disconnects
 socket.on('receiver-disconnected', ({ receiverId }) => {
   if (isHost) {
     cleanupReceiverPeer(receiverId);
@@ -526,7 +523,7 @@ function updateSenderActivityFeed() {
   receiversActivityFeed.innerHTML = html;
 }
 
-// ================= SENDER ISOLATED WORKER (READS FROM BYTE 0 FOR EACH PEER) =================
+// ================= SENDER ISOLATED WORKER (READS FROM BYTE 0 PER PEER) =================
 
 async function startIsolatedStreamToReceiver(receiverId) {
   if (!receiverPeers.has(receiverId) || fileQueue.length === 0) return;
@@ -536,7 +533,6 @@ async function startIsolatedStreamToReceiver(receiverId) {
 
   const totalBytes = fileQueue.reduce((acc, f) => acc + f.size, 0);
 
-  // 1. Send the file manifest
   const manifest = fileQueue.map(item => ({
     id: item.id,
     name: item.name,
@@ -551,14 +547,12 @@ async function startIsolatedStreamToReceiver(receiverId) {
     files: manifest
   }));
 
-  // 2. Stream all files in order from byte 0 specifically for this receiver
   for (let i = 0; i < fileQueue.length; i++) {
     if (!receiverPeers.has(receiverId)) break;
     const item = fileQueue[i];
     await streamSingleFileToPeer(peer, item, totalBytes, receiverId);
   }
 
-  // 3. Send final batch-complete
   if (receiverPeers.has(receiverId) && peer.dc.readyState === 'open') {
     peer.dc.send(JSON.stringify({ type: 'batch-complete' }));
     peer.progress = 100;
@@ -585,7 +579,6 @@ function streamSingleFileToPeer(peer, item, totalBatchBytes, receiverId) {
         return;
       }
 
-      // Check Backpressure on this receiver's DataChannel
       if (peer.dc.bufferedAmount > BUFFER_THRESHOLD) {
         peer.dc.onbufferedamountlow = () => {
           peer.dc.onbufferedamountlow = null;
@@ -609,7 +602,6 @@ function streamSingleFileToPeer(peer, item, totalBatchBytes, receiverId) {
           offset += bytesRead;
           peer.bytesSent += bytesRead;
 
-          // Update sender-side telemetry for this receiver
           peer.progress = Math.min(99, (peer.bytesSent / totalBatchBytes) * 100);
           updateSenderActivityFeed();
 
@@ -657,7 +649,6 @@ function setupReceiverDataChannel(channel) {
         const url = URL.createObjectURL(blob);
         completedFiles.push({ name: currentReceivingFile.name, blob, url });
 
-        // Trigger immediate browser download
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
@@ -678,7 +669,6 @@ function setupReceiverDataChannel(channel) {
       return;
     }
 
-    // Binary Chunk received
     const chunk = event.data;
     receivedFileChunks.push(chunk);
 
@@ -797,14 +787,12 @@ function resetStateAndGoHome() {
     socket.emit('destroy-room', currentRoomId);
   }
 
-  // Teardown all receiver peers
   for (const [id, peer] of receiverPeers) {
     try { peer.dc?.close(); } catch (_) {}
     try { peer.pc?.close(); } catch (_) {}
   }
   receiverPeers.clear();
 
-  // Teardown receiver connection
   if (receiverDC) {
     try { receiverDC.close(); } catch (_) {}
     receiverDC = null;
@@ -855,7 +843,7 @@ brandHomeLink.addEventListener('click', () => {
 
 cancelReceiverBtn.addEventListener('click', resetStateAndGoHome);
 
-// Social Dock Clipboard Handler
+// ================= SOCIAL DOCK CLIPBOARD =================
 if (copyEmailDockBtn) {
   copyEmailDockBtn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -873,6 +861,67 @@ if (copyEmailDockBtn) {
           copyEmailTooltip.classList.add('opacity-0');
         }, 1800);
       }
+      showToast('Email address copied to clipboard');
+    } catch (_) {
+      showToast('Could not copy email');
+    }
+  });
+}
+
+// ================= FOUNDER PROFILE MODAL =================
+function openFounderModal() {
+  if (!founderModal) return;
+  founderModal.classList.remove('hidden');
+  founderModal.classList.add('flex');
+
+  requestAnimationFrame(() => {
+    founderModalContent.classList.remove('scale-95', 'opacity-0');
+    founderModalContent.classList.add('scale-100', 'opacity-100');
+  });
+  lucide.createIcons();
+}
+
+function closeFounderModal() {
+  if (!founderModal) return;
+  founderModalContent.classList.remove('scale-100', 'opacity-100');
+  founderModalContent.classList.add('scale-95', 'opacity-0');
+
+  setTimeout(() => {
+    founderModal.classList.add('hidden');
+    founderModal.classList.remove('flex');
+  }, 200);
+}
+
+if (openFounderModalBtn) openFounderModalBtn.addEventListener('click', openFounderModal);
+if (closeFounderModalBtn) closeFounderModalBtn.addEventListener('click', closeFounderModal);
+if (founderModalBackdrop) founderModalBackdrop.addEventListener('click', closeFounderModal);
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && founderModal && !founderModal.classList.contains('hidden')) {
+    closeFounderModal();
+  }
+});
+
+if (modalCopyEmailBtn) {
+  modalCopyEmailBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = modalCopyEmailBtn.getAttribute('data-email') || 'vishwanthmalla0324@gmail.com';
+
+    try {
+      await navigator.clipboard.writeText(email);
+
+      if (modalEmailTooltip) {
+        modalEmailTooltip.textContent = 'Copied!';
+        modalEmailTooltip.classList.remove('opacity-0');
+        modalEmailTooltip.classList.add('opacity-100', 'text-emerald-400', 'border-emerald-500/40');
+
+        setTimeout(() => {
+          modalEmailTooltip.textContent = 'Copy Email';
+          modalEmailTooltip.classList.remove('text-emerald-400', 'border-emerald-500/40');
+          modalEmailTooltip.classList.add('opacity-0');
+        }, 1800);
+      }
+
       showToast('Email address copied to clipboard');
     } catch (_) {
       showToast('Could not copy email');
