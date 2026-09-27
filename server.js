@@ -16,70 +16,78 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Lightweight health check endpoint for uptime monitors
 app.get('/healthz', (req, res) => {
   res.status(200).send('OK');
 });
 
-// Map: roomId -> Set of socket IDs
-const rooms = new Map();
+// Map: roomId -> { hostId: string, receivers: Set<string> }
+const activeRooms = new Map();
 
 io.on('connection', (socket) => {
-  let currentRoom = null;
+  let joinedRoomId = null;
 
-  socket.on('join-room', (roomId) => {
-    currentRoom = roomId;
+  // 1. Host creates a persistent file room
+  socket.on('create-room', (roomId) => {
+    joinedRoomId = roomId;
     socket.join(roomId);
-
-    if (!rooms.has(roomId)) {
-      rooms.set(roomId, new Set());
-    }
-    const clients = rooms.get(roomId);
-    clients.add(socket.id);
-
-    // Notify other peers in this room
-    socket.to(roomId).emit('peer-joined', socket.id);
-
-    if (clients.size > 1) {
-      socket.emit('ready');
-    }
+    activeRooms.set(roomId, { hostId: socket.id, receivers: new Set() });
+    socket.emit('room-created', roomId);
   });
 
-  socket.on('leave-room', (roomId) => {
-    socket.leave(roomId);
-    if (rooms.has(roomId)) {
-      const clients = rooms.get(roomId);
-      clients.delete(socket.id);
-      socket.to(roomId).emit('peer-disconnected', socket.id);
-      if (clients.size === 0) {
-        rooms.delete(roomId);
+  // 2. Receiver joins an existing room
+  socket.on('join-room', (roomId) => {
+    joinedRoomId = roomId;
+    const room = activeRooms.get(roomId);
+
+    if (!room || !room.hostId) {
+      socket.emit('room-error', 'Share session not found or host went offline.');
+      return;
+    }
+
+    socket.join(roomId);
+    room.receivers.add(socket.id);
+
+    // Notify the host that a new receiver wants to pull files
+    io.to(room.hostId).emit('receiver-joined', { receiverId: socket.id });
+    socket.emit('joined-successfully', { hostId: room.hostId });
+  });
+
+  // 3. Direct signaling routing between host and individual receivers
+  socket.on('signal-offer', ({ target, sdp }) => {
+    io.to(target).emit('signal-offer', { sender: socket.id, sdp });
+  });
+
+  socket.on('signal-answer', ({ target, sdp }) => {
+    io.to(target).emit('signal-answer', { sender: socket.id, sdp });
+  });
+
+  socket.on('signal-ice', ({ target, candidate }) => {
+    io.to(target).emit('signal-ice', { sender: socket.id, candidate });
+  });
+
+  // 4. Host leaves or closes tab -> tear down the room
+  socket.on('destroy-room', (roomId) => {
+    if (activeRooms.has(roomId)) {
+      const room = activeRooms.get(roomId);
+      if (room.hostId === socket.id) {
+        socket.to(roomId).emit('host-offline');
+        activeRooms.delete(roomId);
       }
     }
-    if (currentRoom === roomId) {
-      currentRoom = null;
-    }
-  });
-
-  socket.on('offer', ({ target, sdp }) => {
-    io.to(target).emit('offer', { sender: socket.id, sdp });
-  });
-
-  socket.on('answer', ({ target, sdp }) => {
-    io.to(target).emit('answer', { sender: socket.id, sdp });
-  });
-
-  socket.on('ice-candidate', ({ target, candidate }) => {
-    io.to(target).emit('ice-candidate', { sender: socket.id, candidate });
   });
 
   socket.on('disconnect', () => {
-    if (currentRoom && rooms.has(currentRoom)) {
-      const clients = rooms.get(currentRoom);
-      clients.delete(socket.id);
-      socket.to(currentRoom).emit('peer-disconnected', socket.id);
+    if (joinedRoomId && activeRooms.has(joinedRoomId)) {
+      const room = activeRooms.get(joinedRoomId);
 
-      if (clients.size === 0) {
-        rooms.delete(currentRoom);
+      // If the host drops, close the session for all receivers
+      if (room.hostId === socket.id) {
+        socket.to(joinedRoomId).emit('host-offline');
+        activeRooms.delete(joinedRoomId);
+      } else {
+        // If a receiver drops, inform the host to clean up only that peer
+        room.receivers.delete(socket.id);
+        io.to(room.hostId).emit('receiver-disconnected', { receiverId: socket.id });
       }
     }
   });
@@ -87,5 +95,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Direct Beam server running on port ${PORT}`);
+  console.log(`Direct Beam P2P Host Server running on port ${PORT}`);
 });

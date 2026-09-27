@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Direct Beam — Enterprise Multi-File P2P Transfer</title>
+  <title>Direct Beam — On-Demand P2P File Sharing</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,62 +31,8 @@
   </script>
 
   <style>
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
-    }
-
-    .radar-loader {
-      position: relative;
-      width: 38px;
-      height: 38px;
-      background: transparent;
-      border-radius: 50%;
-      border: 1px solid rgba(6, 182, 212, 0.35);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .radar-loader::before {
-      content: '';
-      position: absolute;
-      inset: 4px;
-      background: transparent;
-      border: 1px dashed rgba(6, 182, 212, 0.45);
-      border-radius: 50%;
-    }
-    .radar-loader span {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 50%;
-      height: 100%;
-      background: transparent;
-      transform-origin: top left;
-      animation: radarSweep 2s linear infinite;
-      border-top: 1px dashed #ffffff;
-    }
-    .radar-loader span::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #06b6d4;
-      transform-origin: top left;
-      transform: rotate(-55deg);
-      filter: blur(7px) drop-shadow(3px 3px 5px #06b6d4);
-    }
-    @keyframes radarSweep {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 
     .neon-card {
       position: relative;
@@ -122,11 +68,11 @@
 
     .btn-cancel-sweep {
       position: relative;
-      padding: 12px 24px;
+      padding: 10px 20px;
       width: 100%;
       border-radius: 12px;
       border: 1px solid rgba(239, 68, 68, 0.6);
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
       font-weight: 700;
       letter-spacing: 1.5px;
@@ -139,40 +85,17 @@
     .btn-cancel-sweep:hover {
       background: rgba(239, 68, 68, 0.85);
       color: #ffffff;
-      box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
-    }
-    .btn-cancel-sweep::before {
-      content: '';
-      display: block;
-      width: 0px;
-      height: 86%;
-      position: absolute;
-      top: 7%;
-      left: 0%;
-      opacity: 0;
-      background: #ffffff;
-      box-shadow: 0 0 50px 30px #ffffff;
-      transform: skewX(-20deg);
-    }
-    .btn-cancel-sweep:hover::before {
-      animation: sweepAnim 0.5s linear;
-    }
-    @keyframes sweepAnim {
-      0% { opacity: 0; left: 0%; }
-      50% { opacity: 1; }
-      100% { opacity: 0; left: 100%; }
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
     }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-cyan-500/20 selection:text-cyan-300 font-sans antialiased">
 
-  <!-- Toast Notification -->
   <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-y-[-20px] opacity-0 pointer-events-none flex items-center gap-2 bg-slate-900 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-lg shadow-2xl text-xs font-medium">
     <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
     <span id="toast-message">Notification</span>
   </div>
 
-  <!-- Cold Start Server Pill -->
   <div id="cold-start-banner" class="hidden w-full bg-amber-500/10 border-b border-amber-500/20 py-2 px-4 text-center text-xs text-amber-300 font-medium">
     <div class="inline-flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
@@ -180,7 +103,7 @@
     </div>
   </div>
 
-  <!-- Header & Top Nav -->
+  <!-- Header -->
   <header class="w-full max-w-4xl mx-auto pt-8 pb-4 px-4 text-center relative">
     <div class="flex items-center justify-between mb-4">
       <button id="btn-back-home" type="button" class="hidden bg-slate-900 border border-slate-800 text-center w-40 rounded-xl h-10 relative text-slate-200 text-xs font-semibold group transition-all hover:border-slate-700 active:scale-95 shadow-md">
@@ -195,7 +118,7 @@
 
       <div class="mx-auto inline-flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs text-cyan-400 font-mono font-medium shadow-inner">
         <span class="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse"></span>
-        Multi-File Mesh Pipeline
+        Persistent P2P Mesh Pipeline
       </div>
 
       <div class="w-40 hidden sm:block"></div>
@@ -208,7 +131,6 @@
       Encrypted point-to-point batch data streaming. Direct disk writes, unlimited size, and zero cloud retention.
     </p>
 
-    <!-- Trust Badges -->
     <div class="flex flex-wrap items-center justify-center gap-2.5 text-xs text-slate-400">
       <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 px-2.5 py-1 rounded-md">
         <i data-lucide="layers" class="w-3.5 h-3.5 text-cyan-400"></i> Multi-File Queue
@@ -222,18 +144,18 @@
     </div>
   </header>
 
-  <!-- Workstation Container with Responsive Neon Card -->
+  <!-- Workstation Container -->
   <main class="w-full max-w-xl mx-auto px-4 flex-1 flex flex-col justify-center py-6">
     <div class="neon-card w-full shadow-2xl backdrop-blur-xl relative">
 
-      <!-- ================= VIEW 1: SELECTION & RECEIVE ================= -->
+      <!-- ================= 1. HOME: FILE SELECTOR & RECEIVER ENTRY ================= -->
       <section id="selection-view" class="space-y-6">
         <div id="drop-zone" class="border-2 border-dashed border-slate-800 hover:border-cyan-500/50 bg-slate-950/40 hover:bg-slate-950/70 transition-all rounded-xl p-8 text-center cursor-pointer group flex flex-col items-center justify-center">
           <div class="w-14 h-14 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-3 group-hover:border-cyan-500/40 text-slate-400 group-hover:text-cyan-400 transition-colors">
             <i data-lucide="files" class="w-7 h-7"></i>
           </div>
-          <p class="text-sm font-semibold text-slate-200 mb-1">Click or drag & drop files</p>
-          <p class="text-xs text-slate-400">Select any mix of documents, videos, music, photos, or archives</p>
+          <p class="text-sm font-semibold text-slate-200 mb-1">Click or drag & drop files to share</p>
+          <p class="text-xs text-slate-400">Select any files. We create an instant direct P2P link.</p>
           <input type="file" id="file-input" class="hidden" multiple>
         </div>
 
@@ -268,129 +190,121 @@
         </div>
       </section>
 
-      <!-- ================= VIEW 2: SENDER QUEUE & READY ================= -->
+      <!-- ================= 2. SENDER: PERSISTENT HOST SCREEN (TOFFEESHARE FLOW) ================= -->
       <section id="sender-view" class="hidden space-y-4">
-        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+        <!-- Persistent Hub Status -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="text-sm font-bold text-white">Now sharing your files</span>
+          </div>
+          <span id="connected-count-pill" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+            0 devices connected
+          </span>
+        </div>
+
+        <!-- Prominent QR Code & Share Box -->
+        <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+          <div id="qrcode-box" class="bg-white p-2.5 rounded-lg shadow-lg flex-shrink-0"></div>
+          <div class="space-y-2 w-full text-center sm:text-left">
             <div>
-              <span id="queue-summary-count" class="text-xs font-bold text-white">0 files</span>
-              <span class="text-slate-500 mx-1.5">•</span>
-              <span id="queue-summary-size" class="text-xs font-mono text-cyan-400">0 Bytes</span>
+              <span class="text-[10px] uppercase font-mono tracking-widest text-slate-400">Security Room Code</span>
+              <div id="display-code" class="text-3xl font-mono font-black tracking-widest text-cyan-400 select-all">------</div>
             </div>
-            <button id="add-more-files-btn" class="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-slate-900 hover:bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg transition active:scale-95">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add More
+            <p class="text-xs text-slate-400">Scan this code or share the direct link with anyone.</p>
+            <button id="copy-link-btn" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Direct Share Link
             </button>
           </div>
-
-          <ul id="sender-queue-list" class="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 text-xs"></ul>
         </div>
 
-        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center space-y-2">
-          <div class="flex items-center justify-between px-2">
-            <label class="text-[11px] font-medium text-slate-400 uppercase tracking-wider block">Security Room Key</label>
-            <span id="sender-status-pill" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              Waiting for peer...
+        <!-- File Summary & Expandable Manifest -->
+        <div class="bg-slate-950/50 border border-slate-800/80 rounded-xl p-3.5 space-y-2">
+          <div class="flex items-center justify-between cursor-pointer" id="toggle-manifest-btn">
+            <div class="flex items-center gap-2">
+              <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+              <span id="queue-summary-count" class="text-xs font-semibold text-white">0 files</span>
+              <span class="text-slate-500">•</span>
+              <span id="queue-summary-size" class="text-xs font-mono text-cyan-400">0 Bytes</span>
+            </div>
+            <span class="text-[11px] text-slate-400 hover:text-white flex items-center gap-1">
+              View files <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
             </span>
           </div>
-          <div id="display-code" class="text-3xl sm:text-4xl font-mono font-bold tracking-[0.3em] text-cyan-400 select-all">
-            ------
+          <ul id="sender-queue-list" class="hidden space-y-1 max-h-36 overflow-y-auto custom-scrollbar pt-2 border-t border-slate-800 text-xs text-slate-300"></ul>
+        </div>
+
+        <!-- Connected Receivers Live Activity Feed -->
+        <div class="bg-slate-950/50 border border-slate-800/80 rounded-xl p-3 space-y-2">
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Connected Devices Activity</span>
+          <div id="receivers-activity-feed" class="space-y-1.5 text-xs">
+            <p class="text-slate-500 italic text-[11px]">Waiting for peers to open the link...</p>
           </div>
         </div>
 
-        <div class="flex gap-2">
-          <button id="copy-link-btn" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Link
-          </button>
-          <button id="toggle-qr-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95">
-            <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> QR Code
-          </button>
+        <!-- ToffeeShare Background Warning Notice -->
+        <div class="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-[11px] text-amber-300/90 leading-relaxed">
+          <i data-lucide="info" class="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5"></i>
+          <span>Closing this tab stops sharing immediately. Keep this page open in the background so peers can pull files directly from your device.</span>
         </div>
 
-        <div id="qr-modal-container" class="hidden flex flex-col items-center justify-center bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-2">
-          <div id="qrcode-box" class="bg-white p-2.5 rounded-lg shadow-lg"></div>
-          <span class="text-[11px] text-slate-400 font-mono mt-1">Scan to connect directly</span>
-        </div>
-
-        <button id="start-beam-btn" class="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 disabled:hover:bg-cyan-500 text-slate-950 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition active:scale-98 shadow-lg shadow-cyan-500/20" disabled>
-          Waiting for Peer to Connect...
+        <button id="stop-sharing-btn" class="btn-cancel-sweep">
+          Stop Sharing & Close Session
         </button>
       </section>
 
-      <!-- ================= VIEW 3: TRANSFERRING DASHBOARD ================= -->
-      <section id="transfer-view" class="hidden space-y-4">
-        <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="radar-loader">
-                <span></span>
-              </div>
-              <div>
-                <span id="transfer-role-text" class="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">Broadcasting Batch</span>
-                <p id="overall-batch-subtitle" class="text-xs font-mono text-slate-400 mt-0.5">0 of 0 files completed</p>
-              </div>
-            </div>
-            <span id="overall-percentage" class="text-2xl font-black font-mono text-cyan-400">0.0%</span>
+      <!-- ================= 3. RECEIVER: DIRECT PULL / DOWNLOAD SCREEN ================= -->
+      <section id="receiver-view" class="hidden space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <span class="text-xs font-bold text-cyan-400 uppercase tracking-wider block">Receiving files with Direct Beam</span>
+            <p id="receiver-batch-subtitle" class="text-[11px] font-mono text-slate-400 mt-0.5">Connecting to sender's live storage...</p>
           </div>
+          <span id="receiver-percentage" class="text-2xl font-black font-mono text-cyan-400">0.0%</span>
+        </div>
 
-          <div class="w-full bg-slate-900 border border-slate-800 rounded-full h-2.5 p-0.5 overflow-hidden">
-            <div id="overall-progress-bar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full w-0 transition-all duration-150"></div>
+        <!-- Receiver Aggregate Progress Bar -->
+        <div class="w-full bg-slate-900 border border-slate-800 rounded-full h-2.5 p-0.5 overflow-hidden">
+          <div id="receiver-progress-bar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full w-0 transition-all duration-150"></div>
+        </div>
+
+        <!-- Live Telemetry -->
+        <div class="grid grid-cols-2 gap-2 text-center font-mono">
+          <div class="bg-slate-900/60 rounded-lg p-2 border border-slate-800/60">
+            <span class="text-[10px] text-slate-500 uppercase block">Transfer Speed</span>
+            <span id="receiver-speed-text" class="text-xs font-bold text-slate-200">0.00 MB/s</span>
           </div>
-
-          <div class="grid grid-cols-2 gap-2 pt-1 text-center font-mono">
-            <div class="bg-slate-900/60 rounded-lg p-2 border border-slate-800/60">
-              <span class="text-[10px] text-slate-500 uppercase block">Speed</span>
-              <span id="speed-text" class="text-xs font-bold text-slate-200">0.00 MB/s</span>
-            </div>
-            <div class="bg-slate-900/60 rounded-lg p-2 border border-slate-800/60">
-              <span class="text-[10px] text-slate-500 uppercase block">ETA</span>
-              <span id="eta-text" class="text-xs font-bold text-slate-200">Calculating...</span>
-            </div>
+          <div class="bg-slate-900/60 rounded-lg p-2 border border-slate-800/60">
+            <span class="text-[10px] text-slate-500 uppercase block">Estimated Time</span>
+            <span id="receiver-eta-text" class="text-xs font-bold text-slate-200">Calculating...</span>
           </div>
         </div>
 
-        <!-- Manifest File List -->
+        <!-- Incoming Manifest Table -->
         <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
-          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-2 px-1">Batch Manifest</span>
-          <ul id="transfer-manifest-list" class="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pr-1 text-xs"></ul>
+          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-2 px-1">File Manifest</span>
+          <ul id="receiver-manifest-list" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1 text-xs"></ul>
         </div>
 
-        <!-- Danger Light-Sweep Cancel Button -->
-        <button id="cancel-transfer-btn" class="btn-cancel-sweep">
-          Cancel Transfer
+        <!-- Receiver Completion Card with Direct ZIP Download -->
+        <div id="receiver-complete-card" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-center space-y-3">
+          <div class="inline-flex items-center gap-2 text-emerald-400 font-bold text-xs">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> All files downloaded to your device!
+          </div>
+          <button id="download-zip-btn" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-98 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
+            <i data-lucide="archive" class="w-4 h-4"></i> Download All as .ZIP Archive
+          </button>
+        </div>
+
+        <button id="cancel-receiver-btn" class="btn-cancel-sweep">
+          Disconnect from Host
         </button>
-      </section>
-
-      <!-- ================= VIEW 4: TRANSFER COMPLETE ================= -->
-      <section id="complete-view" class="hidden text-center space-y-4 py-3">
-        <div class="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
-          <i data-lucide="check-check" class="w-7 h-7"></i>
-        </div>
-        <div>
-          <h2 class="text-lg font-bold text-white mb-0.5">Batch Completed!</h2>
-          <p id="complete-details" class="text-xs text-slate-400">All files transferred directly peer-to-peer.</p>
-        </div>
-
-        <div id="receiver-actions-box" class="space-y-2 pt-1">
-          <button id="download-zip-btn" class="hidden w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-98 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
-            <i data-lucide="archive" class="w-4 h-4"></i> Download All as .ZIP
-          </button>
-          <div id="individual-downloads-container" class="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-1 text-left"></div>
-        </div>
-
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
-          <button id="send-another-btn" class="w-full sm:w-auto bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-1.5 shadow-md shadow-cyan-500/20">
-            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Send More
-          </button>
-          <button id="complete-back-home-btn" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-1.5">
-            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Back Home
-          </button>
-        </div>
       </section>
 
     </div>
   </main>
 
-  <!-- ================= ABOUT ME & CUSTOM PROJECTS BANNER ================= -->
+  <!-- About Me & Custom Projects Banner -->
   <section class="w-full max-w-xl mx-auto px-4 mb-4">
     <div class="bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-900/90 border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-xl text-center space-y-2 backdrop-blur-md">
       <div class="inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-full">
@@ -409,13 +323,9 @@
     </div>
   </section>
 
-  <!-- ================= SOCIAL DOCK & FOOTER WITH SVG ICONS ================= -->
+  <!-- Social Dock & Footer -->
   <footer class="w-full max-w-4xl mx-auto py-6 px-4 flex flex-col items-center gap-4 border-t border-slate-900/80 text-xs text-slate-500">
-    
-    <!-- Interactive Frosted-Glass Social Dock -->
     <div class="relative group/dock flex items-center gap-2 sm:gap-3 bg-slate-900/70 backdrop-blur-md border border-slate-800/80 rounded-2xl px-3 py-2 sm:px-4 sm:py-2.5 shadow-2xl">
-      
-      <!-- Label -->
       <span class="hidden sm:inline-block text-[11px] font-semibold text-slate-400 uppercase tracking-wider pl-1 pr-2 border-r border-slate-800/80">
         Let's Connect
       </span>
@@ -459,7 +369,7 @@
         </span>
       </div>
 
-      <!-- WhatsApp Direct Chat -->
+      <!-- WhatsApp -->
       <div class="relative group flex items-center justify-center">
         <a href="https://wa.me/918501820073" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp"
           class="w-9 h-9 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-emerald-400 hover:border-emerald-500 hover:-translate-y-1 hover:shadow-[0_0_14px_rgba(16,185,129,0.35)] transition-all duration-200 active:scale-95">
@@ -474,7 +384,7 @@
 
       <div class="h-4 w-[1px] bg-slate-800/80 mx-0.5"></div>
 
-      <!-- Direct Email Client -->
+      <!-- Email Client -->
       <div class="relative group flex items-center justify-center">
         <a href="mailto:vishwanthmalla0324@gmail.com" aria-label="Send Email"
           class="w-9 h-9 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-slate-400 hover:text-amber-400 hover:border-amber-500 hover:-translate-y-1 hover:shadow-[0_0_14px_rgba(245,158,11,0.35)] transition-all duration-200 active:scale-95">
@@ -487,7 +397,7 @@
         </span>
       </div>
 
-      <!-- Copy Email Button with Animated Micro-Tooltip -->
+      <!-- Copy Email Button -->
       <div class="relative flex items-center justify-center">
         <button id="copy-email-dock-btn" type="button" aria-label="Copy Email Address"
           data-email="vishwanthmalla0324@gmail.com"
@@ -501,11 +411,10 @@
 
     </div>
 
-    <!-- Secondary Meta Row -->
     <div class="flex flex-col sm:flex-row items-center justify-between w-full text-[11px] gap-2 text-slate-500">
       <div class="flex items-center gap-1.5">
         <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-500"></i>
-        <span>Sequential Multi-File Framing Protocol</span>
+        <span>On-Demand Persistent Mesh Engine</span>
       </div>
       <div>
         <span>Direct Beam &copy; 2026 • Built by Vishwanth</span>
