@@ -92,8 +92,7 @@
   const securityModalBackdrop = document.getElementById('security-modal-backdrop');
   const closeSecurityModalBtn = document.getElementById('close-security-modal-btn');
 
-  // Dock / Social
-  const copyEmailDockBtn = document.getElementById('copy-email-dock-btn');
+  // Modal Email Copy
   const modalCopyEmailBtn = document.getElementById('modal-copy-email-btn');
 
   // Social Share
@@ -102,7 +101,6 @@
   const shareX = document.getElementById('share-x');
   const shareLi = document.getElementById('share-li');
   const shareGmail = document.getElementById('share-gmail');
-  const shareEmail = document.getElementById('share-email');
   const shareNative = document.getElementById('share-native');
 
   // ==========================================================================
@@ -174,13 +172,12 @@
   }
 
   // ==========================================================================
-  // SOCKET.IO SIGNALING WITH DYNAMIC PROTOCOL ALIGNMENT (HTTPS -> WSS)
+  // SOCKET.IO SIGNALING WITH DYNAMIC PROTOCOL NEGOTIATION
   // ==========================================================================
 
   function initSocket() {
     if (socket) return;
 
-    // Detect HTTPS vs HTTP to dynamically select wss:// or ws://
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socketUrl = `${protocol}//${window.location.host}`;
 
@@ -197,14 +194,13 @@
     socket.on('connect', () => {
       clearTimeout(coldStartTimer);
       if (coldStartBanner) coldStartBanner.classList.add('hidden');
-      console.log('Connected to signaling server with ID:', socket.id);
+      console.log('Signaling server connected:', socket.id);
     });
 
     socket.on('connect_error', (err) => {
       console.error('Signaling connection error:', err);
     });
 
-    // Room Created Handler with Polymorphic Argument Extraction
     socket.on('room-created', (payload) => {
       let code = null;
       if (typeof payload === 'string') {
@@ -214,7 +210,6 @@
       }
 
       if (!code) {
-        console.error('Signaling server returned an empty payload for room-created:', payload);
         showToast('Error generating room code');
         return;
       }
@@ -230,7 +225,6 @@
       }
     });
 
-    // Room Joined Handler
     socket.on('room-joined', (payload) => {
       let code = null;
       if (typeof payload === 'string') {
@@ -249,7 +243,7 @@
 
     socket.on('peer-joined', async ({ peerId }) => {
       if (isSender) {
-        logSenderActivity(`New peer (${peerId.slice(0, 5)}) joined room`);
+        logSenderActivity(`Peer connected (${peerId.slice(0, 5)})`);
         await createSenderPeerConnection(peerId);
         updatePeerCountUI();
       }
@@ -262,7 +256,7 @@
         try { if (pc) pc.close(); } catch (e) {}
         peerConnections.delete(peerId);
         updatePeerCountUI();
-        logSenderActivity(`Peer (${peerId.slice(0, 5)}) disconnected`);
+        logSenderActivity(`Peer disconnected (${peerId.slice(0, 5)})`);
       }
     });
 
@@ -329,7 +323,7 @@
       });
     }
 
-    // Update File Manifest Drawer
+    // Manifest Details
     const totalBytes = selectedFiles.reduce((acc, f) => acc + f.size, 0);
     if (queueSummaryCount) queueSummaryCount.textContent = `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}`;
     if (queueSummarySize) queueSummarySize.textContent = formatBytes(totalBytes);
@@ -344,7 +338,7 @@
       });
     }
 
-    // Social Sharing Links
+    // Dynamic Share Links
     const shareUrl = `${window.location.origin}/?code=${code}`;
     const encodedUrl = encodeURIComponent(shareUrl);
     const encodedText = encodeURIComponent(`Download ${selectedFiles.length} file(s) via Direct Beam P2P: ${shareUrl}`);
@@ -354,7 +348,6 @@
     if (shareX) shareX.onclick = () => window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
     if (shareLi) shareLi.onclick = () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
     if (shareGmail) shareGmail.onclick = () => window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=Direct+Beam+Files&body=${encodedText}`, '_blank');
-    if (shareEmail) shareEmail.onclick = () => window.location.href = `mailto:?subject=Direct Beam Transfer&body=${encodedText}`;
     if (shareNative) {
       shareNative.onclick = async () => {
         if (navigator.share) {
@@ -371,7 +364,6 @@
   async function createSenderPeerConnection(peerId) {
     const pc = new RTCPeerConnection(RTC_CONFIG);
     
-    // Explicit DataChannel initialization with binaryType arraybuffer
     const dc = pc.createDataChannel('fileStream', { ordered: true });
     dc.binaryType = 'arraybuffer';
     dc.bufferedAmountLowThreshold = BUFFER_FLOOR;
@@ -386,12 +378,12 @@
     };
 
     dc.onopen = () => {
-      logSenderActivity(`DataChannel opened with peer (${peerId.slice(0, 5)})`);
+      logSenderActivity(`Channel open with peer (${peerId.slice(0, 5)})`);
       startBatchStreamToPeer(peerId);
     };
 
     dc.onerror = (err) => console.error('DataChannel error on sender:', err);
-    dc.onclose = () => logSenderActivity(`DataChannel closed with peer (${peerId.slice(0, 5)})`);
+    dc.onclose = () => logSenderActivity(`Channel closed with peer (${peerId.slice(0, 5)})`);
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -414,7 +406,7 @@
     }
 
     peer.dc.send(JSON.stringify({ type: 'batch-complete' }));
-    logSenderActivity(`Finished streaming batch to (${peerId.slice(0, 5)})`);
+    logSenderActivity(`Batch complete for (${peerId.slice(0, 5)})`);
     peer.isTransferring = false;
   }
 
@@ -686,7 +678,7 @@
   // Receiver Joining
   if (joinBtn) {
     joinBtn.onclick = () => {
-      const code = manualCodeInput.value.trim().toUpperCase();
+      const code = manualCodeInput.value.trim();
       if (code.length < 6) {
         showToast('Please enter a valid 6-digit code');
         return;
@@ -772,7 +764,10 @@
     };
   }
 
-  // QR Code Scanner Logic
+  // ==========================================================================
+  // RESPONSIVE QR SCANNER ENGINE (Fixes viewport size crashes on mobile)
+  // ==========================================================================
+
   if (scanQrBtn) {
     scanQrBtn.onclick = () => {
       if (scannerWrapper) scannerWrapper.classList.remove('hidden');
@@ -800,21 +795,56 @@
       showToast('QR Scanner engine not loaded.');
       return;
     }
+
+    // Dynamic responsive bounding box to prevent iOS/Android aspect ratio mismatch errors
+    const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
+      const minEdgePercentage = 0.70; // 70% of viewport
+      const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+      const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+      return {
+        width: Math.max(qrboxSize, 180),
+        height: Math.max(qrboxSize, 180)
+      };
+    };
+
     html5QrCodeScanner = new Html5Qrcode('qr-reader');
+    
+    const config = {
+      fps: 15,
+      qrbox: qrboxFunction,
+      aspectRatio: 1.0,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+      }
+    };
+
     html5QrCodeScanner.start(
       { facingMode: currentFacingMode },
-      { fps: 10, qrbox: { width: 220, height: 220 } },
+      config,
       (decodedText) => {
+        console.log('Scanned QR:', decodedText);
         stopQrScanner();
         if (scannerWrapper) scannerWrapper.classList.add('hidden');
-        const urlMatch = decodedText.match(/code=([A-Za-z0-9]{6})/);
-        const code = urlMatch ? urlMatch[1] : decodedText.trim().slice(0, 6);
-        joinRoomByCode(code.toUpperCase());
+
+        // Extract 6-digit numeric or alphanumeric room code
+        let code = '';
+        const urlMatch = decodedText.match(/code=([0-9]{6})/i) || decodedText.match(/code=([A-Za-z0-9]{6})/i);
+        if (urlMatch) {
+          code = urlMatch[1];
+        } else {
+          const directMatch = decodedText.match(/\b([0-9]{6})\b/) || decodedText.match(/\b([A-Za-z0-9]{6})\b/);
+          code = directMatch ? directMatch[1] : decodedText.trim().slice(0, 6);
+        }
+
+        if (manualCodeInput) manualCodeInput.value = code;
+        joinRoomByCode(code);
       },
-      (error) => {}
+      (errorMessage) => {
+        // Continuous scan parsing noise; ignore
+      }
     ).catch((err) => {
-      console.warn('Unable to start QR Scanner', err);
-      showToast('Camera access denied or unavailable');
+      console.warn('Unable to start QR Scanner:', err);
+      showToast('Camera error: check permissions');
       if (scannerWrapper) scannerWrapper.classList.add('hidden');
     });
   }
@@ -874,25 +904,20 @@
   if (closeSecurityModalBtn) closeSecurityModalBtn.onclick = closeSecurity;
   if (securityModalBackdrop) securityModalBackdrop.onclick = closeSecurity;
 
-  // Copy Email Buttons
-  if (copyEmailDockBtn) {
-    copyEmailDockBtn.onclick = () => {
-      copyTextToClipboard('vishwanthmalla0324@gmail.com', 'Founder email copied!');
-    };
-  }
+  // Modal Email Copy
   if (modalCopyEmailBtn) {
     modalCopyEmailBtn.onclick = () => {
       copyTextToClipboard('vishwanthmalla0324@gmail.com', 'Founder email copied!');
     };
   }
 
-  // Auto-Join by URL Query Parameter (e.g. `?code=ABC123`)
+  // Auto-Join by URL Query Parameter (e.g. `?code=123456`)
   window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     if (code && code.length >= 6) {
-      if (manualCodeInput) manualCodeInput.value = code.toUpperCase();
-      joinRoomByCode(code.toUpperCase());
+      if (manualCodeInput) manualCodeInput.value = code;
+      joinRoomByCode(code);
     }
   });
 

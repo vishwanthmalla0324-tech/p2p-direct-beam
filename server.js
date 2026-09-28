@@ -9,7 +9,7 @@ const server = http.createServer(app);
 // Serve static assets from public/
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Configure Socket.IO with multi-transport fallback & CORS
+// Configure Socket.IO with CORS and transport fallbacks
 const io = new Server(server, {
   cors: {
     origin: '*',
@@ -18,14 +18,9 @@ const io = new Server(server, {
   transports: ['websocket', 'polling']
 });
 
-// Generate 6-character Base32 room codes (excluding ambiguous letters like O, I, 0, 1)
+// Generate pure 6-digit numeric room codes (100000 - 999999)
 function generateRoomCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 // In-memory room state: roomCode -> Set of socket IDs
@@ -46,8 +41,6 @@ io.on('connection', (socket) => {
     socket.roomCode = roomCode;
 
     console.log(`[Room Created] ${roomCode} by ${socket.id}`);
-
-    // Standardized payload format
     socket.emit('room-created', { roomCode: roomCode, code: roomCode });
   });
 
@@ -55,13 +48,13 @@ io.on('connection', (socket) => {
   socket.on('join-room', (payload) => {
     let roomCode = '';
     if (typeof payload === 'string') {
-      roomCode = payload.trim().toUpperCase();
+      roomCode = payload.trim();
     } else if (payload && typeof payload === 'object') {
-      roomCode = (payload.roomCode || payload.code || '').trim().toUpperCase();
+      roomCode = (payload.roomCode || payload.code || '').toString().trim();
     }
 
     if (!roomCode || !rooms.has(roomCode)) {
-      socket.emit('error-msg', 'Room code not found or expired.');
+      socket.emit('error-msg', 'Room code not found or has expired.');
       return;
     }
 
@@ -71,11 +64,7 @@ io.on('connection', (socket) => {
     socket.roomCode = roomCode;
 
     console.log(`[Room Joined] ${socket.id} entered ${roomCode}`);
-
-    // Acknowledge back to receiver
     socket.emit('room-joined', { roomCode: roomCode, code: roomCode });
-
-    // Notify peers (sender)
     socket.to(roomCode).emit('peer-joined', { peerId: socket.id });
   });
 
