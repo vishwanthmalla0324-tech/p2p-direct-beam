@@ -23,8 +23,7 @@
   let currentRoomId = null;
   let isSender = false;
   let selectedFiles = []; // File objects
-  let peerConnections = new Map(); // peerId -> { pc, dc, activeTransfer: bool }
-  let receiverChannelManager = null;
+  let peerConnections = new Map(); // peerId -> { pc, dc, isTransferring }
   let html5QrCodeScanner = null;
   let currentFacingMode = 'environment';
   let receivedFilesArchive = []; // { name, blob, size }
@@ -244,7 +243,6 @@
           }
         }
       } else {
-        // Receiver handling signal from Sender
         await handleReceiverSignal(senderId, data);
       }
     });
@@ -298,7 +296,7 @@
     queueSummarySize.textContent = formatBytes(totalBytes);
 
     senderQueueList.innerHTML = '';
-    selectedFiles.forEach((f, idx) => {
+    selectedFiles.forEach((f) => {
       const li = document.createElement('li');
       li.className = 'flex justify-between items-center py-1 border-b border-slate-800/40';
       li.innerHTML = `<span class="truncate max-w-[220px]">${f.name}</span><span class="font-mono text-slate-400 text-[10px]">${formatBytes(f.size)}</span>`;
@@ -309,21 +307,23 @@
     const encodedUrl = encodeURIComponent(shareUrl);
     const encodedText = encodeURIComponent(`Download ${selectedFiles.length} file(s) via Direct Beam P2P: ${shareUrl}`);
 
-    shareWa.onclick = () => window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
-    shareFb.onclick = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
-    shareX.onclick = () => window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
-    shareLi.onclick = () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
-    shareGmail.onclick = () => window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=Direct+Beam+Files&body=${encodedText}`, '_blank');
-    shareEmail.onclick = () => window.location.href = `mailto:?subject=Direct Beam Transfer&body=${encodedText}`;
-    shareNative.onclick = async () => {
-      if (navigator.share) {
-        try {
-          await navigator.share({ title: 'Direct Beam Transfer', text: 'P2P File Transfer Link', url: shareUrl });
-        } catch (e) {}
-      } else {
-        copyTextToClipboard(shareUrl, 'Share link copied!');
-      }
-    };
+    if (shareWa) shareWa.onclick = () => window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+    if (shareFb) shareFb.onclick = () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, '_blank');
+    if (shareX) shareX.onclick = () => window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
+    if (shareLi) shareLi.onclick = () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, '_blank');
+    if (shareGmail) shareGmail.onclick = () => window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=Direct+Beam+Files&body=${encodedText}`, '_blank');
+    if (shareEmail) shareEmail.onclick = () => window.location.href = `mailto:?subject=Direct Beam Transfer&body=${encodedText}`;
+    if (shareNative) {
+      shareNative.onclick = async () => {
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: 'Direct Beam Transfer', text: 'P2P File Transfer Link', url: shareUrl });
+          } catch (e) {}
+        } else {
+          copyTextToClipboard(shareUrl, 'Share link copied!');
+        }
+      };
+    }
   }
 
   async function createSenderPeerConnection(peerId) {
@@ -334,7 +334,7 @@
     dc.binaryType = 'arraybuffer';
     dc.bufferedAmountLowThreshold = BUFFER_FLOOR;
 
-    const peerObj = { pc, dc, isTransferring: false, readyToReceive: false };
+    const peerObj = { pc, dc, isTransferring: false };
     peerConnections.set(peerId, peerObj);
 
     pc.onicecandidate = (event) => {
@@ -346,17 +346,6 @@
     dc.onopen = () => {
       logSenderActivity(`DataChannel opened with peer (${peerId.slice(0, 5)})`);
       startBatchStreamToPeer(peerId);
-    };
-
-    dc.onmessage = (event) => {
-      if (typeof event.data === 'string') {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === 'ready') {
-            peerObj.readyToReceive = true;
-          }
-        } catch (e) {}
-      }
     };
 
     dc.onerror = (err) => console.error('DataChannel error on sender:', err);
@@ -379,9 +368,7 @@
       const fileId = `file_${i}_${Date.now()}`;
       logSenderActivity(`Sending: ${file.name} to (${peerId.slice(0, 5)})`);
 
-      await streamSingleFile(peer.dc, file, fileId, (prog) => {
-        // Can optionally log per-file progress
-      });
+      await streamSingleFile(peer.dc, file, fileId);
     }
 
     // Inform peer the entire batch is completed
@@ -390,7 +377,7 @@
     peer.isTransferring = false;
   }
 
-  async function streamSingleFile(dc, file, fileId, onProgress) {
+  async function streamSingleFile(dc, file, fileId) {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
     // 1. Send Manifest
@@ -406,7 +393,6 @@
 
     // 2. Stream Binary Chunks with Reactive Backpressure
     let offset = 0;
-    let chunkIndex = 0;
 
     while (offset < file.size) {
       if (dc.bufferedAmount > BUFFER_CEILING) {
@@ -423,18 +409,7 @@
       const buffer = await slice.arrayBuffer();
 
       dc.send(buffer);
-
       offset += buffer.byteLength;
-      chunkIndex++;
-
-      if (onProgress) {
-        onProgress({
-          fileId,
-          bytesSent: offset,
-          totalBytes: file.size,
-          progress: offset / file.size
-        });
-      }
     }
 
     // 3. Send EOF delimiter
@@ -483,8 +458,6 @@
     let receivedBytes = 0;
     let receivedChunks = [];
     let startTime = 0;
-    let totalBatchBytes = 0;
-    let cumulativeBatchReceived = 0;
 
     if (receiverBatchSubtitle) receiverBatchSubtitle.textContent = 'Direct P2P Link Established. Streaming...';
 
@@ -515,11 +488,8 @@
               });
 
               markReceiverManifestItemDone(currentManifest.fileId, fileBlob);
-
-              // Auto-trigger single file download
               triggerDownload(fileBlob, currentManifest.name);
 
-              cumulativeBatchReceived += currentManifest.size;
               currentManifest = null;
               receivedChunks = [];
             }
@@ -620,35 +590,61 @@
   }
 
   // ==========================================================================
-  // EVENT LISTENERS & UI WIRING
+  // EVENT LISTENERS & UI WIRING: FILE PICKER & DRAG-AND-DROP
   // ==========================================================================
 
-  // Drag & Drop
-  if (dropZone) {
-    dropZone.onclick = () => fileInput.click();
-    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-cyan-500'); };
-    dropZone.ondragleave = () => dropZone.classList.remove('border-cyan-500');
-    dropZone.ondrop = (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('border-cyan-500');
-      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        handleFilesSelected(Array.from(e.dataTransfer.files));
-      }
-    };
-  }
+  if (dropZone && fileInput) {
+    // 1. Trigger file picker when user clicks drop zone
+    dropZone.addEventListener('click', () => {
+      fileInput.click();
+    });
 
-  if (fileInput) {
-    fileInput.onchange = (e) => {
+    // 2. Process chosen files and reset input so identical files can be selected again
+    fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
         handleFilesSelected(Array.from(e.target.files));
+        fileInput.value = '';
       }
-    };
+    });
+
+    // 3. Prevent browser from opening dropped files in tab
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+      dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }, false);
+    });
+
+    // 4. Highlight drag state
+    dropZone.addEventListener('dragover', () => {
+      dropZone.classList.add('border-cyan-500', 'bg-cyan-500/10');
+    });
+
+    ['dragleave', 'drop'].forEach((eventName) => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.classList.remove('border-cyan-500', 'bg-cyan-500/10');
+      });
+    });
+
+    // 5. Ingest dropped files
+    dropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFilesSelected(Array.from(e.dataTransfer.files));
+      }
+    });
   }
 
   function handleFilesSelected(files) {
+    if (!files || files.length === 0) return;
     selectedFiles = files;
     initSocket();
-    socket.emit('create-room');
+    if (socket.connected) {
+      socket.emit('create-room');
+    } else {
+      socket.once('connect', () => {
+        socket.emit('create-room');
+      });
+    }
   }
 
   // Receiver Joining
@@ -665,7 +661,13 @@
 
   function joinRoomByCode(code) {
     initSocket();
-    socket.emit('join-room', { roomCode: code });
+    if (socket.connected) {
+      socket.emit('join-room', { roomCode: code });
+    } else {
+      socket.once('connect', () => {
+        socket.emit('join-room', { roomCode: code });
+      });
+    }
   }
 
   // Copy Link Button
@@ -769,7 +771,6 @@
       (decodedText) => {
         stopQrScanner();
         scannerWrapper.classList.add('hidden');
-        // Extract 6-digit code if URL is scanned
         const urlMatch = decodedText.match(/code=([A-Za-z0-9]{6})/);
         const code = urlMatch ? urlMatch[1] : decodedText.trim().slice(0, 6);
         joinRoomByCode(code.toUpperCase());
