@@ -6,6 +6,11 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
+// Keep-alive heartbeat endpoint for UptimeRobot / Cron-Job pingers
+app.get('/healthz', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Serve static assets from public/
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -27,8 +32,6 @@ function generateRoomCode() {
 const rooms = new Map();
 
 io.on('connection', (socket) => {
-  console.log(`[Signaling] Socket connected: ${socket.id}`);
-
   // 1. Create room
   socket.on('create-room', () => {
     let roomCode = generateRoomCode();
@@ -40,7 +43,6 @@ io.on('connection', (socket) => {
     socket.join(roomCode);
     socket.roomCode = roomCode;
 
-    console.log(`[Room Created] ${roomCode} by ${socket.id}`);
     socket.emit('room-created', { roomCode: roomCode, code: roomCode });
   });
 
@@ -63,7 +65,6 @@ io.on('connection', (socket) => {
     socket.join(roomCode);
     socket.roomCode = roomCode;
 
-    console.log(`[Room Joined] ${socket.id} entered ${roomCode}`);
     socket.emit('room-joined', { roomCode: roomCode, code: roomCode });
     socket.to(roomCode).emit('peer-joined', { peerId: socket.id });
   });
@@ -77,7 +78,6 @@ io.on('connection', (socket) => {
 
   // 4. Disconnect handling
   socket.on('disconnect', () => {
-    console.log(`[Signaling] Socket disconnected: ${socket.id}`);
     const roomCode = socket.roomCode;
     if (roomCode && rooms.has(roomCode)) {
       const members = rooms.get(roomCode);
@@ -87,7 +87,6 @@ io.on('connection', (socket) => {
 
       if (members.size === 0) {
         rooms.delete(roomCode);
-        console.log(`[Room Deleted] ${roomCode}`);
       }
     }
   });

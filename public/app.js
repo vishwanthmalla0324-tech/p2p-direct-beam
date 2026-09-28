@@ -194,11 +194,6 @@
     socket.on('connect', () => {
       clearTimeout(coldStartTimer);
       if (coldStartBanner) coldStartBanner.classList.add('hidden');
-      console.log('Signaling server connected:', socket.id);
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('Signaling connection error:', err);
     });
 
     socket.on('room-created', (payload) => {
@@ -243,7 +238,7 @@
 
     socket.on('peer-joined', async ({ peerId }) => {
       if (isSender) {
-        logSenderActivity(`Peer connected (${peerId.slice(0, 5)})`);
+        logSenderActivity(`Device connected (${peerId.slice(0, 5)})`);
         await createSenderPeerConnection(peerId);
         updatePeerCountUI();
       }
@@ -256,7 +251,7 @@
         try { if (pc) pc.close(); } catch (e) {}
         peerConnections.delete(peerId);
         updatePeerCountUI();
-        logSenderActivity(`Peer disconnected (${peerId.slice(0, 5)})`);
+        logSenderActivity(`Device disconnected (${peerId.slice(0, 5)})`);
       }
     });
 
@@ -285,7 +280,7 @@
   }
 
   // ==========================================================================
-  // SENDER ENGINE (256 KB Chunking & Flow Control)
+  // SENDER ENGINE (Isolated Pipelines & Cooperative Event Loop Yielding)
   // ==========================================================================
 
   function updatePeerCountUI() {
@@ -378,18 +373,19 @@
     };
 
     dc.onopen = () => {
-      logSenderActivity(`Channel open with peer (${peerId.slice(0, 5)})`);
+      logSenderActivity(`Channel open with device (${peerId.slice(0, 5)})`);
       startBatchStreamToPeer(peerId);
     };
 
     dc.onerror = (err) => console.error('DataChannel error on sender:', err);
-    dc.onclose = () => logSenderActivity(`Channel closed with peer (${peerId.slice(0, 5)})`);
+    dc.onclose = () => logSenderActivity(`Channel closed with device (${peerId.slice(0, 5)})`);
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     socket.emit('signal', { targetId: peerId, data: { sdp: pc.localDescription } });
   }
 
+  // Independent pipeline per peer to avoid head-of-line blocking across multiple receivers
   async function startBatchStreamToPeer(peerId) {
     const peer = peerConnections.get(peerId);
     if (!peer || !peer.dc || peer.dc.readyState !== 'open') return;
@@ -397,37 +393,49 @@
 
     peer.isTransferring = true;
 
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
-      const fileId = `file_${i}_${Date.now()}`;
-      logSenderActivity(`Sending: ${file.name} to (${peerId.slice(0, 5)})`);
+    try {
+      for (let i = 0; i < selectedFiles.length; i++) {
+        // Discontinue if receiver disconnected mid-batch
+        if (!peerConnections.has(peerId) || peer.dc.readyState !== 'open') break;
 
-      await streamSingleFile(peer.dc, file, fileId);
+        const file = selectedFiles[i];
+        const fileId = `file_${i}_${Date.now()}`;
+        logSenderActivity(`Streaming ${file.name} to (${peerId.slice(0, 5)})`);
+
+        await streamSingleFile(peer.dc, file, fileId);
+      }
+
+      if (peer.dc && peer.dc.readyState === 'open') {
+        peer.dc.send(JSON.stringify({ type: 'batch-complete' }));
+        logSenderActivity(`Batch complete for (${peerId.slice(0, 5)})`);
+      }
+    } catch (err) {
+      console.error(`Streaming error to device ${peerId}:`, err);
+    } finally {
+      peer.isTransferring = false;
     }
-
-    peer.dc.send(JSON.stringify({ type: 'batch-complete' }));
-    logSenderActivity(`Batch complete for (${peerId.slice(0, 5)})`);
-    peer.isTransferring = false;
   }
 
   async function streamSingleFile(dc, file, fileId) {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
     // 1. Send Manifest
-    const manifest = {
+    dc.send(JSON.stringify({
       type: 'manifest',
       fileId: fileId,
       name: file.name,
       size: file.size,
       mimeType: file.type || 'application/octet-stream',
       totalChunks: totalChunks
-    };
-    dc.send(JSON.stringify(manifest));
+    }));
 
-    // 2. Stream Binary Chunks with Reactive Backpressure
+    // 2. Stream Binary Chunks with Cooperative Event Loop Yielding
     let offset = 0;
+    let chunksSinceYield = 0;
 
     while (offset < file.size) {
+      if (dc.readyState !== 'open') throw new Error('DataChannel closed unexpectedly');
+
       if (dc.bufferedAmount > BUFFER_CEILING) {
         await new Promise((resolve) => {
           dc.onbufferedamountlow = () => {
@@ -443,10 +451,19 @@
 
       dc.send(buffer);
       offset += buffer.byteLength;
+      chunksSinceYield++;
+
+      // Yield execution back to browser thread every 8 chunks (~2 MB) to prevent browser UI lock
+      if (chunksSinceYield >= 8) {
+        chunksSinceYield = 0;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
     }
 
     // 3. Send EOF delimiter
-    dc.send(JSON.stringify({ type: 'eof', fileId: fileId, name: file.name }));
+    if (dc.readyState === 'open') {
+      dc.send(JSON.stringify({ type: 'eof', fileId: fileId, name: file.name }));
+    }
   }
 
   // ==========================================================================
@@ -765,7 +782,7 @@
   }
 
   // ==========================================================================
-  // RESPONSIVE QR SCANNER ENGINE (Fixes viewport size crashes on mobile)
+  // RESPONSIVE QR SCANNER ENGINE
   // ==========================================================================
 
   if (scanQrBtn) {
@@ -796,9 +813,8 @@
       return;
     }
 
-    // Dynamic responsive bounding box to prevent iOS/Android aspect ratio mismatch errors
     const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
-      const minEdgePercentage = 0.70; // 70% of viewport
+      const minEdgePercentage = 0.70;
       const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
       const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
       return {
@@ -822,11 +838,9 @@
       { facingMode: currentFacingMode },
       config,
       (decodedText) => {
-        console.log('Scanned QR:', decodedText);
         stopQrScanner();
         if (scannerWrapper) scannerWrapper.classList.add('hidden');
 
-        // Extract 6-digit numeric or alphanumeric room code
         let code = '';
         const urlMatch = decodedText.match(/code=([0-9]{6})/i) || decodedText.match(/code=([A-Za-z0-9]{6})/i);
         if (urlMatch) {
@@ -839,9 +853,7 @@
         if (manualCodeInput) manualCodeInput.value = code;
         joinRoomByCode(code);
       },
-      (errorMessage) => {
-        // Continuous scan parsing noise; ignore
-      }
+      () => {}
     ).catch((err) => {
       console.warn('Unable to start QR Scanner:', err);
       showToast('Camera error: check permissions');
