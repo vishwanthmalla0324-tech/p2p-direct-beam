@@ -8,7 +8,7 @@
   // --- Configuration Constants ---
   const CHUNK_SIZE = 256 * 1024; // 256 KB per frame
   const BUFFER_CEILING = 8 * 1024 * 1024; // 8 MB buffer threshold
-  const BUFFER_FLOOR = 1024 * 1024; // 1 MB resumption threshold
+  const BUFFER_FLOOR = 1024 * 1024; // 1 MB backpressure resumption floor
 
   const RTC_CONFIG = {
     iceServers: [
@@ -22,7 +22,7 @@
   let socket = null;
   let currentRoomId = null;
   let isSender = false;
-  let selectedFiles = []; // File objects
+  let selectedFiles = [];
   let peerConnections = new Map(); // peerId -> { pc, dc, isTransferring }
   let html5QrCodeScanner = null;
   let currentFacingMode = 'environment';
@@ -96,7 +96,7 @@
   const copyEmailDockBtn = document.getElementById('copy-email-dock-btn');
   const modalCopyEmailBtn = document.getElementById('modal-copy-email-btn');
 
-  // Share buttons
+  // Social Share
   const shareWa = document.getElementById('share-wa');
   const shareFb = document.getElementById('share-fb');
   const shareX = document.getElementById('share-x');
@@ -174,17 +174,21 @@
   }
 
   // ==========================================================================
-  // SOCKET.IO SIGNALING
+  // SOCKET.IO SIGNALING WITH DYNAMIC PROTOCOL ALIGNMENT (HTTPS -> WSS)
   // ==========================================================================
 
   function initSocket() {
     if (socket) return;
 
+    // Detect HTTPS vs HTTP to dynamically select wss:// or ws://
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socketUrl = `${protocol}//${window.location.host}`;
+
     const coldStartTimer = setTimeout(() => {
       if (coldStartBanner) coldStartBanner.classList.remove('hidden');
     }, 2500);
 
-    socket = io({
+    socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,
       reconnectionDelay: 1000
@@ -196,17 +200,21 @@
       console.log('Connected to signaling server with ID:', socket.id);
     });
 
-    // Polymorphic room-created handler to support string, object, or argument payloads
+    socket.on('connect_error', (err) => {
+      console.error('Signaling connection error:', err);
+    });
+
+    // Room Created Handler with Polymorphic Argument Extraction
     socket.on('room-created', (payload) => {
       let code = null;
       if (typeof payload === 'string') {
         code = payload;
       } else if (payload && typeof payload === 'object') {
-        code = payload.roomCode || payload.roomId || payload.code;
+        code = payload.roomCode || payload.code || payload.roomId;
       }
 
       if (!code) {
-        console.error('Signaling server returned empty payload for room-created:', payload);
+        console.error('Signaling server returned an empty payload for room-created:', payload);
         showToast('Error generating room code');
         return;
       }
@@ -222,13 +230,13 @@
       }
     });
 
-    // Polymorphic room-joined handler
+    // Room Joined Handler
     socket.on('room-joined', (payload) => {
       let code = null;
       if (typeof payload === 'string') {
         code = payload;
       } else if (payload && typeof payload === 'object') {
-        code = payload.roomCode || payload.roomId || payload.code;
+        code = payload.roomCode || payload.code || payload.roomId;
       }
 
       currentRoomId = code || currentRoomId;
@@ -321,7 +329,7 @@
       });
     }
 
-    // Manifest Drawer
+    // Update File Manifest Drawer
     const totalBytes = selectedFiles.reduce((acc, f) => acc + f.size, 0);
     if (queueSummaryCount) queueSummaryCount.textContent = `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}`;
     if (queueSummarySize) queueSummarySize.textContent = formatBytes(totalBytes);
@@ -336,7 +344,7 @@
       });
     }
 
-    // Dynamic Social Share URLs
+    // Social Sharing Links
     const shareUrl = `${window.location.origin}/?code=${code}`;
     const encodedUrl = encodeURIComponent(shareUrl);
     const encodedText = encodeURIComponent(`Download ${selectedFiles.length} file(s) via Direct Beam P2P: ${shareUrl}`);
@@ -622,24 +630,21 @@
   }
 
   // ==========================================================================
-  // EVENT LISTENERS & UI WIRING: FILE PICKER & DRAG-AND-DROP
+  // EVENT LISTENERS: FILE PICKER & DRAG-AND-DROP
   // ==========================================================================
 
   if (dropZone && fileInput) {
-    // 1. Click to trigger file dialog
     dropZone.addEventListener('click', () => {
       fileInput.click();
     });
 
-    // 2. File input change event
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
         handleFilesSelected(Array.from(e.target.files));
-        fileInput.value = ''; // Reset so identical files can be selected again
+        fileInput.value = '';
       }
     });
 
-    // 3. Drag-and-drop event containment
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
       dropZone.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -716,7 +721,7 @@
     };
   }
 
-  // Stop / Cancel Sharing
+  // Reset to Home
   function resetToHome() {
     peerConnections.forEach(({ pc, dc }) => {
       try { if (dc) dc.close(); } catch (e) {}
@@ -869,7 +874,7 @@
   if (closeSecurityModalBtn) closeSecurityModalBtn.onclick = closeSecurity;
   if (securityModalBackdrop) securityModalBackdrop.onclick = closeSecurity;
 
-  // Email Copy Buttons
+  // Copy Email Buttons
   if (copyEmailDockBtn) {
     copyEmailDockBtn.onclick = () => {
       copyTextToClipboard('vishwanthmalla0324@gmail.com', 'Founder email copied!');

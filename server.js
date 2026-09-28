@@ -1,93 +1,104 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
 const path = require('path');
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 
-// Keep-alive heartbeat: pingInterval 20s stops Render's 55s idle proxy disconnect
+// Serve static assets from public/
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Configure Socket.IO with multi-transport fallback & CORS
 const io = new Server(server, {
-  cors: { origin: '*' },
-  pingInterval: 20000,
-  pingTimeout: 25000,
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  },
   transports: ['websocket', 'polling']
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Generate 6-character Base32 room codes (excluding ambiguous letters like O, I, 0, 1)
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
 
-app.get('/healthz', (req, res) => {
-  res.status(200).send('OK');
-});
-
-// Map: roomId -> { hostId: string, receivers: Set<string> }
-const activeRooms = new Map();
+// In-memory room state: roomCode -> Set of socket IDs
+const rooms = new Map();
 
 io.on('connection', (socket) => {
-  let joinedRoomId = null;
+  console.log(`[Signaling] Socket connected: ${socket.id}`);
 
-  // Host registers a persistent room
-  socket.on('create-room', (roomId) => {
-    joinedRoomId = roomId;
-    socket.join(roomId);
-    activeRooms.set(roomId, { hostId: socket.id, receivers: new Set() });
-    socket.emit('room-created', roomId);
+  // 1. Create room
+  socket.on('create-room', () => {
+    let roomCode = generateRoomCode();
+    while (rooms.has(roomCode)) {
+      roomCode = generateRoomCode();
+    }
+
+    rooms.set(roomCode, new Set([socket.id]));
+    socket.join(roomCode);
+    socket.roomCode = roomCode;
+
+    console.log(`[Room Created] ${roomCode} by ${socket.id}`);
+
+    // Standardized payload format
+    socket.emit('room-created', { roomCode: roomCode, code: roomCode });
   });
 
-  // Receiver joins an existing room
-  socket.on('join-room', (roomId) => {
-    joinedRoomId = roomId;
-    const room = activeRooms.get(roomId);
+  // 2. Join room
+  socket.on('join-room', (payload) => {
+    let roomCode = '';
+    if (typeof payload === 'string') {
+      roomCode = payload.trim().toUpperCase();
+    } else if (payload && typeof payload === 'object') {
+      roomCode = (payload.roomCode || payload.code || '').trim().toUpperCase();
+    }
 
-    if (!room || !room.hostId) {
-      socket.emit('room-error', 'Share session not found or host went offline.');
+    if (!roomCode || !rooms.has(roomCode)) {
+      socket.emit('error-msg', 'Room code not found or expired.');
       return;
     }
 
-    socket.join(roomId);
-    room.receivers.add(socket.id);
+    const roomMembers = rooms.get(roomCode);
+    roomMembers.add(socket.id);
+    socket.join(roomCode);
+    socket.roomCode = roomCode;
 
-    // Notify the host that a new receiver is requesting an independent pipe
-    io.to(room.hostId).emit('receiver-joined', { receiverId: socket.id });
-    socket.emit('joined-successfully', { hostId: room.hostId });
+    console.log(`[Room Joined] ${socket.id} entered ${roomCode}`);
+
+    // Acknowledge back to receiver
+    socket.emit('room-joined', { roomCode: roomCode, code: roomCode });
+
+    // Notify peers (sender)
+    socket.to(roomCode).emit('peer-joined', { peerId: socket.id });
   });
 
-  // Targeted point-to-point signaling
-  socket.on('signal-offer', ({ target, sdp }) => {
-    io.to(target).emit('signal-offer', { sender: socket.id, sdp });
-  });
-
-  socket.on('signal-answer', ({ target, sdp }) => {
-    io.to(target).emit('signal-answer', { sender: socket.id, sdp });
-  });
-
-  socket.on('signal-ice', ({ target, candidate }) => {
-    io.to(target).emit('signal-ice', { sender: socket.id, candidate });
-  });
-
-  // Explicit host teardown
-  socket.on('destroy-room', (roomId) => {
-    if (activeRooms.has(roomId)) {
-      const room = activeRooms.get(roomId);
-      if (room.hostId === socket.id) {
-        socket.to(roomId).emit('host-offline');
-        activeRooms.delete(roomId);
-      }
+  // 3. WebRTC signaling relay (SDP / ICE Candidates)
+  socket.on('signal', ({ targetId, data }) => {
+    if (targetId) {
+      io.to(targetId).emit('signal', { senderId: socket.id, data });
     }
   });
 
+  // 4. Disconnect handling
   socket.on('disconnect', () => {
-    if (joinedRoomId && activeRooms.has(joinedRoomId)) {
-      const room = activeRooms.get(joinedRoomId);
+    console.log(`[Signaling] Socket disconnected: ${socket.id}`);
+    const roomCode = socket.roomCode;
+    if (roomCode && rooms.has(roomCode)) {
+      const members = rooms.get(roomCode);
+      members.delete(socket.id);
 
-      // If the host drops, teardown the session for all connected receivers
-      if (room.hostId === socket.id) {
-        socket.to(joinedRoomId).emit('host-offline');
-        activeRooms.delete(joinedRoomId);
-      } else {
-        // If a single receiver leaves, only clean up their instance
-        room.receivers.delete(socket.id);
-        io.to(room.hostId).emit('receiver-disconnected', { receiverId: socket.id });
+      socket.to(roomCode).emit('peer-disconnected', { peerId: socket.id });
+
+      if (members.size === 0) {
+        rooms.delete(roomCode);
+        console.log(`[Room Deleted] ${roomCode}`);
       }
     }
   });
@@ -95,5 +106,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Direct Beam persistent signaling server running on port ${PORT}`);
+  console.log(`Direct Beam signaling server running on port ${PORT}`);
 });
