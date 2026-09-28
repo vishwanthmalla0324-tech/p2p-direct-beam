@@ -196,18 +196,47 @@
       console.log('Connected to signaling server with ID:', socket.id);
     });
 
-    socket.on('room-created', ({ roomCode }) => {
-      currentRoomId = roomCode;
+    // Polymorphic room-created handler to support string, object, or argument payloads
+    socket.on('room-created', (payload) => {
+      let code = null;
+      if (typeof payload === 'string') {
+        code = payload;
+      } else if (payload && typeof payload === 'object') {
+        code = payload.roomCode || payload.roomId || payload.code;
+      }
+
+      if (!code) {
+        console.error('Signaling server returned empty payload for room-created:', payload);
+        showToast('Error generating room code');
+        return;
+      }
+
+      currentRoomId = code;
       isSender = true;
-      setupSenderRoomUI(roomCode);
       switchView('sender');
+
+      try {
+        setupSenderRoomUI(code);
+      } catch (err) {
+        console.error('Error rendering sender room UI:', err);
+      }
     });
 
-    socket.on('room-joined', ({ roomCode }) => {
-      currentRoomId = roomCode;
+    // Polymorphic room-joined handler
+    socket.on('room-joined', (payload) => {
+      let code = null;
+      if (typeof payload === 'string') {
+        code = payload;
+      } else if (payload && typeof payload === 'object') {
+        code = payload.roomCode || payload.roomId || payload.code;
+      }
+
+      currentRoomId = code || currentRoomId;
       isSender = false;
       switchView('receiver');
-      if (receiverBatchSubtitle) receiverBatchSubtitle.textContent = 'Signaling connected. Awaiting sender handshake...';
+      if (receiverBatchSubtitle) {
+        receiverBatchSubtitle.textContent = 'Signaling connected. Awaiting sender handshake...';
+      }
     });
 
     socket.on('peer-joined', async ({ peerId }) => {
@@ -276,34 +305,39 @@
   }
 
   function setupSenderRoomUI(code) {
-    displayCode.textContent = code;
+    if (displayCode) displayCode.textContent = code;
 
     // Render QR Code
-    qrcodeBox.innerHTML = '';
-    const shareUrl = `${window.location.origin}/?code=${code}`;
-    new QRCode(qrcodeBox, {
-      text: shareUrl,
-      width: 140,
-      height: 140,
-      colorDark: '#0f172a',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
+    if (qrcodeBox && typeof QRCode !== 'undefined') {
+      qrcodeBox.innerHTML = '';
+      const shareUrl = `${window.location.origin}/?code=${code}`;
+      new QRCode(qrcodeBox, {
+        text: shareUrl,
+        width: 140,
+        height: 140,
+        colorDark: '#0f172a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
 
     // Manifest Drawer
     const totalBytes = selectedFiles.reduce((acc, f) => acc + f.size, 0);
-    queueSummaryCount.textContent = `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}`;
-    queueSummarySize.textContent = formatBytes(totalBytes);
+    if (queueSummaryCount) queueSummaryCount.textContent = `${selectedFiles.length} file${selectedFiles.length === 1 ? '' : 's'}`;
+    if (queueSummarySize) queueSummarySize.textContent = formatBytes(totalBytes);
 
-    senderQueueList.innerHTML = '';
-    selectedFiles.forEach((f) => {
-      const li = document.createElement('li');
-      li.className = 'flex justify-between items-center py-1 border-b border-slate-800/40';
-      li.innerHTML = `<span class="truncate max-w-[220px]">${f.name}</span><span class="font-mono text-slate-400 text-[10px]">${formatBytes(f.size)}</span>`;
-      senderQueueList.appendChild(li);
-    });
+    if (senderQueueList) {
+      senderQueueList.innerHTML = '';
+      selectedFiles.forEach((f) => {
+        const li = document.createElement('li');
+        li.className = 'flex justify-between items-center py-1 border-b border-slate-800/40';
+        li.innerHTML = `<span class="truncate max-w-[220px]">${f.name}</span><span class="font-mono text-slate-400 text-[10px]">${formatBytes(f.size)}</span>`;
+        senderQueueList.appendChild(li);
+      });
+    }
 
     // Dynamic Social Share URLs
+    const shareUrl = `${window.location.origin}/?code=${code}`;
     const encodedUrl = encodeURIComponent(shareUrl);
     const encodedText = encodeURIComponent(`Download ${selectedFiles.length} file(s) via Direct Beam P2P: ${shareUrl}`);
 
@@ -371,7 +405,6 @@
       await streamSingleFile(peer.dc, file, fileId);
     }
 
-    // Inform peer the entire batch is completed
     peer.dc.send(JSON.stringify({ type: 'batch-complete' }));
     logSenderActivity(`Finished streaming batch to (${peerId.slice(0, 5)})`);
     peer.isTransferring = false;
@@ -522,7 +555,6 @@
         const remainingBytes = currentManifest.size - receivedBytes;
         const etaSeconds = bps > 0 ? remainingBytes / bps : 0;
 
-        // UI Updates
         if (receiverProgressBar) receiverProgressBar.style.width = `${(fileProg * 100).toFixed(1)}%`;
         if (receiverPercentage) receiverPercentage.textContent = `${(fileProg * 100).toFixed(1)}%`;
         if (receiverSpeedText) receiverSpeedText.textContent = `${mbps} MB/s`;
@@ -576,7 +608,7 @@
           <i data-lucide="download" class="w-3 h-3"></i> Save
         </a>
       `;
-      lucide.createIcons();
+      if (typeof lucide !== 'undefined') lucide.createIcons();
     }
   }
 
@@ -594,20 +626,20 @@
   // ==========================================================================
 
   if (dropZone && fileInput) {
-    // 1. Trigger file picker when user clicks drop zone
+    // 1. Click to trigger file dialog
     dropZone.addEventListener('click', () => {
       fileInput.click();
     });
 
-    // 2. Process chosen files and reset input so identical files can be selected again
+    // 2. File input change event
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
         handleFilesSelected(Array.from(e.target.files));
-        fileInput.value = '';
+        fileInput.value = ''; // Reset so identical files can be selected again
       }
     });
 
-    // 3. Prevent browser from opening dropped files in tab
+    // 3. Drag-and-drop event containment
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
       dropZone.addEventListener(eventName, (e) => {
         e.preventDefault();
@@ -615,7 +647,6 @@
       }, false);
     });
 
-    // 4. Highlight drag state
     dropZone.addEventListener('dragover', () => {
       dropZone.classList.add('border-cyan-500', 'bg-cyan-500/10');
     });
@@ -626,7 +657,6 @@
       });
     });
 
-    // 5. Ingest dropped files
     dropZone.addEventListener('drop', (e) => {
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         handleFilesSelected(Array.from(e.dataTransfer.files));
@@ -638,9 +668,10 @@
     if (!files || files.length === 0) return;
     selectedFiles = files;
     initSocket();
-    if (socket.connected) {
+    if (socket && socket.connected) {
       socket.emit('create-room');
-    } else {
+    } else if (socket) {
+      showToast('Connecting to signaling server...');
       socket.once('connect', () => {
         socket.emit('create-room');
       });
@@ -661,9 +692,9 @@
 
   function joinRoomByCode(code) {
     initSocket();
-    if (socket.connected) {
+    if (socket && socket.connected) {
       socket.emit('join-room', { roomCode: code });
-    } else {
+    } else if (socket) {
       socket.once('connect', () => {
         socket.emit('join-room', { roomCode: code });
       });
@@ -681,7 +712,7 @@
   // Toggle Manifest in Sender
   if (toggleManifestBtn) {
     toggleManifestBtn.onclick = () => {
-      senderQueueList.classList.toggle('hidden');
+      if (senderQueueList) senderQueueList.classList.toggle('hidden');
     };
   }
 
@@ -739,7 +770,7 @@
   // QR Code Scanner Logic
   if (scanQrBtn) {
     scanQrBtn.onclick = () => {
-      scannerWrapper.classList.remove('hidden');
+      if (scannerWrapper) scannerWrapper.classList.remove('hidden');
       startQrScanner();
     };
   }
@@ -747,7 +778,7 @@
   if (closeScannerBtn) {
     closeScannerBtn.onclick = () => {
       stopQrScanner();
-      scannerWrapper.classList.add('hidden');
+      if (scannerWrapper) scannerWrapper.classList.add('hidden');
     };
   }
 
@@ -770,7 +801,7 @@
       { fps: 10, qrbox: { width: 220, height: 220 } },
       (decodedText) => {
         stopQrScanner();
-        scannerWrapper.classList.add('hidden');
+        if (scannerWrapper) scannerWrapper.classList.add('hidden');
         const urlMatch = decodedText.match(/code=([A-Za-z0-9]{6})/);
         const code = urlMatch ? urlMatch[1] : decodedText.trim().slice(0, 6);
         joinRoomByCode(code.toUpperCase());
@@ -779,7 +810,7 @@
     ).catch((err) => {
       console.warn('Unable to start QR Scanner', err);
       showToast('Camera access denied or unavailable');
-      scannerWrapper.classList.add('hidden');
+      if (scannerWrapper) scannerWrapper.classList.add('hidden');
     });
   }
 
@@ -795,6 +826,7 @@
   // ==========================================================================
 
   function openModal(modal, content) {
+    if (!modal || !content) return;
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     setTimeout(() => {
@@ -804,6 +836,7 @@
   }
 
   function closeModal(modal, content) {
+    if (!modal || !content) return;
     content.classList.remove('scale-100', 'opacity-100');
     content.classList.add('scale-95', 'opacity-0');
     setTimeout(() => {
