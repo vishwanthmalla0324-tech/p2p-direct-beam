@@ -10,13 +10,31 @@
   const BUFFER_CEILING = 8 * 1024 * 1024; // 8 MB buffer threshold
   const BUFFER_FLOOR = 1024 * 1024; // 1 MB backpressure resumption floor
 
-  const RTC_CONFIG = {
+  // --- Dynamic ICE Configuration (STUN + TURN Fallback) ---
+  let RTC_CONFIG = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun.cloudflare.com:3478' }
     ]
   };
+
+  async function loadIceConfiguration() {
+    try {
+      const res = await fetch('/api/ice-servers');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.iceServers) && data.iceServers.length > 0) {
+          RTC_CONFIG.iceServers = data.iceServers;
+        }
+      }
+    } catch (err) {
+      console.warn('Using default STUN ICE servers:', err);
+    }
+  }
+
+  loadIceConfiguration();
 
   // --- State Variables ---
   let socket = null;
@@ -178,14 +196,12 @@
   function initSocket() {
     if (socket) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socketUrl = `${protocol}//${window.location.host}`;
-
     const coldStartTimer = setTimeout(() => {
       if (coldStartBanner) coldStartBanner.classList.remove('hidden');
     }, 2500);
 
-    socket = io(socketUrl, {
+    // Relative origin automatically resolves current domain, port, and Cloudflare WSS/HTTPS proxies
+    socket = io({
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,
       reconnectionDelay: 1000
@@ -437,11 +453,39 @@
       if (dc.readyState !== 'open') throw new Error('DataChannel closed unexpectedly');
 
       if (dc.bufferedAmount > BUFFER_CEILING) {
-        await new Promise((resolve) => {
-          dc.onbufferedamountlow = () => {
-            dc.onbufferedamountlow = null;
+        if (dc.readyState !== 'open') {
+          throw new Error('DataChannel closed before backpressure drain');
+        }
+
+        await new Promise((resolve, reject) => {
+          let timeoutId = setTimeout(() => {
+            cleanup();
+            // 3000ms safety timeout: resolve so transfer can proceed or re-check channel state
             resolve();
-          };
+          }, 3000);
+
+          function onDrain() {
+            cleanup();
+            resolve();
+          }
+
+          function onAbort() {
+            cleanup();
+            reject(new Error('DataChannel disconnected during backpressure wait'));
+          }
+
+          function cleanup() {
+            clearTimeout(timeoutId);
+            if (dc) {
+              dc.removeEventListener('bufferedamountlow', onDrain);
+              dc.removeEventListener('close', onAbort);
+              dc.removeEventListener('error', onAbort);
+            }
+          }
+
+          dc.addEventListener('bufferedamountlow', onDrain, { once: true });
+          dc.addEventListener('close', onAbort, { once: true });
+          dc.addEventListener('error', onAbort, { once: true });
         });
       }
 
@@ -508,10 +552,12 @@
     let receivedBytes = 0;
     let receivedChunks = [];
     let startTime = 0;
+    let writableStream = null;
+    let isDiskStreaming = false;
 
     if (receiverBatchSubtitle) receiverBatchSubtitle.textContent = 'Direct P2P Link Established. Streaming...';
 
-    dc.onmessage = (event) => {
+    dc.onmessage = async (event) => {
       // 1. Control Packet (JSON String)
       if (typeof event.data === 'string') {
         try {
@@ -521,24 +567,64 @@
             currentManifest = payload;
             receivedBytes = 0;
             receivedChunks = [];
+            writableStream = null;
+            isDiskStreaming = false;
             startTime = performance.now();
 
             renderReceiverManifestItem(payload);
+
+            // Attempt direct-to-disk streaming via File System Access API if supported
+            if (typeof window.showSaveFilePicker === 'function') {
+              try {
+                const handle = await window.showSaveFilePicker({
+                  suggestedName: payload.name
+                });
+                writableStream = await handle.createWritable();
+                isDiskStreaming = true;
+                updateReceiverManifestItemBadge(payload.fileId, 'Direct Disk Stream');
+                showToast(`Streaming ${payload.name} directly to physical disk`);
+              } catch (pickerErr) {
+                if (pickerErr.name === 'AbortError') {
+                  console.log('User dismissed file picker; falling back to memory buffer.');
+                } else {
+                  console.warn('Auto showSaveFilePicker deferred (requires user gesture):', pickerErr.message);
+                }
+                isDiskStreaming = false;
+              }
+            }
+
+            // Warning for multi-gigabyte transfers when falling back to browser RAM
+            if (!isDiskStreaming && payload.size > 1.5 * 1024 * 1024 * 1024) {
+              showToast('Large file (>1.5 GB) buffering in browser memory. Keep tab focused.', 6000);
+            }
+
             dc.send(JSON.stringify({ type: 'ready', fileId: payload.fileId }));
           } else if (payload.type === 'eof') {
             if (currentManifest && currentManifest.fileId === payload.fileId) {
-              const fileBlob = new Blob(receivedChunks, {
-                type: currentManifest.mimeType || 'application/octet-stream'
-              });
+              if (isDiskStreaming && writableStream) {
+                try {
+                  await writableStream.close();
+                } catch (closeErr) {
+                  console.error('Error closing writable stream:', closeErr);
+                }
+                writableStream = null;
+                isDiskStreaming = false;
+                markReceiverManifestItemDoneDisk(currentManifest.fileId, currentManifest.name);
+                showToast(`Saved ${currentManifest.name} directly to disk!`);
+              } else {
+                const fileBlob = new Blob(receivedChunks, {
+                  type: currentManifest.mimeType || 'application/octet-stream'
+                });
 
-              receivedFilesArchive.push({
-                name: currentManifest.name,
-                blob: fileBlob,
-                size: currentManifest.size
-              });
+                receivedFilesArchive.push({
+                  name: currentManifest.name,
+                  blob: fileBlob,
+                  size: currentManifest.size
+                });
 
-              markReceiverManifestItemDone(currentManifest.fileId, fileBlob);
-              triggerDownload(fileBlob, currentManifest.name);
+                markReceiverManifestItemDone(currentManifest.fileId, fileBlob);
+                triggerDownload(fileBlob, currentManifest.name);
+              }
 
               currentManifest = null;
               receivedChunks = [];
@@ -562,7 +648,19 @@
       if (event.data instanceof ArrayBuffer) {
         if (!currentManifest) return;
 
-        receivedChunks.push(event.data);
+        if (isDiskStreaming && writableStream) {
+          try {
+            await writableStream.write(event.data);
+          } catch (writeErr) {
+            console.error('Disk stream write error, falling back to memory:', writeErr);
+            isDiskStreaming = false;
+            writableStream = null;
+            receivedChunks.push(event.data);
+          }
+        } else {
+          receivedChunks.push(event.data);
+        }
+
         receivedBytes += event.data.byteLength;
 
         const fileProg = Math.min(receivedBytes / currentManifest.size, 1.0);
@@ -581,9 +679,20 @@
       }
     };
 
-    dc.onerror = (e) => console.error('Receiver channel error:', e);
+    dc.onerror = (e) => {
+      console.error('Receiver channel error:', e);
+      if (writableStream) {
+        try { writableStream.abort(); } catch (err) {}
+        writableStream = null;
+      }
+    };
+
     dc.onclose = () => {
       if (receiverBatchSubtitle) receiverBatchSubtitle.textContent = 'Host disconnected or transfer terminated.';
+      if (writableStream) {
+        try { writableStream.abort(); } catch (err) {}
+        writableStream = null;
+      }
     };
   }
 
@@ -594,7 +703,10 @@
     li.className = 'bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 flex items-center justify-between';
     li.innerHTML = `
       <div class="flex-1 min-w-0 mr-3">
-        <span class="truncate block text-white font-medium text-xs">${manifest.name}</span>
+        <div class="flex items-center gap-2">
+          <span class="truncate block text-white font-medium text-xs">${manifest.name}</span>
+          <span id="badge-${manifest.fileId}" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Memory Stream</span>
+        </div>
         <span class="text-[10px] text-slate-400 font-mono">${formatBytes(manifest.size)}</span>
         <div class="w-full bg-slate-950 h-1 rounded-full mt-1.5 overflow-hidden">
           <div class="item-progress bg-cyan-400 h-full w-0 transition-all"></div>
@@ -605,6 +717,29 @@
       </div>
     `;
     receiverManifestList.appendChild(li);
+  }
+
+  function updateReceiverManifestItemBadge(fileId, text) {
+    const badge = document.getElementById(`badge-${fileId}`);
+    if (badge) {
+      badge.textContent = text;
+      badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/60';
+    }
+  }
+
+  function markReceiverManifestItemDoneDisk(fileId, filename) {
+    const item = document.getElementById(`item-${fileId}`);
+    if (!item) return;
+    updateReceiverManifestItemBadge(fileId, 'Saved to Disk');
+    const action = item.querySelector('.item-action');
+    if (action) {
+      action.innerHTML = `
+        <span class="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded-md font-semibold flex items-center gap-1">
+          <i data-lucide="check" class="w-3 h-3"></i> Saved
+        </span>
+      `;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
   }
 
   function updateReceiverManifestItemProgress(fileId, progress) {
@@ -772,7 +907,11 @@
   // Download All as ZIP
   if (downloadZipBtn) {
     downloadZipBtn.onclick = async () => {
-      if (receivedFilesArchive.length === 0 || typeof JSZip === 'undefined') return;
+      if (receivedFilesArchive.length === 0) {
+        showToast('All files were already streamed and saved directly to your disk.');
+        return;
+      }
+      if (typeof JSZip === 'undefined') return;
       const zip = new JSZip();
       receivedFilesArchive.forEach((f) => zip.file(f.name, f.blob));
       const zipBlob = await zip.generateAsync({ type: 'blob' });
