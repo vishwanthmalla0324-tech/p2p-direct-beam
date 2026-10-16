@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: p2p-direct-beam
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: 10000
