@@ -139,6 +139,79 @@
       <!-- Auth Tabs & Forms (Shown when not logged in) -->
       <div id="auth-forms-container" class="p-6">
         
+        <!-- Google & Apple Social Sign In (Cloudflare Worker KV Powered) -->
+        <div class="space-y-2.5 mb-5">
+          <!-- Google Sign-In Button -->
+          <button 
+            type="button" 
+            id="btn-google-login" 
+            onclick="handleSocialLoginPrompt('google')" 
+            class="w-full py-2.5 px-4 bg-white hover:bg-neutral-100 text-neutral-900 rounded-lg font-mono text-xs font-semibold flex items-center justify-center gap-3 transition-all border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.08)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] cursor-pointer group"
+          >
+            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span class="tracking-wide">CONTINUE WITH GOOGLE</span>
+            <span class="ml-auto text-[9px] text-zinc-500 font-mono tracking-tight bg-zinc-200 px-1.5 py-0.5 rounded">KV SYNC</span>
+          </button>
+
+          <!-- Apple Sign-In Button -->
+          <button 
+            type="button" 
+            id="btn-apple-login" 
+            onclick="handleSocialLoginPrompt('apple')" 
+            class="w-full py-2.5 px-4 bg-black hover:bg-neutral-900 text-white rounded-lg font-mono text-xs font-semibold flex items-center justify-center gap-3 transition-all border border-white/20 shadow-[0_0_15px_rgba(0,0,0,0.4)] hover:border-white/40 cursor-pointer group"
+          >
+            <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 170 170">
+              <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.6-7.71-11.72-14.01-6.19-9.5-11.08-20.2-14.67-32.09-3.59-11.9-5.39-23.23-5.39-34.02 0-14.79 3.59-26.97 10.77-36.54 7.18-9.58 16.27-14.47 27.27-14.7 4.58 0 9.8 1.25 15.66 3.75 5.86 2.5 9.77 3.86 11.72 4.08 1.52-.22 5.54-1.63 12.06-4.23 6.52-2.61 11.95-3.75 16.29-3.41 12.51.65 22.38 5.44 29.62 14.37-10.88 6.64-16.19 15.66-15.93 27.06.22 9.03 3.69 16.75 10.4 23.16 6.7 6.42 14.63 10.01 23.81 10.77-2.18 6.42-4.79 12.72-7.83 18.91zM119.22 31.84c0-7.39 2.61-14.24 7.83-20.55 5.22-6.31 11.74-10.44 19.57-12.39.43 1.09.65 2.18.65 3.26 0 7.39-2.72 14.35-8.15 20.88-5.44 6.52-12.07 10.43-19.9 11.74-.22-1-.33-1.9-.33-2.94z"/>
+            </svg>
+            <span class="tracking-wide">CONTINUE WITH APPLE</span>
+            <span class="ml-auto text-[9px] text-zinc-500 font-mono tracking-tight bg-zinc-800 px-1.5 py-0.5 rounded">KV SYNC</span>
+          </button>
+        </div>
+
+        <!-- Social Prompt Popup Box (Dynamic) -->
+        <div id="social-prompt-box" class="hidden mb-5 p-4 rounded-lg bg-black/80 border border-cyan-500/40 space-y-3">
+          <div class="flex items-center justify-between">
+            <span id="social-prompt-title" class="text-xs font-mono font-bold text-cyan-400 uppercase flex items-center gap-2">
+              <span>Google Account Verification</span>
+            </span>
+            <button type="button" onclick="closeSocialPrompt()" class="text-zinc-500 hover:text-white text-xs font-mono">✕</button>
+          </div>
+          <p id="social-prompt-desc" class="text-[11px] text-zinc-400 font-mono leading-normal">
+            Authenticate your Google credentials to automatically sync your session with Cloudflare Worker KV.
+          </p>
+          <div class="space-y-2">
+            <input 
+              type="email" 
+              id="social-email-input" 
+              placeholder="operator@gmail.com"
+              class="w-full px-3 py-2 bg-black border border-white/20 rounded focus:border-cyan-400 focus:outline-none text-white text-xs font-mono"
+            />
+            <button 
+              type="button" 
+              id="social-confirm-btn" 
+              onclick="submitSocialAuth()" 
+              class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs rounded transition uppercase tracking-wider cursor-pointer"
+            >
+              Confirm &amp; Bind Session
+            </button>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="relative my-5 text-center">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-white/10"></div>
+          </div>
+          <span class="relative bg-[#161616] px-3 text-[10px] text-zinc-500 font-mono uppercase tracking-widest">
+            OR USE EMAIL ACCOUNT
+          </span>
+        </div>
+
         <!-- Tab Selectors -->
         <div class="grid grid-cols-2 border-b border-white/10 mb-6 text-xs font-mono font-bold tracking-wider">
           <button id="tab-signin" type="button" onclick="switchTab('signin')" class="py-2.5 text-center transition active-tab">
@@ -416,133 +489,114 @@
       loggedInDiv.classList.remove('hidden');
       document.getElementById('logged-user-email').textContent = `${user.name || user.email} (${user.email})`;
       document.getElementById('logged-user-tier').textContent = user.pro
-        ? 'STATUS: PRO LIFETIME (UNLIMITED TRANSFERS)'
+        ? 'STATUS: PRO LIFETIME — ₹300 (UNLIMITED TRANSFERS)'
         : `STATUS: FREE TIER (${user.transfersCount || 0}/3 LIFETIME TRANSFERS USED)`;
     }
 
-    document.getElementById('btn-logout').onclick = async () => {
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+    let activeSocialProvider = 'google';
+
+    function handleSocialLoginPrompt(provider) {
+      hideAlert();
+      activeSocialProvider = provider;
+      const box = document.getElementById('social-prompt-box');
+      const title = document.getElementById('social-prompt-title');
+      const desc = document.getElementById('social-prompt-desc');
+      const input = document.getElementById('social-email-input');
+      const confirmBtn = document.getElementById('social-confirm-btn');
+
+      if (provider === 'google') {
+        title.innerHTML = '<span>🌐 Google Account Authentication</span>';
+        desc.textContent = 'Authenticate your Google credentials to bind your Cloudflare Worker KV session.';
+        input.placeholder = 'username@gmail.com';
+        confirmBtn.className = 'w-full py-2 bg-white hover:bg-neutral-200 text-black font-bold font-mono text-xs rounded transition uppercase tracking-wider cursor-pointer';
+        confirmBtn.textContent = 'Connect Google & Sync KV';
+      } else {
+        title.innerHTML = '<span>🍎 Apple ID Authentication</span>';
+        desc.textContent = 'Authenticate with your Apple ID to securely bind your Cloudflare Worker KV session.';
+        input.placeholder = 'operator@icloud.com';
+        confirmBtn.className = 'w-full py-2 bg-neutral-900 hover:bg-neutral-800 text-white border border-white/30 font-bold font-mono text-xs rounded transition uppercase tracking-wider cursor-pointer';
+        confirmBtn.textContent = 'Connect Apple ID & Sync KV';
+      }
+
+      box.classList.remove('hidden');
+      input.focus();
+    }
+
+    function closeSocialPrompt() {
+      const box = document.getElementById('social-prompt-box');
+      if (box) box.classList.add('hidden');
+    }
+
+    async function submitSocialAuth() {
+      const input = document.getElementById('social-email-input');
+      const email = (input ? input.value : '').trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showAlert('Please enter a valid email address.', true);
+        return;
+      }
+
+      const confirmBtn = document.getElementById('social-confirm-btn');
+      const origText = confirmBtn.textContent;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Authenticating with Cloudflare KV...';
+
       try {
-        if (token) {
-          await fetch('/api/auth/logout', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
+        const res = await fetch('/api/auth/oauth/social', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: activeSocialProvider,
+            email,
+            name: email.split('@')[0]
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Social authentication failed.');
+        }
+
+        localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
+        const localCount = parseInt(localStorage.getItem('direct_beam_transfer_count') || '0', 10);
+        const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
+        const effectiveCount = Math.max(localCount, remoteCount);
+        localStorage.setItem('direct_beam_transfer_count', effectiveCount.toString());
+        data.user.transfersCount = effectiveCount;
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
+        if (data.user.pro) {
+          localStorage.setItem(STORAGE_KEY_PRO, 'active');
+        }
+
+        showAlert(`${activeSocialProvider === 'apple' ? 'Apple ID' : 'Google'} verified! Redirecting to pipeline...`, false);
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 700);
+      } catch (err) {
+        showAlert(err.message, true);
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = origText;
+      }
+    }
+
+    // Auto-detect Cloudflare Access Zero Trust SSO (if active on domain)
+    async function checkCloudflareAccess() {
+      try {
+        const res = await fetch('/api/auth/cloudflare-access');
+        const data = await res.json();
+        if (data && data.active && data.token && data.user) {
+          localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
+          localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
+          if (data.user.pro) localStorage.setItem(STORAGE_KEY_PRO, 'active');
+          renderLoggedInState(data.user);
         }
       } catch (e) {}
-      localStorage.removeItem(STORAGE_KEY_TOKEN);
-      localStorage.removeItem(STORAGE_KEY_USER);
-      window.location.reload();
-    };
-
-    // Handle Sign In submission
-    async function handleSignIn(e) {
-      e.preventDefault();
-      hideAlert();
-      const email = document.getElementById('signin-email').value.trim();
-      const password = document.getElementById('signin-password').value;
-      const btn = document.getElementById('btn-submit-signin');
-      const originalText = btn.innerHTML;
-
-      btn.disabled = true;
-      btn.innerHTML = '<span>⚡ CONNECTING TO KV...</span>';
-
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Authentication failed. Please verify credentials.');
-        }
-
-        // Store session and user data
-        localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
-        const localCount = parseInt(localStorage.getItem('direct_beam_transfer_count') || '0', 10);
-        const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-        const effectiveCount = Math.max(localCount, remoteCount);
-        localStorage.setItem('direct_beam_transfer_count', effectiveCount.toString());
-        data.user.transfersCount = effectiveCount;
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
-        if (data.user.pro) {
-          localStorage.setItem(STORAGE_KEY_PRO, 'active');
-        }
-
-        showAlert('Access Granted. Redirecting to Direct Beam pipeline...', false);
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 800);
-      } catch (err) {
-        showAlert(err.message, true);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      }
     }
 
-    // Handle Sign Up submission
-    async function handleSignUp(e) {
-      e.preventDefault();
-      hideAlert();
-      const name = document.getElementById('signup-name').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const password = document.getElementById('signup-password').value;
-      const confirmPassword = document.getElementById('signup-password-confirm').value;
-      const btn = document.getElementById('btn-submit-signup');
-      const originalText = btn.innerHTML;
-
-      if (password !== confirmPassword) {
-        showAlert('Passwords do not match.', true);
-        return;
-      }
-      if (password.length < 6) {
-        showAlert('Password must be at least 6 characters.', true);
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerHTML = '<span>⚡ COMMITTING TO KV...</span>';
-
-      try {
-        const res = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, name })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Registration failed.');
-        }
-
-        localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
-        const localCount = parseInt(localStorage.getItem('direct_beam_transfer_count') || '0', 10);
-        const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-        const effectiveCount = Math.max(localCount, remoteCount);
-        localStorage.setItem('direct_beam_transfer_count', effectiveCount.toString());
-        data.user.transfersCount = effectiveCount;
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
-        if (data.user.pro) {
-          localStorage.setItem(STORAGE_KEY_PRO, 'active');
-        }
-
-        showAlert('Account created in Cloudflare KV. Redirecting to Direct Beam...', false);
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 800);
-      } catch (err) {
-        showAlert(err.message, true);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      }
-    }
-
-    // Initialize check
-    window.addEventListener('DOMContentLoaded', checkCurrentSession);
+    // Initialize checks
+    window.addEventListener('DOMContentLoaded', () => {
+      checkCurrentSession();
+      checkCloudflareAccess();
+    });
   </script>
 </body>
 </html>

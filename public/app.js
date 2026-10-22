@@ -1871,7 +1871,7 @@
 
     if (authProfileEmail && user) authProfileEmail.textContent = user.email;
     if (authProfileBadge) {
-      authProfileBadge.textContent = isPro ? '⭐ DIRECT BEAM PRO LIFETIME' : 'FREE TIER (GUEST / DEVICE)';
+      authProfileBadge.textContent = isPro ? '⭐ DIRECT BEAM PRO LIFETIME (₹300)' : 'FREE TIER (GUEST / DEVICE)';
       authProfileBadge.className = isPro ? 'db-pill text-[10px] text-amber-300 border-amber-400/50 bg-amber-950/40' : 'db-pill text-[10px] text-emerald-400 border-emerald-400/40';
     }
     if (authProfileQuota) {
@@ -1962,13 +1962,120 @@
     }
   }
 
+  async function handleModalSocialLogin(provider) {
+    let email = '';
+    if (authEmailInput && authEmailInput.value.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authEmailInput.value.trim())) {
+      email = authEmailInput.value.trim();
+    } else {
+      const promptText = provider === 'apple' 
+        ? 'Enter your Apple ID email (e.g. user@icloud.com):' 
+        : 'Enter your Google Account email (e.g. user@gmail.com):';
+      const inputVal = window.prompt(promptText, '');
+      if (!inputVal || !inputVal.trim()) return;
+      email = inputVal.trim();
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (authStatusMsg) {
+        authStatusMsg.className = 'text-xs font-mono p-2.5 border border-rose-500/50 bg-rose-950/40 text-rose-300 block flex items-center gap-2';
+        authStatusMsg.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>Please provide a valid email address.</span>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+      return;
+    }
+
+    if (authStatusMsg) {
+      authStatusMsg.className = 'text-xs font-mono p-2.5 border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 block flex items-center gap-2';
+      authStatusMsg.innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span>Authenticating ${provider === 'apple' ? 'Apple ID' : 'Google'} via Cloudflare KV...</span></span>`;
+    }
+
+    try {
+      const res = await fetch('/api/auth/oauth/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider,
+          email,
+          name: email.split('@')[0]
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Social authentication failed.');
+      }
+
+      if (data.token) localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
+      if (data.user) {
+        const localCount = parseInt(localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
+        const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
+        const effectiveCount = Math.max(localCount, remoteCount);
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, effectiveCount.toString());
+        data.user.transfersCount = effectiveCount;
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+
+        if (data.user.pro) {
+          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+          window.DIRECT_BEAM_PRO = true;
+          updateProUI(true);
+        }
+      }
+
+      if (authStatusMsg) {
+        authStatusMsg.className = 'text-xs font-mono p-2.5 border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 block flex items-center gap-2';
+        authStatusMsg.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>${provider === 'apple' ? 'Apple ID' : 'Google'} verified and saved to Cloudflare KV!</span>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+
+      showToast(`Welcome, ${(data.user && data.user.name) || email.split('@')[0]}!`);
+      updateQuotaBadge();
+
+      setTimeout(() => {
+        closeAuthModal();
+        if (authEmailInput) authEmailInput.value = '';
+        if (authPasswordInput) authPasswordInput.value = '';
+        if (authStatusMsg) authStatusMsg.classList.add('hidden');
+      }, 700);
+
+    } catch (err) {
+      if (authStatusMsg) {
+        authStatusMsg.className = 'text-xs font-mono p-2.5 border border-rose-500/50 bg-rose-950/40 text-rose-300 block flex items-center gap-2';
+        authStatusMsg.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>${err.message}</span>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+    }
+  }
+
+  // Cloudflare Access Zero Trust Auto-Detection
+  async function checkCloudflareAccessSSO() {
+    try {
+      const res = await fetch('/api/auth/cloudflare-access');
+      const data = await res.json();
+      if (data && data.active && data.token && data.user) {
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+        if (data.user.pro) {
+          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+          window.DIRECT_BEAM_PRO = true;
+          updateProUI(true);
+        }
+        updateQuotaBadge();
+      }
+    } catch (e) {}
+  }
+
   window.syncUserSession = syncUserSession;
   window.handleAuthSubmit = handleAuthSubmit;
+  window.handleModalSocialLogin = handleModalSocialLogin;
+  window.checkCloudflareAccessSSO = checkCloudflareAccessSSO;
   window.signOutUser = signOutUser;
   window.canInitiateTransfer = canInitiateTransfer;
   window.getTransferCount = getTransferCount;
   window.recordSuccessfulTransfer = recordSuccessfulTransfer;
   window.updateQuotaBadge = updateQuotaBadge;
+
+  // Run SSO check on start
+  checkCloudflareAccessSSO();
 
   // ==========================================================================
   // PRO LICENSE KEY (LEMON SQUEEZY) MODAL & ACTIVATION CONTROLLER

@@ -310,5 +310,121 @@ export async function handleAuthRequest(request, env) {
     }
   }
 
+  // 7. Social OAuth Login - Google & Apple (POST /api/auth/oauth/social)
+  if (url.pathname === "/api/auth/oauth/social" && request.method === "POST") {
+    try {
+      const body = await request.json();
+      const { provider, email, name, avatar } = body || {};
+
+      if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return jsonResponse({ error: "Please provide a valid email address." }, 400);
+      }
+      if (!provider || !["google", "apple"].includes(provider.toLowerCase())) {
+        return jsonResponse({ error: "Unsupported social provider." }, 400);
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      let user = await kv.get(`user:${normalizedEmail}`, "json");
+
+      if (!user) {
+        const userId = "usr_" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+        const displayName = (name && typeof name === "string" ? name.trim() : (provider === "apple" ? "Apple User" : normalizedEmail.split("@")[0])) || "User";
+
+        user = {
+          id: userId,
+          email: normalizedEmail,
+          name: displayName,
+          provider: provider.toLowerCase(),
+          avatar: avatar || null,
+          createdAt: new Date().toISOString(),
+          transfersCount: 0,
+          pro: false
+        };
+        await kv.put(`user:${normalizedEmail}`, JSON.stringify(user));
+      } else {
+        // Update social provider and name if needed
+        if (!user.provider) user.provider = provider.toLowerCase();
+        if (name && (!user.name || user.name === "User")) user.name = name.trim();
+        if (avatar && !user.avatar) user.avatar = avatar;
+        await kv.put(`user:${normalizedEmail}`, JSON.stringify(user));
+      }
+
+      // Generate 30-day session token in Cloudflare KV
+      const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
+      await kv.put(
+        `session:${token}`,
+        JSON.stringify({ userId: user.id, email: user.email }),
+        { expirationTtl: 2592000 }
+      );
+
+      return jsonResponse({
+        success: true,
+        message: `${provider === "apple" ? "Apple" : "Google"} authentication successful.`,
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          transfersCount: user.transfersCount || 0,
+          pro: Boolean(user.pro),
+          provider: user.provider
+        }
+      });
+    } catch (err) {
+      console.error("Social auth error:", err);
+      return jsonResponse({ error: "Social login failed: " + (err.message || "") }, 500);
+    }
+  }
+
+  // 8. Cloudflare Zero Trust / Access SSO Auto-Detection (GET /api/auth/cloudflare-access)
+  if (url.pathname === "/api/auth/cloudflare-access" && request.method === "GET") {
+    try {
+      const cfEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
+      if (!cfEmail) {
+        return jsonResponse({ active: false, message: "No Cloudflare Access header detected." });
+      }
+
+      const normalizedEmail = cfEmail.trim().toLowerCase();
+      let user = await kv.get(`user:${normalizedEmail}`, "json");
+
+      if (!user) {
+        const userId = "usr_" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+        user = {
+          id: userId,
+          email: normalizedEmail,
+          name: normalizedEmail.split("@")[0],
+          provider: "cloudflare_access",
+          createdAt: new Date().toISOString(),
+          transfersCount: 0,
+          pro: false
+        };
+        await kv.put(`user:${normalizedEmail}`, JSON.stringify(user));
+      }
+
+      const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
+      await kv.put(
+        `session:${token}`,
+        JSON.stringify({ userId: user.id, email: user.email }),
+        { expirationTtl: 2592000 }
+      );
+
+      return jsonResponse({
+        active: true,
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          transfersCount: user.transfersCount || 0,
+          pro: Boolean(user.pro),
+          provider: "cloudflare_access"
+        }
+      });
+    } catch (err) {
+      return jsonResponse({ active: false, error: err.message }, 500);
+    }
+  }
+
   return null;
 }

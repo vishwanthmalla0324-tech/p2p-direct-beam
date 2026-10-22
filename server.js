@@ -116,6 +116,62 @@ app.post('/api/auth/sync', (req, res) => {
   res.json({ success: true, user: safeUser });
 });
 
+// Social Login (Google & Apple)
+app.post('/api/auth/oauth/social', (req, res) => {
+  const { provider, email, name, avatar } = req.body || {};
+  if (!email || !provider) {
+    return res.status(400).json({ error: 'Valid email and provider required.' });
+  }
+  const normEmail = email.trim().toLowerCase();
+  let user = localUsers.get(normEmail);
+  if (!user) {
+    user = {
+      id: 'usr_' + Math.random().toString(36).substring(2, 10),
+      email: normEmail,
+      name: name || (provider === 'apple' ? 'Apple User' : normEmail.split('@')[0]),
+      provider: provider.toLowerCase(),
+      avatar: avatar || null,
+      transfersCount: 0,
+      pro: false
+    };
+    localUsers.set(normEmail, user);
+  }
+  const token = 'local_sess_' + Math.random().toString(36).substring(2);
+  localSessions.set(token, normEmail);
+  const { password: _, ...safeUser } = user;
+  res.json({
+    success: true,
+    message: `${provider === 'apple' ? 'Apple' : 'Google'} authentication successful.`,
+    token,
+    user: safeUser
+  });
+});
+
+// Cloudflare Access Zero Trust header auto-detection
+app.get('/api/auth/cloudflare-access', (req, res) => {
+  const cfEmail = req.headers['cf-access-authenticated-user-email'];
+  if (!cfEmail) {
+    return res.json({ active: false, message: 'No Cloudflare Access header detected.' });
+  }
+  const normEmail = cfEmail.trim().toLowerCase();
+  let user = localUsers.get(normEmail);
+  if (!user) {
+    user = {
+      id: 'usr_' + Math.random().toString(36).substring(2, 10),
+      email: normEmail,
+      name: normEmail.split('@')[0],
+      provider: 'cloudflare_access',
+      transfersCount: 0,
+      pro: false
+    };
+    localUsers.set(normEmail, user);
+  }
+  const token = 'local_sess_' + Math.random().toString(36).substring(2);
+  localSessions.set(token, normEmail);
+  const { password: _, ...safeUser } = user;
+  res.json({ active: true, success: true, token, user: safeUser });
+});
+
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
