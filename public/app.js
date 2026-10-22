@@ -843,7 +843,6 @@
     if (peer.isTransferring) return;
 
     if (!canInitiateTransfer()) {
-      showPaywallModal();
       return;
     }
 
@@ -1276,7 +1275,6 @@
   function handleFilesSelected(files) {
     if (!files || files.length === 0) return;
     if (!canInitiateTransfer()) {
-      showPaywallModal();
       return;
     }
     selectedFiles = files;
@@ -1608,6 +1606,13 @@
   }
 
   function canInitiateTransfer() {
+    const user = getLoggedInUser();
+    if (!user || !user.email) {
+      showToast('Account required: Sign in to activate your 3 free transfers.');
+      openAuthModal();
+      return false;
+    }
+
     if (isProUser()) return true;
     const count = getTransferCount();
     if (count >= USAGE_CONFIG.FREE_LIMIT) {
@@ -1840,9 +1845,15 @@
 
     if (headerQuotaPill) {
       if (isPro) {
+        headerQuotaPill.onclick = null;
         headerQuotaPill.innerHTML = '<i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i><span class="text-amber-300 font-bold">PRO: UNLIMITED</span>';
         headerQuotaPill.className = 'db-pill text-[10px] text-amber-300 border-amber-400/50 bg-amber-950/30 font-mono tracking-wider flex items-center gap-1 shadow-sm';
+      } else if (!user || !user.email) {
+        headerQuotaPill.onclick = openAuthModal;
+        headerQuotaPill.innerHTML = '<i data-lucide="lock" class="w-3 h-3 text-cyan-400"></i><span>3 FREE <strong class="text-white">TRANSFERS</strong> (SIGN IN)</span>';
+        headerQuotaPill.className = 'db-pill text-[10px] border-cyan-500/40 bg-cyan-950/20 text-cyan-300 font-mono tracking-wider flex items-center gap-1 shadow-sm cursor-pointer hover:border-cyan-400 transition';
       } else {
+        headerQuotaPill.onclick = null;
         const remaining = Math.max(0, USAGE_CONFIG.FREE_LIMIT - count);
         const isExhausted = count >= USAGE_CONFIG.FREE_LIMIT;
         headerQuotaPill.innerHTML = `<i data-lucide="${isExhausted ? 'alert-triangle' : 'gauge'}" class="w-3 h-3 ${isExhausted ? 'text-rose-400' : 'text-cyan-400'}"></i><span>${isExhausted ? '<strong class="text-rose-400">LIMIT (3/3)</strong>' : `FREE: <strong class="${remaining <= 1 ? 'text-amber-400' : 'text-white'}">${count}</strong>/3`}</span>`;
