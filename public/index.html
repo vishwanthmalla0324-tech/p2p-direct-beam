@@ -1106,8 +1106,11 @@
         </div>
       </div>
 
+      <!-- Unauthenticated View: Sign In / Create Account / Forgot Password -->
+      <div id="auth-form-view" class="space-y-4">
+
         <!-- Real Google OAuth (Cloudflare KV Verified) -->
-        <div class="space-y-2">
+        <div id="auth-google-section" class="space-y-2">
           <button 
             type="button" 
             id="modal-btn-google-login" 
@@ -1129,18 +1132,18 @@
               <span>Verifying with Google...</span>
             </span>
           </div>
-        </div>
 
-        <div class="relative my-3 text-center">
-          <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-base-900"></div>
+          <div class="relative my-3 text-center">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-base-900"></div>
+            </div>
+            <span class="relative bg-black px-2 text-[10px] text-base-700 font-mono uppercase tracking-widest">
+              OR WITH EMAIL
+            </span>
           </div>
-          <span class="relative bg-black px-2 text-[10px] text-base-700 font-mono uppercase tracking-widest">
-            OR WITH EMAIL
-          </span>
         </div>
 
-        <!-- Tabs -->
+        <!-- Tabs (hidden in forgot password mode) -->
         <div id="auth-tabs-row" class="grid grid-cols-2 gap-2 border-b border-base-900 pb-3">
           <button id="auth-tab-signin" type="button" class="py-2 text-xs font-mono uppercase font-bold text-white border-b-2 border-cyan-400 cursor-pointer">
             Sign In
@@ -1150,11 +1153,11 @@
           </button>
         </div>
 
-        <!-- Reset Password Banner (shown only in reset mode) -->
+        <!-- Forgot Password Banner (shown only in forgot password mode) -->
         <div id="auth-reset-banner" class="hidden flex items-center justify-between border-b border-cyan-500/30 pb-2.5">
           <span class="text-xs font-mono text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="key-round" class="w-3.5 h-3.5 text-cyan-400"></i>
-            <span>Reset Password</span>
+            <span>Forgot Password</span>
           </span>
           <button type="button" onclick="window.toggleForgotPasswordMode && window.toggleForgotPasswordMode(false)" class="text-[11px] font-mono text-zinc-400 hover:text-white transition flex items-center gap-1 cursor-pointer">
             <span>← Back to Sign In</span>
@@ -1162,6 +1165,7 @@
         </div>
 
         <form id="auth-form" onsubmit="event.preventDefault(); window.handleAuthSubmit && window.handleAuthSubmit();" class="space-y-3">
+          <!-- Email Input Field -->
           <div class="space-y-1">
             <label for="auth-email-input" class="text-[11px] font-mono uppercase tracking-wider text-base-700 block">
               Email Address
@@ -1173,9 +1177,13 @@
               placeholder="e.g., user@domain.com"
               class="w-full bg-black/90 border-2 border-base-900 focus:border-cyan-400 px-4 py-2.5 font-mono text-xs text-white focus:outline-none transition placeholder:text-base-600"
             />
+            <p id="auth-reset-hint" class="hidden text-[10px] font-mono text-cyan-400/90 pt-0.5">
+              Enter your registered email address. We will send a secure single-use reset link (15-minute expiry).
+            </p>
           </div>
 
-          <div class="space-y-1">
+          <!-- Password Input Field (completely hidden in Forgot Password mode) -->
+          <div id="auth-password-wrapper" class="space-y-1">
             <div class="flex items-center justify-between text-[11px] font-mono">
               <label id="auth-password-label" for="auth-password-input" class="uppercase tracking-wider text-base-700 block">
                 Password
@@ -1193,29 +1201,16 @@
             />
           </div>
 
-          <!-- Confirm Password (shown only in reset mode) -->
-          <div id="auth-confirm-password-wrapper" class="hidden space-y-1">
-            <label for="auth-confirm-password-input" class="text-[11px] font-mono uppercase tracking-wider text-base-700 block">
-              Confirm New Password
-            </label>
-            <input
-              type="password"
-              id="auth-confirm-password-input"
-              placeholder="••••••••••••"
-              class="w-full bg-black/90 border-2 border-base-900 focus:border-cyan-400 px-4 py-2.5 font-mono text-xs text-white focus:outline-none transition placeholder:text-base-600"
-            />
-          </div>
-
           <!-- Auth Status Feedback Area -->
           <div id="auth-status-msg" class="hidden text-xs font-mono p-2.5 border"></div>
 
           <button id="auth-submit-btn" type="submit" class="cyber-btn-primary w-full py-2.5 text-xs font-mono uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer bg-white text-black border-white hover:bg-neutral-200 transition">
-            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <i id="auth-submit-icon" data-lucide="log-in" class="w-4 h-4"></i>
             <span id="auth-submit-text">Sign In</span>
           </button>
         </form>
 
-        <div class="pt-3 border-t border-base-900 text-center space-y-2">
+        <div id="auth-footer-note" class="pt-3 border-t border-base-900 text-center space-y-2">
           <p class="text-[11px] font-mono text-base-700 leading-normal">
             Sign in or create an account to activate your 3 free transfers.
           </p>

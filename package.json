@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "build": "wrangler deploy --dry-run",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node test/security_flow.test.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",

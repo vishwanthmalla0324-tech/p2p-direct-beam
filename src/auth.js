@@ -1,3 +1,5 @@
+import { sendPasswordResetEmail } from "./email.js";
+
 /**
  * Cloudflare Worker KV Authentication Module for Direct Beam
  * Stores user profiles, hashed credentials (PBKDF2), and sessions in USERS_KV.
@@ -85,6 +87,29 @@ function generateSalt() {
     .join("");
 }
 
+/**
+ * Compute SHA-256 hash of a string (used to hash reset tokens before storing in KV)
+ */
+async function hashToken(rawToken) {
+  const enc = new TextEncoder();
+  const digest = await crypto.subtle.digest("SHA-256", enc.encode(rawToken));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * Mask email for secure visual confirmation without leaking full address (e.g. v***a@gmail.com)
+ */
+function maskEmail(email) {
+  if (!email || typeof email !== "string") return "";
+  const parts = email.split("@");
+  if (parts.length !== 2) return email;
+  const [local, domain] = parts;
+  if (local.length <= 2) return `${local[0]}*@${domain}`;
+  return `${local[0]}${"*".repeat(Math.min(local.length - 2, 4))}${local[local.length - 1]}@${domain}`;
+}
+
 function extractToken(request) {
   const authHeader = request.headers.get("Authorization") || "";
   if (authHeader.startsWith("Bearer ")) {
@@ -139,17 +164,18 @@ export async function handleAuthRequest(request, env) {
         hash,
         createdAt: new Date().toISOString(),
         transfersCount: 0,
+        tokenVersion: 1,
         pro: false
       };
 
       // Store user record in Cloudflare KV
       await kv.put(`user:${normalizedEmail}`, JSON.stringify(newUser));
 
-      // Create session token with 30-day expiration
+      // Create session token with 30-day expiration bound to tokenVersion
       const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
       await kv.put(
         `session:${token}`,
-        JSON.stringify({ userId, email: normalizedEmail }),
+        JSON.stringify({ userId, email: normalizedEmail, tokenVersion: 1 }),
         { expirationTtl: 2592000 }
       );
 
@@ -195,11 +221,12 @@ export async function handleAuthRequest(request, env) {
         return jsonResponse({ error: "Invalid email or password." }, 401);
       }
 
-      // Generate new session token
+      // Generate new session token bound to active tokenVersion
+      const userTokenVersion = user.tokenVersion || 1;
       const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
       await kv.put(
         `session:${token}`,
-        JSON.stringify({ userId: user.id, email: user.email }),
+        JSON.stringify({ userId: user.id, email: user.email, tokenVersion: userTokenVersion }),
         { expirationTtl: 2592000 }
       );
 
@@ -221,51 +248,182 @@ export async function handleAuthRequest(request, env) {
     }
   }
 
-  // 3b. Reset Password (POST /api/auth/reset-password)
-  if (url.pathname === "/api/auth/reset-password" && request.method === "POST") {
+  // 3b. Request Password Reset (POST /api/auth/forgot-password)
+  // Step 1: User enters email. Generic 200 response to prevent enumeration attacks.
+  if (url.pathname === "/api/auth/forgot-password" && request.method === "POST") {
     try {
-      const body = await request.json();
-      const { email, newPassword } = body || {};
+      const body = await request.json().catch(() => ({}));
+      const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
 
-      if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-        return jsonResponse({ error: "Please provide a valid email address." }, 400);
-      }
-      if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
-        return jsonResponse({ error: "New password must be at least 6 characters long." }, 400);
+      // Always prepare generic response to prevent user enumeration
+      const genericResponse = jsonResponse({
+        success: true,
+        message: "If an account exists for this email address, a password reset link has been sent to your inbox."
+      });
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return genericResponse;
       }
 
-      const normalizedEmail = email.trim().toLowerCase();
-      const user = await kv.get(`user:${normalizedEmail}`, "json");
+      const user = await kv.get(`user:${email}`, "json");
       if (!user) {
-        return jsonResponse({ error: "No account found with this email. Please create an account." }, 404);
+        // Return generic 200 without exposing whether email exists
+        return genericResponse;
       }
 
+      // If registered strictly via Google OAuth without password, return generic 200
       if (user.provider === "google" && !user.hash) {
+        return genericResponse;
+      }
+
+      // Generate cryptographically secure single-use 32-byte token (hex string = 64 characters)
+      const rawTokenBytes = new Uint8Array(32);
+      crypto.getRandomValues(rawTokenBytes);
+      const rawToken = Array.from(rawTokenBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+
+      // Compute SHA-256 hash of token to store in KV (OWASP compliance: never store plaintext tokens in DB)
+      const tokenHash = await hashToken(rawToken);
+
+      // Store in KV with strict 15-minute expiration (900 seconds)
+      const tokenPayload = {
+        userId: user.id,
+        email: user.email,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 15 * 60 * 1000
+      };
+      await kv.put(`reset_token:${tokenHash}`, JSON.stringify(tokenPayload), {
+        expirationTtl: 900
+      });
+
+      // Assemble secure reset link
+      const resetUrl = `${url.origin}/reset-password?token=${rawToken}`;
+
+      // Dispatch email via MailChannels / Resend transporter
+      await sendPasswordResetEmail({
+        toEmail: user.email,
+        resetUrl,
+        env,
+        expirationMinutes: 15
+      });
+
+      return genericResponse;
+    } catch (err) {
+      console.error("Auth forgot-password error:", err);
+      return jsonResponse({
+        success: true,
+        message: "If an account exists for this email address, a password reset link has been sent to your inbox."
+      });
+    }
+  }
+
+  // 3c. Verify Password Reset Token (GET /api/auth/verify-reset-token)
+  // Step 2a: Validate token before rendering the new password form
+  if (url.pathname === "/api/auth/verify-reset-token" && request.method === "GET") {
+    try {
+      const rawToken = url.searchParams.get("token") || "";
+      if (!rawToken || rawToken.length !== 64) {
         return jsonResponse({
-          error: "This account was registered with Google. Please use 'Continue with Google' to sign in."
+          valid: false,
+          error: "Invalid password reset token format."
         }, 400);
       }
 
+      const tokenHash = await hashToken(rawToken);
+      const tokenData = await kv.get(`reset_token:${tokenHash}`, "json");
+
+      if (!tokenData) {
+        return jsonResponse({
+          valid: false,
+          error: "This password reset link is invalid or has expired. Please request a new one."
+        }, 400);
+      }
+
+      // Check explicit expiration timestamp
+      if (tokenData.expiresAt && Date.now() > tokenData.expiresAt) {
+        await kv.delete(`reset_token:${tokenHash}`);
+        return jsonResponse({
+          valid: false,
+          error: "This password reset link has expired (15-minute limit). Please request a new one."
+        }, 400);
+      }
+
+      return jsonResponse({
+        valid: true,
+        email: maskEmail(tokenData.email)
+      });
+    } catch (err) {
+      console.error("Auth verify-reset-token error:", err);
+      return jsonResponse({ valid: false, error: "Token verification failed." }, 500);
+    }
+  }
+
+  // 3d. Complete Password Reset & Session Invalidation (POST /api/auth/reset-password)
+  // Step 2b: Update password, destroy token, invalidate all previous sessions
+  if (url.pathname === "/api/auth/reset-password" && request.method === "POST") {
+    try {
+      const body = await request.json().catch(() => ({}));
+      const rawToken = typeof body?.token === "string" ? body.token.trim() : "";
+      const newPassword = typeof body?.newPassword === "string" ? body.newPassword : "";
+
+      if (!rawToken || rawToken.length !== 64) {
+        return jsonResponse({ error: "Invalid password reset token format." }, 400);
+      }
+
+      if (!newPassword || newPassword.length < 8) {
+        return jsonResponse({ error: "New password must be at least 8 characters long." }, 400);
+      }
+
+      const tokenHash = await hashToken(rawToken);
+      const tokenData = await kv.get(`reset_token:${tokenHash}`, "json");
+
+      if (!tokenData || !tokenData.email) {
+        return jsonResponse({
+          error: "This password reset token has expired or has already been used. Please request a new link."
+        }, 400);
+      }
+
+      // Check explicit expiration timestamp
+      if (tokenData.expiresAt && Date.now() > tokenData.expiresAt) {
+        await kv.delete(`reset_token:${tokenHash}`);
+        return jsonResponse({
+          error: "This password reset link has expired (15-minute limit). Please request a new link."
+        }, 400);
+      }
+
+      // CRITICAL: Immediately invalidate single-use token from KV
+      await kv.delete(`reset_token:${tokenHash}`);
+
+      const user = await kv.get(`user:${tokenData.email}`, "json");
+      if (!user) {
+        return jsonResponse({ error: "User account no longer exists." }, 404);
+      }
+
+      // Hash new password using Web Crypto PBKDF2 (100,000 iterations, SHA-256)
       const salt = generateSalt();
       const hash = await hashPassword(newPassword, salt);
 
+      // Invalidate all existing sessions by incrementing tokenVersion
+      const nextTokenVersion = (user.tokenVersion || 1) + 1;
+
       user.salt = salt;
       user.hash = hash;
+      user.tokenVersion = nextTokenVersion;
       user.updatedAt = new Date().toISOString();
 
-      await kv.put(`user:${normalizedEmail}`, JSON.stringify(user));
+      await kv.put(`user:${tokenData.email}`, JSON.stringify(user));
 
-      const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
+      // Issue fresh session token bound to the new tokenVersion
+      const sessionToken = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
       await kv.put(
-        `session:${token}`,
-        JSON.stringify({ userId: user.id, email: user.email }),
+        `session:${sessionToken}`,
+        JSON.stringify({ userId: user.id, email: user.email, tokenVersion: nextTokenVersion }),
         { expirationTtl: 2592000 }
       );
 
       return jsonResponse({
         success: true,
-        message: "Password reset successfully! Logged in.",
-        token,
+        message: "Password updated successfully! All other sessions have been logged out.",
+        token: sessionToken,
         user: {
           id: user.id,
           email: user.email,
@@ -276,7 +434,7 @@ export async function handleAuthRequest(request, env) {
       });
     } catch (err) {
       console.error("Auth reset-password error:", err);
-      return jsonResponse({ error: "Password reset failed: " + (err.message || "") }, 500);
+      return jsonResponse({ error: "Password update failed: " + (err.message || "") }, 500);
     }
   }
 
@@ -296,6 +454,16 @@ export async function handleAuthRequest(request, env) {
       const user = await kv.get(`user:${session.email}`, "json");
       if (!user) {
         return jsonResponse({ error: "User account not found." }, 404);
+      }
+
+      // Check session tokenVersion against current user tokenVersion
+      // If password was reset or credentials modified, tokenVersion will not match
+      const currentTokenVersion = user.tokenVersion || 1;
+      const sessionTokenVersion = session.tokenVersion || 1;
+      if (sessionTokenVersion !== currentTokenVersion) {
+        // Destroy invalidated session
+        await kv.delete(`session:${token}`);
+        return jsonResponse({ error: "Session has been invalidated. Please sign in with your new password." }, 401);
       }
 
       return jsonResponse({
@@ -594,7 +762,7 @@ export async function handleAuthRequest(request, env) {
       const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
       await kv.put(
         `session:${token}`,
-        JSON.stringify({ userId: user.id, email: user.email }),
+        JSON.stringify({ userId: user.id, email: user.email, tokenVersion: user.tokenVersion || 1 }),
         { expirationTtl: 2592000 }
       );
 
@@ -661,7 +829,7 @@ export async function handleAuthRequest(request, env) {
       const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
       await kv.put(
         `session:${token}`,
-        JSON.stringify({ userId: user.id, email: user.email }),
+        JSON.stringify({ userId: user.id, email: user.email, tokenVersion: user.tokenVersion || 1 }),
         { expirationTtl: 2592000 }
       );
 

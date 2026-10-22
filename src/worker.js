@@ -274,6 +274,13 @@ export default {
       }
     }
 
+    // Rewrite clean /reset-password path to /reset-password.html
+    if (url.pathname === "/reset-password" || url.pathname === "/reset-password/") {
+      if (env.ASSETS) {
+        return env.ASSETS.fetch(new Request(new URL("/reset-password.html", request.url), request));
+      }
+    }
+
     // 1. Health check endpoint
     if (url.pathname === "/healthz") {
       return new Response("OK", {
