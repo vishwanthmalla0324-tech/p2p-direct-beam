@@ -93,40 +93,60 @@ function generateResetEmailHtml({ resetUrl, userEmail, expirationMinutes }) {
  * Dispatch password reset email via Cloudflare Native MailChannels or Resend API
  */
 export async function sendPasswordResetEmail({ toEmail, resetUrl, env, expirationMinutes = 15 }) {
-  const fromAddress = "auth@directbeam.space";
-  const fromName = "Direct Beam Security";
+  const customFrom = env?.RESEND_FROM_EMAIL || "Direct Beam Security <auth@directbeam.space>";
+  const fallbackFrom = "Direct Beam Security <onboarding@resend.dev>";
   const subject = "Reset your Direct Beam password";
   const htmlContent = generateResetEmailHtml({ resetUrl, userEmail: toEmail, expirationMinutes });
 
-  // 1. Try Resend API if API Key is configured in environment
+  // 1. Deliver via Resend API
   if (env && env.RESEND_API_KEY) {
-    try {
-      const resendRes = await fetch("https://api.resend.com/emails", {
+    const resendApiKey = env.RESEND_API_KEY.trim();
+    
+    // Helper function to call Resend
+    async function attemptResendSend(fromSender) {
+      return await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+          "Authorization": `Bearer ${resendApiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          from: `${fromName} <${fromAddress}>`,
+          from: fromSender,
           to: [toEmail],
           subject,
           html: htmlContent
         })
       });
+    }
+
+    try {
+      // First attempt with custom domain
+      let resendRes = await attemptResendSend(customFrom);
+      
+      // If domain is not verified yet, automatically retry with Resend sandbox sender
+      if (!resendRes.ok && customFrom !== fallbackFrom) {
+        const errJson = await resendRes.clone().json().catch(() => ({}));
+        console.warn("[Email] Resend attempt with custom sender failed:", errJson?.message || resendRes.statusText);
+        console.log("[Email] Retrying with Resend onboarding sender...");
+        resendRes = await attemptResendSend(fallbackFrom);
+      }
+
       if (resendRes.ok) {
-        console.log(`[Email] Password reset delivered via Resend to ${toEmail}`);
-        return { success: true, provider: "resend" };
+        const data = await resendRes.json().catch(() => ({}));
+        console.log(`[Email] Password reset successfully delivered via Resend to ${toEmail}. Message ID: ${data?.id || "sent"}`);
+        return { success: true, provider: "resend", id: data?.id };
       } else {
         const errJson = await resendRes.json().catch(() => ({}));
-        console.warn("[Email] Resend API error:", errJson);
+        console.error("[Email] Resend delivery rejected:", errJson);
       }
     } catch (err) {
-      console.warn("[Email] Resend network error:", err.message);
+      console.error("[Email] Resend network error:", err.message);
     }
+  } else {
+    console.warn("[Email] RESEND_API_KEY is not configured in Cloudflare environment!");
   }
 
-  // 2. Try MailChannels API (Native free SMTP for Cloudflare Workers)
+  // 2. Try MailChannels API (Fallback for Cloudflare Workers)
   try {
     const mcRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
       method: "POST",
@@ -140,8 +160,8 @@ export async function sendPasswordResetEmail({ toEmail, resetUrl, env, expiratio
           }
         ],
         from: {
-          email: fromAddress,
-          name: fromName
+          email: "auth@directbeam.space",
+          name: "Direct Beam Security"
         },
         subject,
         content: [

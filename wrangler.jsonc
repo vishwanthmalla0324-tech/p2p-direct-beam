@@ -5,6 +5,9 @@
   "compatibility_date": "2024-09-23",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "vars": {
+    "RESEND_FROM_EMAIL": "Direct Beam Security <onboarding@resend.dev>"
+  },
   "routes": [
     {
       "pattern": "*directbeam.space/*",
