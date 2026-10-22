@@ -271,10 +271,7 @@ export async function handleAuthRequest(request, env) {
         return genericResponse;
       }
 
-      // If registered strictly via Google OAuth without password, return generic 200
-      if (user.provider === "google" && !user.hash) {
-        return genericResponse;
-      }
+      // Allow any registered account (including Google OAuth users) to set/reset their password via email
 
       // Generate cryptographically secure single-use 32-byte token (hex string = 64 characters)
       const rawTokenBytes = new Uint8Array(32);
