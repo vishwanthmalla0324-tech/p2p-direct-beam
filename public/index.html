@@ -1141,12 +1141,23 @@
         </div>
 
         <!-- Tabs -->
-        <div class="grid grid-cols-2 gap-2 border-b border-base-900 pb-3">
+        <div id="auth-tabs-row" class="grid grid-cols-2 gap-2 border-b border-base-900 pb-3">
           <button id="auth-tab-signin" type="button" class="py-2 text-xs font-mono uppercase font-bold text-white border-b-2 border-cyan-400 cursor-pointer">
             Sign In
           </button>
           <button id="auth-tab-signup" type="button" class="py-2 text-xs font-mono uppercase font-bold text-base-700 hover:text-white border-b-2 border-transparent cursor-pointer">
             Create Account
+          </button>
+        </div>
+
+        <!-- Reset Password Banner (shown only in reset mode) -->
+        <div id="auth-reset-banner" class="hidden flex items-center justify-between border-b border-cyan-500/30 pb-2.5">
+          <span class="text-xs font-mono text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="key-round" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Reset Password</span>
+          </span>
+          <button type="button" onclick="window.toggleForgotPasswordMode && window.toggleForgotPasswordMode(false)" class="text-[11px] font-mono text-zinc-400 hover:text-white transition flex items-center gap-1 cursor-pointer">
+            <span>← Back to Sign In</span>
           </button>
         </div>
 
@@ -1165,13 +1176,31 @@
           </div>
 
           <div class="space-y-1">
-            <label for="auth-password-input" class="text-[11px] font-mono uppercase tracking-wider text-base-700 block">
-              Password
-            </label>
+            <div class="flex items-center justify-between text-[11px] font-mono">
+              <label id="auth-password-label" for="auth-password-input" class="uppercase tracking-wider text-base-700 block">
+                Password
+              </label>
+              <button type="button" id="btn-forgot-password" onclick="window.toggleForgotPasswordMode && window.toggleForgotPasswordMode(true)" class="text-cyan-400 hover:underline cursor-pointer">
+                Forgot Password?
+              </button>
+            </div>
             <input
               type="password"
               id="auth-password-input"
               required
+              placeholder="••••••••••••"
+              class="w-full bg-black/90 border-2 border-base-900 focus:border-cyan-400 px-4 py-2.5 font-mono text-xs text-white focus:outline-none transition placeholder:text-base-600"
+            />
+          </div>
+
+          <!-- Confirm Password (shown only in reset mode) -->
+          <div id="auth-confirm-password-wrapper" class="hidden space-y-1">
+            <label for="auth-confirm-password-input" class="text-[11px] font-mono uppercase tracking-wider text-base-700 block">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              id="auth-confirm-password-input"
               placeholder="••••••••••••"
               class="w-full bg-black/90 border-2 border-base-900 focus:border-cyan-400 px-4 py-2.5 font-mono text-xs text-white focus:outline-none transition placeholder:text-base-600"
             />

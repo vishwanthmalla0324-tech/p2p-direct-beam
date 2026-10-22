@@ -1672,11 +1672,53 @@
   const headerQuotaPill = document.getElementById('header-quota-pill');
   const quotaUsedCount = document.getElementById('quota-used-count');
 
+  const authTabsRow = document.getElementById('auth-tabs-row');
+  const authResetBanner = document.getElementById('auth-reset-banner');
+  const authPasswordLabel = document.getElementById('auth-password-label');
+  const authConfirmPasswordWrapper = document.getElementById('auth-confirm-password-wrapper');
+  const authConfirmPasswordInput = document.getElementById('auth-confirm-password-input');
+
   let currentAuthMode = 'signin';
+
+  function toggleForgotPasswordMode(enable) {
+    if (authStatusMsg) authStatusMsg.classList.add('hidden');
+    if (enable) {
+      currentAuthMode = 'reset';
+      if (authTabsRow) authTabsRow.classList.add('hidden');
+      if (authResetBanner) authResetBanner.classList.remove('hidden');
+      if (authPasswordLabel) authPasswordLabel.textContent = 'New Password';
+      if (authConfirmPasswordWrapper) authConfirmPasswordWrapper.classList.remove('hidden');
+      if (authPasswordInput) {
+        authPasswordInput.placeholder = 'Enter new password (min 6 chars)';
+        authPasswordInput.value = '';
+      }
+      if (authConfirmPasswordInput) authConfirmPasswordInput.value = '';
+      if (authSubmitText) authSubmitText.textContent = 'Reset Password & Sign In';
+      if (authPasswordInput) setTimeout(() => authPasswordInput.focus(), 150);
+    } else {
+      currentAuthMode = 'signin';
+      if (authTabsRow) authTabsRow.classList.remove('hidden');
+      if (authResetBanner) authResetBanner.classList.add('hidden');
+      if (authPasswordLabel) authPasswordLabel.textContent = 'Password';
+      if (authConfirmPasswordWrapper) authConfirmPasswordWrapper.classList.add('hidden');
+      if (authPasswordInput) {
+        authPasswordInput.placeholder = '••••••••••••';
+      }
+      if (authTabSignin) {
+        authTabSignin.className = 'py-2 text-xs font-mono uppercase font-bold text-white border-b-2 border-cyan-400 cursor-pointer';
+      }
+      if (authTabSignup) {
+        authTabSignup.className = 'py-2 text-xs font-mono uppercase font-bold text-base-700 hover:text-white border-b-2 border-transparent cursor-pointer';
+      }
+      if (authSubmitText) authSubmitText.textContent = 'Sign In';
+    }
+  }
+  window.toggleForgotPasswordMode = toggleForgotPasswordMode;
 
   function openAuthModal() {
     const user = getLoggedInUser();
     if (authStatusMsg) authStatusMsg.classList.add('hidden');
+    toggleForgotPasswordMode(false);
     if (user && user.email) {
       if (authLoggedInView) authLoggedInView.classList.remove('hidden');
       if (authFormView) authFormView.classList.add('hidden');
@@ -1701,6 +1743,7 @@
 
   if (authTabSignin && authTabSignup) {
     authTabSignin.onclick = () => {
+      toggleForgotPasswordMode(false);
       currentAuthMode = 'signin';
       authTabSignin.className = 'py-2 text-xs font-mono uppercase font-bold text-white border-b-2 border-cyan-400 cursor-pointer';
       authTabSignup.className = 'py-2 text-xs font-mono uppercase font-bold text-base-700 hover:text-white border-b-2 border-transparent cursor-pointer';
@@ -1709,6 +1752,7 @@
     };
 
     authTabSignup.onclick = () => {
+      toggleForgotPasswordMode(false);
       currentAuthMode = 'signup';
       authTabSignup.className = 'py-2 text-xs font-mono uppercase font-bold text-white border-b-2 border-cyan-400 cursor-pointer';
       authTabSignin.className = 'py-2 text-xs font-mono uppercase font-bold text-base-700 hover:text-white border-b-2 border-transparent cursor-pointer';
@@ -1735,6 +1779,72 @@
         authStatusMsg.className = 'text-xs font-mono p-2.5 border border-rose-500/50 bg-rose-950/40 text-rose-300 block flex items-center gap-2';
         authStatusMsg.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>Password must be at least 6 characters.</span>';
         if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+      return;
+    }
+
+    // Handle Reset Password Mode
+    if (currentAuthMode === 'reset') {
+      const confirmPassword = authConfirmPasswordInput ? authConfirmPasswordInput.value.trim() : '';
+      if (password !== confirmPassword) {
+        if (authStatusMsg) {
+          authStatusMsg.className = 'text-xs font-mono p-2.5 border border-rose-500/50 bg-rose-950/40 text-rose-300 block flex items-center gap-2';
+          authStatusMsg.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>Passwords do not match. Please verify both fields.</span>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        return;
+      }
+
+      if (authSubmitBtn) authSubmitBtn.disabled = true;
+      if (authSubmitText) authSubmitText.textContent = 'Updating Password...';
+
+      try {
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, newPassword: password })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Password reset failed.');
+        }
+
+        if (data.token) localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
+        if (data.user) {
+          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+          if (data.user.pro) {
+            localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+            window.DIRECT_BEAM_PRO = true;
+            updateProUI(true);
+          }
+        }
+
+        if (authStatusMsg) {
+          authStatusMsg.className = 'text-xs font-mono p-2.5 border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 block flex items-center gap-2';
+          authStatusMsg.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>Password updated successfully! Logging you in...</span>';
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        showToast('Password updated successfully!');
+        updateQuotaBadge();
+
+        setTimeout(() => {
+          closeAuthModal();
+          toggleForgotPasswordMode(false);
+          if (authEmailInput) authEmailInput.value = '';
+          if (authPasswordInput) authPasswordInput.value = '';
+          if (authConfirmPasswordInput) authConfirmPasswordInput.value = '';
+          if (authStatusMsg) authStatusMsg.classList.add('hidden');
+        }, 900);
+      } catch (err) {
+        if (authStatusMsg) {
+          authStatusMsg.className = 'text-xs font-mono p-2.5 border border-rose-500/50 bg-rose-950/40 text-rose-300 block flex items-center gap-2';
+          authStatusMsg.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>${err.message}</span>`;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+      } finally {
+        if (authSubmitBtn) authSubmitBtn.disabled = false;
+        if (authSubmitText) authSubmitText.textContent = 'Reset Password & Sign In';
       }
       return;
     }

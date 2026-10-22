@@ -221,6 +221,65 @@ export async function handleAuthRequest(request, env) {
     }
   }
 
+  // 3b. Reset Password (POST /api/auth/reset-password)
+  if (url.pathname === "/api/auth/reset-password" && request.method === "POST") {
+    try {
+      const body = await request.json();
+      const { email, newPassword } = body || {};
+
+      if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        return jsonResponse({ error: "Please provide a valid email address." }, 400);
+      }
+      if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+        return jsonResponse({ error: "New password must be at least 6 characters long." }, 400);
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await kv.get(`user:${normalizedEmail}`, "json");
+      if (!user) {
+        return jsonResponse({ error: "No account found with this email. Please create an account." }, 404);
+      }
+
+      if (user.provider === "google" && !user.hash) {
+        return jsonResponse({
+          error: "This account was registered with Google. Please use 'Continue with Google' to sign in."
+        }, 400);
+      }
+
+      const salt = generateSalt();
+      const hash = await hashPassword(newPassword, salt);
+
+      user.salt = salt;
+      user.hash = hash;
+      user.updatedAt = new Date().toISOString();
+
+      await kv.put(`user:${normalizedEmail}`, JSON.stringify(user));
+
+      const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
+      await kv.put(
+        `session:${token}`,
+        JSON.stringify({ userId: user.id, email: user.email }),
+        { expirationTtl: 2592000 }
+      );
+
+      return jsonResponse({
+        success: true,
+        message: "Password reset successfully! Logged in.",
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          transfersCount: user.transfersCount || 0,
+          pro: Boolean(user.pro)
+        }
+      });
+    } catch (err) {
+      console.error("Auth reset-password error:", err);
+      return jsonResponse({ error: "Password reset failed: " + (err.message || "") }, 500);
+    }
+  }
+
   // 4. Current User Profile (GET /api/auth/me)
   if (url.pathname === "/api/auth/me" && request.method === "GET") {
     try {
