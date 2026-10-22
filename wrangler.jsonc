@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "vars": {
-    "RESEND_FROM_EMAIL": "Direct Beam Security <onboarding@resend.dev>"
+    "RESEND_FROM_EMAIL": "Direct Beam Security <auth@directbeam.space>"
   },
   "routes": [
     {
