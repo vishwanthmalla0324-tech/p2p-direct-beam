@@ -1,0 +1,19 @@
+# Direct Beam (directbeam.space)
+
+> Direct Beam is a high-throughput, browser-to-browser encrypted peer-to-peer data pipeline built on WebRTC DataChannels with zero cloud storage retention.
+
+## Core Capabilities
+- **Direct P2P Data Streaming**: Transfers files and batches directly disk-to-disk between devices via WebRTC DataChannels without uploading to intermediate cloud servers.
+- **End-to-End Encryption**: Secures all data in transit using DTLS 1.3 and Web Crypto PBKDF2 encryption.
+- **Zero Cloud Retention**: Files never touch server disks, ensuring total privacy and confidentiality.
+- **Mesh Room Signaling**: Ephemeral 6-digit room signaling powered by Cloudflare Workers Durable Objects.
+- **Fast Resilient Fallback**: Integrated STUN/TURN traversal servers for cross-NAT connections.
+
+## Access Tiers
+- **Free Tier**: 3 free transfers per authenticated account with zero storage.
+- **Pro Lifetime**: Lifetime unlimited peer-to-peer transfers, dedicated TURN relays, and priority network signaling for ₹300.
+
+## Authentication & Security
+- Cloudflare Workers KV distributed authentication with PBKDF2 (100,000 iterations).
+- Real Google OAuth integration via Google Identity Services.
+- Out-of-band cryptographic password reset pipeline with 15-minute single-use token verification.

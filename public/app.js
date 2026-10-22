@@ -1580,7 +1580,7 @@
 
   function getLoggedInUser() {
     try {
-      const raw = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_USER) || localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_LEGACY_USER);
+      const raw = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_USER);
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
       return null;
@@ -1589,13 +1589,8 @@
 
   function getTransferCount() {
     const user = getLoggedInUser();
-    const localCount = parseInt(localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
-    const userCount = (user && typeof user.transfersCount === 'number') ? user.transfersCount : 0;
-    const maxCount = Math.max(localCount, userCount);
-    if (maxCount !== localCount) {
-      localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, maxCount.toString());
-    }
-    return maxCount;
+    if (!user || !user.email) return 0;
+    return typeof user.transfersCount === 'number' ? user.transfersCount : 0;
   }
 
   function isProUser() {
@@ -1876,30 +1871,19 @@
         localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
       }
       if (data.user) {
-        const localCount = parseInt(localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
-        const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-        const effectiveCount = Math.max(localCount, remoteCount);
-
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, effectiveCount.toString());
-        data.user.transfersCount = effectiveCount;
+        const count = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
+        data.user.transfersCount = count;
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, count.toString());
         localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
 
         if (data.user.pro) {
           localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
           window.DIRECT_BEAM_PRO = true;
           updateProUI(true);
-        }
-
-        // If local device had more guest transfers, sync them up immediately to user record
-        if (localCount > remoteCount && data.token) {
-          fetch('/api/auth/sync', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${data.token}`
-            },
-            body: JSON.stringify({ transfersCount: effectiveCount, pro: isProUser() })
-          }).catch(() => {});
+        } else {
+          localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+          window.DIRECT_BEAM_PRO = false;
+          updateProUI(false);
         }
       }
 
@@ -1947,6 +1931,8 @@
     localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_LEGACY_USER);
     localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
     localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_COUNT);
+    localStorage.removeItem('direct_beam_transfer_count');
     localStorage.removeItem('direct_beam_pro');
     localStorage.removeItem('direct_beam_pro_status');
     localStorage.removeItem('direct_beam_pro_key');
@@ -2065,12 +2051,9 @@
       if (res.ok) {
         const data = await res.json();
         if (data && data.user) {
-          const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-          const localCount = parseInt(localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
-          const effectiveCount = Math.max(localCount, remoteCount);
-
-          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, effectiveCount.toString());
-          data.user.transfersCount = effectiveCount;
+          const userCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
+          data.user.transfersCount = userCount;
+          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, userCount.toString());
           localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
 
           if (data.user.pro) {
@@ -2084,17 +2067,6 @@
             localStorage.removeItem('direct_beam_pro_key');
             window.DIRECT_BEAM_PRO = false;
             updateProUI(false);
-          }
-
-          if (localCount > remoteCount) {
-            fetch('/api/auth/sync', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ transfersCount: effectiveCount, pro: isProUser() })
-            }).catch(() => {});
           }
         }
       } else if (res.status === 401) {
@@ -2362,15 +2334,10 @@
     const emailParam = encodeURIComponent(user.email);
     const nameParam = encodeURIComponent(user.name || '');
     const userParam = encodeURIComponent(user.id || '');
-    const checkoutUrl = `${checkoutBase}?checkout[email]=${emailParam}&checkout[name]=${nameParam}&checkout[custom][user_id]=${userParam}&embed=1`;
+    const checkoutUrl = `${checkoutBase}?checkout[email]=${emailParam}&checkout[name]=${nameParam}&checkout[custom][user_id]=${userParam}`;
 
-    showToast(`Opening Pro checkout for: ${user.email}`);
-
-    if (window.LemonSqueezy && typeof window.LemonSqueezy.Url?.Open === 'function') {
-      window.LemonSqueezy.Url.Open(checkoutUrl);
-    } else {
-      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
-    }
+    showToast(`Opening Lemon Squeezy checkout for ${user.email}...`);
+    window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
   }
 
   // Single-Use User-Bound License Key Activation

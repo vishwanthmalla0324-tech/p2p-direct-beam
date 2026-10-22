@@ -261,23 +261,46 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    // 0. Cloudflare Worker KV Authentication Endpoints (/api/auth/*)
+    // 0a. Enforce HTTPS 301 Redirect in production
+    const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
+    if (proto === "http" && !url.hostname.includes("localhost") && !url.hostname.includes("127.0.0.1")) {
+      return Response.redirect(`https://${url.host}${url.pathname}${url.search}`, 301);
+    }
+
+    // Helper to attach security headers to responses
+    function withSecurityHeaders(res) {
+      if (!res) return res;
+      const headers = new Headers(res.headers);
+      headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+      headers.set("X-Content-Type-Options", "nosniff");
+      headers.set("X-Frame-Options", "SAMEORIGIN");
+      headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+      return new Response(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers
+      });
+    }
+
+    // 0b. Cloudflare Worker KV Authentication Endpoints (/api/auth/*)
     if (url.pathname.startsWith("/api/auth")) {
       const authRes = await handleAuthRequest(request, env);
-      if (authRes) return authRes;
+      if (authRes) return withSecurityHeaders(authRes);
     }
 
     // Rewrite clean /login path to /login.html
     if (url.pathname === "/login" || url.pathname === "/login/") {
       if (env.ASSETS) {
-        return env.ASSETS.fetch(new Request(new URL("/login.html", request.url), request));
+        const res = await env.ASSETS.fetch(new Request(new URL("/login.html", request.url), request));
+        return withSecurityHeaders(res);
       }
     }
 
     // Rewrite clean /reset-password path to /reset-password.html
     if (url.pathname === "/reset-password" || url.pathname === "/reset-password/") {
       if (env.ASSETS) {
-        return env.ASSETS.fetch(new Request(new URL("/reset-password.html", request.url), request));
+        const res = await env.ASSETS.fetch(new Request(new URL("/reset-password.html", request.url), request));
+        return withSecurityHeaders(res);
       }
     }
 
@@ -351,7 +374,8 @@ export default {
 
     // 5. Static Assets fallback (index.html, app.js, style.css, assets, etc.)
     if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
+      const res = await env.ASSETS.fetch(request);
+      return withSecurityHeaders(res);
     }
 
     return new Response("Not Found", { status: 404 });

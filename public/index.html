@@ -3,16 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Direct Beam — Encrypted Point-to-Point Pipeline</title>
-  <meta name="description" content="Encrypted point-to-point batch data streaming utility built on WebRTC DataChannels with zero cloud retention." />
+  <title>Direct Beam — Secure P2P File Transfer & Real-Time Data Streaming</title>
+  <meta name="description" content="Direct Beam delivers browser-to-browser encrypted P2P file transfers and real-time streaming with zero cloud storage, unlimited file sizes, and DTLS 1.3 security." />
+  <meta name="keywords" content="P2P file transfer, WebRTC direct beam, encrypted file sharing, browser to browser transfer, zero cloud storage, large file sharing" />
   <meta name="author" content="Vishwanth Malla" />
   <link rel="canonical" href="https://directbeam.space/" />
+
+  <!-- OpenGraph Meta Tags for Rich Social Previews -->
+  <meta property="og:title" content="Direct Beam — Secure P2P File Transfer & Real-Time Data Streaming" />
+  <meta property="og:description" content="Encrypted peer-to-peer file transfers and real-time streaming with zero cloud storage and DTLS 1.3 encryption." />
+  <meta property="og:url" content="https://directbeam.space/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Direct Beam" />
+  <meta property="og:image" content="https://directbeam.space/assets/direct_beam_banner.jpg" />
+  <meta property="og:logo" content="https://directbeam.space/assets/direct_beam_logo.jpg" />
+
+  <!-- Twitter / X Cards -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Direct Beam — Secure P2P File Transfer" />
+  <meta name="twitter:description" content="Direct browser-to-browser encrypted file transfers with zero cloud retention, unlimited file size, and WebRTC DataChannels." />
+  <meta name="twitter:image" content="https://directbeam.space/assets/direct_beam_banner.jpg" />
 
   <!-- Favicon & Brand Icons -->
   <link rel="icon" type="image/jpeg" href="/assets/direct_beam_logo.jpg" />
   <link rel="apple-touch-icon" href="/assets/direct_beam_logo.jpg" />
-  <meta property="og:image" content="https://directbeam.space/assets/direct_beam_banner.jpg" />
-  <meta property="og:logo" content="https://directbeam.space/assets/direct_beam_logo.jpg" />
+
+  <!-- JSON-LD Structured Data Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Direct Beam",
+        "url": "https://directbeam.space",
+        "operatingSystem": "All",
+        "applicationCategory": "NetworkingApplication",
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Free Tier",
+            "price": "0",
+            "priceCurrency": "INR",
+            "description": "3 free transfers with zero cloud retention"
+          },
+          {
+            "@type": "Offer",
+            "name": "Pro Lifetime",
+            "price": "300",
+            "priceCurrency": "INR",
+            "description": "Unlimited peer-to-peer transfers with dedicated high-speed TURN relays"
+          }
+        ],
+        "description": "High-throughput encrypted peer-to-peer batch data streaming pipeline built on WebRTC DataChannels with zero cloud retention."
+      },
+      {
+        "@type": "WebSite",
+        "name": "Direct Beam",
+        "url": "https://directbeam.space"
+      },
+      {
+        "@type": "Organization",
+        "name": "Direct Beam",
+        "url": "https://directbeam.space",
+        "logo": "https://directbeam.space/assets/direct_beam_logo.jpg",
+        "sameAs": [
+          "https://wa.me/918501820073",
+          "https://instagram.com/directbeam.space"
+        ]
+      }
+    ]
+  }
+  </script>
 
   <!-- Google Fonts: Road Rage (Heading) & JetBrains Mono (Terminal/Body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -59,7 +121,6 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
 </head>
 <body class="bg-base-100 text-base-900 font-mono antialiased selection:bg-white selection:text-black min-h-screen">
 
@@ -68,7 +129,7 @@
 
   <!-- Floating Toast Notification -->
   <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 -translate-y-20 opacity-0 pointer-events-none db-card-heavy px-5 py-2.5 shadow-2xl text-xs font-mono flex items-center gap-3 border-2 border-base-900 text-white">
-    <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" class="w-4 h-4 rounded-full object-cover shrink-0 border border-emerald-400/40" />
+    <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" width="16" height="16" class="w-4 h-4 rounded-full object-cover shrink-0 border border-emerald-400/40" />
     <span id="toast-message">Notification</span>
   </div>
 
@@ -84,7 +145,7 @@
     <!-- Top Navbar -->
     <header class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b-2 border-base-900 pb-6">
       <div class="flex items-center gap-3 cursor-pointer group" id="brand-home-link">
-        <img src="/assets/direct_beam_logo.jpg" alt="Direct Beam Logo" class="w-11 h-11 rounded-lg object-cover border-2 border-base-900 shadow-xl transition-transform duration-200 group-hover:scale-105 group-hover:border-white" />
+        <img src="/assets/direct_beam_logo.jpg" alt="Direct Beam Logo" width="44" height="44" class="w-11 h-11 rounded-lg object-cover border-2 border-base-900 shadow-xl transition-transform duration-200 group-hover:scale-105 group-hover:border-white" />
         <div>
           <h1 class="text-2xl font-grunge tracking-wide text-white flex items-center gap-2">
             DIRECT BEAM <span class="db-pill text-[10px]">V1.2 MESH</span>
@@ -129,7 +190,7 @@
 
         <!-- 4. Founder Icon -->
         <button id="nav-founder-btn" class="nav-icon-btn group" aria-label="Founder">
-          <img src="/profile.jpg" alt="Founder" class="w-4 h-4 rounded-full object-cover border border-white/60 group-hover:border-white transition" onerror="this.style.display='none'" />
+          <img src="/profile.jpg" alt="Founder" width="16" height="16" class="w-4 h-4 rounded-full object-cover border border-white/60 group-hover:border-white transition" onerror="this.style.display='none'" />
           <span class="nav-tooltip">Founder</span>
         </button>
 
@@ -196,10 +257,10 @@
     <section class="text-center space-y-4 pt-2">
       <div class="flex items-center justify-center gap-3">
         <div class="db-pill">
-          <img src="/assets/symbolWhite.svg" alt="Mesh Symbol" class="w-4 h-3.5" />
+          <img src="/assets/symbolWhite.svg" alt="Mesh Symbol" width="16" height="14" class="w-4 h-3.5" />
           <span>DIRECT DEVICE-TO-DEVICE MESH PIPELINE</span>
         </div>
-        <img src="/assets/barcode.svg" alt="Barcode Stamp" class="grunge-stamp-barcode hidden sm:inline-block" />
+        <img src="/assets/barcode.svg" alt="Barcode Stamp" width="60" height="24" class="grunge-stamp-barcode hidden sm:inline-block" />
       </div>
 
       <h2 class="text-6xl sm:text-8xl md:text-9xl font-grunge uppercase text-white tracking-tight leading-none">
@@ -252,7 +313,7 @@
 
       <div class="absolute bottom-4 right-4 pointer-events-none flex items-center gap-2 db-pill">
         <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" class="w-3.5 h-3.5 rounded-full object-cover" />
+        <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" width="14" height="14" class="w-3.5 h-3.5 rounded-full object-cover" />
         <span>DIRECTBEAM P2P CORE</span>
       </div>
     </section>
@@ -275,7 +336,7 @@
           </div>
           <div class="flex justify-between items-center text-[10px] text-base-600 font-mono">
             <span>REAL-TIME STREAM</span>
-            <img src="/assets/barcode.svg" class="h-3.5 opacity-60" alt="Barcode" />
+            <img src="/assets/barcode.svg" width="35" height="14" class="h-3.5 opacity-60" alt="Barcode" />
           </div>
         </div>
       </div>
@@ -292,7 +353,7 @@
         </div>
         <div class="flex justify-between items-center text-[11px] font-mono text-white pt-2 border-t border-base-400">
           <span>Zero Cloud Retention</span>
-          <img src="/assets/symbolWhite.svg" class="h-3 opacity-80" alt="Symbol" />
+          <img src="/assets/symbolWhite.svg" width="14" height="12" class="h-3 opacity-80" alt="Symbol" />
         </div>
       </div>
 
@@ -336,8 +397,8 @@
 
         <!-- Grunge UI Decorative Stamps -->
         <div class="flex justify-between items-center mb-4">
-          <img src="/assets/symbolWhite.svg" alt="Symbol" class="h-4 opacity-80" />
-          <img src="/assets/barcode.svg" alt="Barcode" class="h-5 opacity-80" />
+          <img src="/assets/symbolWhite.svg" alt="Symbol" width="16" height="16" class="h-4 opacity-80" />
+          <img src="/assets/barcode.svg" alt="Barcode" width="50" height="20" class="h-5 opacity-80" />
         </div>
 
         <div class="flex flex-col items-center justify-center space-y-3">
@@ -467,7 +528,7 @@
       <!-- Developer / Founder Promo Banner -->
       <div class="db-card p-6 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden text-center md:text-left">
         <div class="relative shrink-0">
-          <img src="/profile.jpg" alt="Founder" class="w-20 h-20 border-2 border-base-900 object-cover shadow-2xl" onerror="this.style.display='none'" />
+          <img src="/profile.jpg" alt="Founder" width="80" height="80" class="w-20 h-20 border-2 border-base-900 object-cover shadow-2xl" onerror="this.style.display='none'" />
           <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-black" title="Active Core Engineer"></span>
         </div>
         <div class="space-y-1.5 flex-1">
@@ -674,7 +735,7 @@
     <section class="pt-2 space-y-4">
       <div class="flex items-center justify-between">
         <div class="db-pill">
-          <img src="/assets/symbolWhite.svg" alt="Symbol" class="w-3.5 h-3" />
+          <img src="/assets/symbolWhite.svg" alt="Symbol" width="14" height="12" class="w-3.5 h-3" />
           <span>SYSTEM ARCHITECTURE</span>
         </div>
         <span class="text-[11px] font-mono text-base-700 uppercase">Zero Cloud Intermediary</span>
@@ -686,7 +747,7 @@
             <div class="w-8 h-8 border-2 border-base-900 bg-base-900 flex items-center justify-center text-white">
               <i data-lucide="radio" class="w-4 h-4"></i>
             </div>
-            <img src="/assets/barcode.svg" class="h-3.5 opacity-60" alt="Barcode" />
+            <img src="/assets/barcode.svg" width="35" height="14" class="h-3.5 opacity-60" alt="Barcode" />
           </div>
           <h4 class="text-lg font-grunge text-white uppercase tracking-wide">1. Direct Mesh WebRTC</h4>
           <p class="text-xs text-base-700 leading-relaxed font-mono">
@@ -699,7 +760,7 @@
             <div class="w-8 h-8 border-2 border-base-900 bg-base-900 flex items-center justify-center text-white">
               <i data-lucide="lock" class="w-4 h-4"></i>
             </div>
-            <img src="/assets/symbolWhite.svg" class="h-3 opacity-60" alt="Symbol" />
+            <img src="/assets/symbolWhite.svg" width="14" height="12" class="h-3 opacity-60" alt="Symbol" />
           </div>
           <h4 class="text-lg font-grunge text-white uppercase tracking-wide">2. DTLS 1.3 Encryption</h4>
           <p class="text-xs text-base-700 leading-relaxed font-mono">
@@ -712,7 +773,7 @@
             <div class="w-8 h-8 border-2 border-base-900 bg-base-900 flex items-center justify-center text-white">
               <i data-lucide="cpu" class="w-4 h-4"></i>
             </div>
-            <img src="/assets/barcode.svg" class="h-3.5 opacity-60" alt="Barcode" />
+            <img src="/assets/barcode.svg" width="35" height="14" class="h-3.5 opacity-60" alt="Barcode" />
           </div>
           <h4 class="text-lg font-grunge text-white uppercase tracking-wide">3. Adaptive Backpressure</h4>
           <p class="text-xs text-base-700 leading-relaxed font-mono">
@@ -725,7 +786,7 @@
             <div class="w-8 h-8 border-2 border-base-900 bg-base-900 flex items-center justify-center text-white">
               <i data-lucide="hard-drive" class="w-4 h-4"></i>
             </div>
-            <img src="/assets/symbolWhite.svg" class="h-3 opacity-60" alt="Symbol" />
+            <img src="/assets/symbolWhite.svg" width="14" height="12" class="h-3 opacity-60" alt="Symbol" />
           </div>
           <h4 class="text-lg font-grunge text-white uppercase tracking-wide">4. Direct-to-Disk Stream</h4>
           <p class="text-xs text-base-700 leading-relaxed font-mono">
@@ -739,7 +800,7 @@
     <footer class="border-t-2 border-base-900 pt-8 space-y-6">
       <div class="flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-base-700 font-mono">
         <div class="flex items-center gap-3">
-          <img src="/profile.jpg" alt="Founder" class="w-9 h-9 object-cover border-2 border-base-900 shadow-sm" onerror="this.style.display='none'" />
+          <img src="/profile.jpg" alt="Founder" width="36" height="36" class="w-9 h-9 object-cover border-2 border-base-900 shadow-sm" onerror="this.style.display='none'" />
           <div>
             <span class="text-white font-bold">DirectBeam Core Infrastructure</span>
             <span class="block text-base-600">Architected by <button id="open-founder-footer-btn" class="text-white hover:underline cursor-pointer">Vishwanth Malla</button></span>
@@ -754,7 +815,7 @@
           <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">LinkedIn</a>
           <div class="flex items-center gap-2">
             <span>Support:</span>
-            <a href="mailto:support@directbeam.space" class="text-white hover:underline">support@directbeam.space</a>
+            <a href="#" onclick="window.location.href='mai'+'lto:'+'support'+'@'+'directbeam.space';return false;" class="text-white hover:underline">support&#64;directbeam.space</a>
             <button id="copy-email-dock-btn" title="Copy Support Email" class="cyber-btn-secondary px-2 py-0.5 text-[10px] uppercase cursor-pointer">
               Copy
             </button>
@@ -765,10 +826,10 @@
       <!-- Bottom Decorative Barcode & Direct Beam Copyright -->
       <div class="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-base-400/40 text-[11px] text-base-600 font-mono gap-2">
         <div class="flex items-center gap-2">
-          <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" class="w-4 h-4 rounded-sm object-cover opacity-90" />
+          <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" width="16" height="16" class="w-4 h-4 rounded-sm object-cover opacity-90" />
           <span>Direct Beam © 2026 All Rights Reserved</span>
         </div>
-        <img src="/assets/barcode.svg" alt="Barcode Stamp" class="grunge-stamp-barcode" />
+        <img src="/assets/barcode.svg" alt="Barcode Stamp" width="60" height="24" class="grunge-stamp-barcode" />
       </div>
     </footer>
 
@@ -789,7 +850,7 @@
 
       <div class="flex flex-col items-center text-center space-y-3 pt-2">
         <div class="relative">
-          <img src="/profile.jpg" alt="Support / Founder" class="w-32 h-32 object-cover shadow-2xl border-2 border-base-900" />
+          <img src="/profile.jpg" alt="Support / Founder" width="128" height="128" class="w-32 h-32 object-cover shadow-2xl border-2 border-base-900" />
           <span class="absolute bottom-1 right-1 w-4 h-4 bg-emerald-400 border-2 border-black" title="Online Core Engineer"></span>
         </div>
         <div>
@@ -816,7 +877,7 @@
       <div class="pt-4 border-t-2 border-base-900 space-y-2">
         <span class="text-[10px] font-mono uppercase tracking-wider text-base-700 block">Direct Support &amp; Inquiries</span>
         <div class="flex items-center justify-between bg-black/80 p-2.5 border border-base-900 text-xs font-mono">
-          <a href="mailto:support@directbeam.space" class="text-base-800 hover:text-white truncate transition">support@directbeam.space</a>
+          <a href="#" onclick="window.location.href='mai'+'lto:'+'support'+'@'+'directbeam.space';return false;" class="text-base-800 hover:text-white truncate transition">support&#64;directbeam.space</a>
           <button id="modal-copy-email-btn" class="cyber-btn-secondary px-3 py-1 text-white text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer uppercase">
             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
             <span>Copy</span>
