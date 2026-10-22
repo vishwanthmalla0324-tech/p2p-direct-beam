@@ -1,7 +1,10 @@
 /**
  * Cloudflare Worker KV Authentication Module for Direct Beam
  * Stores user profiles, hashed credentials (PBKDF2), and sessions in USERS_KV.
+ * Supports: Email/Password (PBKDF2), Real Google OAuth (GSI JWT verification)
  */
+
+const GOOGLE_CLIENT_ID = "464572597917-bj2jf591tfhc4lvqcqr0pn5q9sgps4d5.apps.googleusercontent.com";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -310,7 +313,146 @@ export async function handleAuthRequest(request, env) {
     }
   }
 
-  // 7. Social OAuth Login - Google & Apple (POST /api/auth/oauth/social)
+  // 7. Real Google OAuth — Verify Google Identity Services JWT Token (POST /api/auth/google/verify)
+  if (url.pathname === "/api/auth/google/verify" && request.method === "POST") {
+    try {
+      const body = await request.json();
+      const { credential } = body || {};
+
+      if (!credential || typeof credential !== "string") {
+        return jsonResponse({ error: "Missing Google credential token." }, 400);
+      }
+
+      // Decode JWT header to get key ID (kid)
+      const parts = credential.split(".");
+      if (parts.length !== 3) {
+        return jsonResponse({ error: "Invalid Google token format." }, 400);
+      }
+
+      // Decode payload (base64url)
+      const payloadB64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const payloadJson = atob(payloadB64);
+      const payload = JSON.parse(payloadJson);
+
+      // Verify issuer
+      if (payload.iss !== "https://accounts.google.com" && payload.iss !== "accounts.google.com") {
+        return jsonResponse({ error: "Invalid token issuer." }, 401);
+      }
+
+      // Verify audience matches our Client ID
+      if (payload.aud !== GOOGLE_CLIENT_ID) {
+        return jsonResponse({ error: "Token audience mismatch." }, 401);
+      }
+
+      // Verify token is not expired
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (payload.exp < nowSec) {
+        return jsonResponse({ error: "Google token has expired." }, 401);
+      }
+
+      // Verify signature against Google's public JWKS keys
+      const headerB64 = parts[0].replace(/-/g, "+").replace(/_/g, "/");
+      const headerJson = atob(headerB64);
+      const header = JSON.parse(headerJson);
+
+      const jwksRes = await fetch("https://www.googleapis.com/oauth2/v3/certs");
+      if (!jwksRes.ok) {
+        return jsonResponse({ error: "Failed to fetch Google public keys." }, 502);
+      }
+      const jwks = await jwksRes.json();
+      const jwk = jwks.keys.find(k => k.kid === header.kid);
+      if (!jwk) {
+        return jsonResponse({ error: "Google signing key not found." }, 401);
+      }
+
+      // Import the public key and verify signature
+      const publicKey = await crypto.subtle.importKey(
+        "jwk",
+        jwk,
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        false,
+        ["verify"]
+      );
+
+      const enc = new TextEncoder();
+      const signedData = enc.encode(parts[0] + "." + parts[1]);
+      const signatureB64 = parts[2].replace(/-/g, "+").replace(/_/g, "/");
+      const signatureBytes = Uint8Array.from(atob(signatureB64), c => c.charCodeAt(0));
+
+      const isValid = await crypto.subtle.verify(
+        "RSASSA-PKCS1-v1_5",
+        publicKey,
+        signatureBytes,
+        signedData
+      );
+
+      if (!isValid) {
+        return jsonResponse({ error: "Google token signature verification failed." }, 401);
+      }
+
+      // ✅ Token is valid — find or create user in KV
+      const email = payload.email?.toLowerCase()?.trim();
+      const name = payload.name || payload.given_name || email?.split("@")[0] || "Google User";
+      const avatar = payload.picture || null;
+
+      if (!email) {
+        return jsonResponse({ error: "No email in Google token." }, 400);
+      }
+
+      let user = await kv.get(`user:${email}`, "json");
+      if (!user) {
+        const userId = "usr_" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+        user = {
+          id: userId,
+          email,
+          name,
+          provider: "google",
+          avatar,
+          googleSub: payload.sub,
+          createdAt: new Date().toISOString(),
+          transfersCount: 0,
+          pro: false
+        };
+        await kv.put(`user:${email}`, JSON.stringify(user));
+      } else {
+        // Update Google-specific fields
+        let changed = false;
+        if (!user.provider) { user.provider = "google"; changed = true; }
+        if (!user.avatar && avatar) { user.avatar = avatar; changed = true; }
+        if (!user.googleSub && payload.sub) { user.googleSub = payload.sub; changed = true; }
+        if (name && (!user.name || user.name === "User")) { user.name = name; changed = true; }
+        if (changed) await kv.put(`user:${email}`, JSON.stringify(user));
+      }
+
+      // Generate 30-day session token
+      const token = "db_sess_" + crypto.randomUUID().replace(/-/g, "");
+      await kv.put(
+        `session:${token}`,
+        JSON.stringify({ userId: user.id, email: user.email }),
+        { expirationTtl: 2592000 }
+      );
+
+      return jsonResponse({
+        success: true,
+        message: "Google authentication successful.",
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar: user.avatar,
+          transfersCount: user.transfersCount || 0,
+          pro: Boolean(user.pro),
+          provider: "google"
+        }
+      });
+    } catch (err) {
+      console.error("Google OAuth verify error:", err);
+      return jsonResponse({ error: "Google authentication failed: " + (err.message || "") }, 500);
+    }
+  }
+
+  // 8. Social OAuth Login - Fallback email-based (POST /api/auth/oauth/social)
   if (url.pathname === "/api/auth/oauth/social" && request.method === "POST") {
     try {
       const body = await request.json();
@@ -376,7 +518,7 @@ export async function handleAuthRequest(request, env) {
     }
   }
 
-  // 8. Cloudflare Zero Trust / Access SSO Auto-Detection (GET /api/auth/cloudflare-access)
+  // 9. Cloudflare Zero Trust / Access SSO Auto-Detection (GET /api/auth/cloudflare-access)
   if (url.pathname === "/api/auth/cloudflare-access" && request.method === "GET") {
     try {
       const cfEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
