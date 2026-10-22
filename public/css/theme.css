@@ -1,0 +1,508 @@
+/* ============================================================================
+   DIRECT BEAM — GRUNGE THEME DESIGN SYSTEM (grunge-v1.0.0 PORT)
+   Strictly preserving all WebRTC and P2P data channel bindings.
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&family=Road+Rage&display=swap');
+
+:root {
+  /* Grunge Token Palette (from grunge-v1.0.0 global.css) */
+  --color-base-100: #121212;
+  --color-base-200: #1a1a19;
+  --color-base-300: #262624;
+  --color-base-400: #3f3e3b;
+  --color-base-500: #595854;
+  --color-base-600: #7b7974;
+  --color-base-700: #a3a19b;
+  --color-base-800: #d4d2cc;
+  --color-base-900: #fbfbf9;
+
+  /* Accent & Highlight Colors */
+  --accent-cyan: #00f0ff;
+  --accent-cyan-dim: rgba(0, 240, 255, 0.2);
+  --accent-emerald: #10b981;
+  --accent-emerald-dim: rgba(16, 185, 129, 0.2);
+  --accent-rose: #f43f5e;
+
+  /* Typography Variables */
+  --font-grunge: 'Road Rage', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Typography Sizing Scale */
+  --text-216: clamp(5rem, 15vw, 13.5rem);
+  --text-128: clamp(4rem, 10vw, 8rem);
+  --text-96: clamp(3rem, 8vw, 6rem);
+  --text-80: clamp(2.5rem, 6.5vw, 5rem);
+  --text-64: clamp(2rem, 5vw, 4rem);
+  --text-48: 3rem;
+  --text-40: 2.5rem;
+  --text-32: 2rem;
+  --text-24: 1.5rem;
+  --text-20: 1.25rem;
+  --text-16: 1rem;
+  --text-12: 0.75rem;
+}
+
+/* ============================================================================
+   GLOBAL HTML & BODY RESET WITH GRUNGE TEXTURE
+   ============================================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--color-base-100);
+  color: var(--color-base-900);
+  font-family: var(--font-mono);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #0d0d0d;
+  background-image: url('/assets/bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--color-base-900);
+  font-family: var(--font-mono);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Authentic Grunge Film Noise Overlay */
+.grunge-noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  z-index: 1;
+}
+
+/* Global Content Wrapper Layer */
+.content-wrapper {
+  position: relative;
+  z-index: 20;
+}
+
+/* ============================================================================
+   TYPOGRAPHY UTILITIES
+   ============================================================================ */
+
+.font-grunge {
+  font-family: var(--font-grunge) !important;
+}
+
+.font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+h1, h2, h3, h4, .text-grunge {
+  font-family: var(--font-grunge);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+}
+
+/* ============================================================================
+   GRUNGE CARDS & SURFACES
+   ============================================================================ */
+
+.db-card, .cyber-card, .grunge-card {
+  background: rgba(18, 18, 18, 0.86) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 2px solid var(--color-base-900) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative;
+}
+
+.db-card:hover, .cyber-card:hover, .grunge-card:hover {
+  border-color: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 18px rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Heavy Card for Modals & Overlay Drawers */
+.db-card-heavy, .cyber-card-heavy, .grunge-card-heavy {
+  background: rgba(14, 14, 14, 0.96) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 2px solid var(--color-base-900) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.98), 0 0 25px rgba(255, 255, 255, 0.08) !important;
+  position: relative;
+}
+
+/* ============================================================================
+   GRUNGE STATUS PILLS & BADGES
+   ============================================================================ */
+
+.db-pill, .cyber-pill, .grunge-pill {
+  font-family: var(--font-mono) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  font-size: 0.72rem !important;
+  padding: 0.32rem 0.75rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  background: rgba(18, 18, 18, 0.92) !important;
+  color: var(--color-base-900) !important;
+  border-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.db-pill-invert {
+  background: var(--color-base-900) !important;
+  color: var(--color-base-100) !important;
+  border: 1px solid var(--color-base-900) !important;
+  font-weight: 700 !important;
+}
+
+.db-dot, .cyber-dot {
+  width: 0.45rem !important;
+  height: 0.45rem !important;
+  border-radius: 9999px !important;
+  background-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 8px var(--accent-cyan) !important;
+}
+
+.db-dot-emerald {
+  background-color: var(--accent-emerald) !important;
+  box-shadow: 0 0 8px var(--accent-emerald) !important;
+}
+
+/* ============================================================================
+   GRUNGE BUTTONS
+   ============================================================================ */
+
+.cyber-btn-primary, .grunge-btn-primary {
+  font-family: var(--font-grunge) !important;
+  font-size: 1.35rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  padding: 0.5rem 1.5rem !important;
+  border: 2px solid var(--color-base-900) !important;
+  background: var(--color-base-900) !important;
+  color: var(--color-base-100) !important;
+  border-radius: 0 !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  text-decoration: none !important;
+}
+
+.cyber-btn-primary:hover, .grunge-btn-primary:hover {
+  background: transparent !important;
+  color: var(--color-base-900) !important;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1px) !important;
+}
+
+.cyber-btn-secondary, .grunge-btn-secondary {
+  font-family: var(--font-mono) !important;
+  font-size: 0.8125rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  background: rgba(26, 26, 25, 0.85) !important;
+  color: var(--color-base-900) !important;
+  border-radius: 0 !important;
+  transition: all 0.2s ease-in-out !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45rem !important;
+  text-decoration: none !important;
+}
+
+.cyber-btn-secondary:hover, .grunge-btn-secondary:hover {
+  border-color: var(--color-base-900) !important;
+  background: rgba(45, 45, 45, 0.95) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.15) !important;
+}
+
+.cyber-btn-danger, .grunge-btn-danger {
+  font-family: var(--font-mono) !important;
+  font-size: 0.8125rem !important;
+  border: 1px solid rgba(244, 63, 94, 0.6) !important;
+  background: rgba(244, 63, 94, 0.12) !important;
+  color: #fca5a5 !important;
+  border-radius: 0 !important;
+  transition: all 0.2s ease-in-out !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45rem !important;
+}
+
+.cyber-btn-danger:hover, .grunge-btn-danger:hover {
+  background: rgba(244, 63, 94, 0.85) !important;
+  color: #ffffff !important;
+  border-color: #f43f5e !important;
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.4) !important;
+}
+
+/* ============================================================================
+   GRUNGE NAVIGATION LINKS (from Navigation.astro & Link.astro)
+   ============================================================================ */
+
+.grunge-nav-link {
+  font-family: var(--font-grunge) !important;
+  font-size: 1.4rem !important;
+  text-transform: uppercase !important;
+  color: var(--color-base-900) !important;
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+  text-decoration-thickness: 2px !important;
+  letter-spacing: 0.04em !important;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+
+.grunge-nav-link:hover {
+  color: var(--color-base-700) !important;
+}
+
+/* ============================================================================
+   DECORATIVE STAMPS & VINYL ASSETS
+   ============================================================================ */
+
+.grunge-stamp-barcode {
+  height: 24px;
+  width: auto;
+  opacity: 0.85;
+}
+
+.grunge-stamp-symbol {
+  height: 18px;
+  width: auto;
+  opacity: 0.9;
+}
+
+/* Vinyl Disc & Animation */
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 6s linear infinite;
+}
+
+/* ============================================================================
+   CUSTOM SCROLLBAR
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3e3b;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #595854;
+}
+
+/* ============================================================================
+   SPLINE & THIRD-PARTY WATERMARK CLEANUP
+   ============================================================================ */
+
+spline-viewer,
+.spline-watermark,
+[aria-label*="Spline"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ============================================================================
+   LUCIDE ICONS STANDARDIZER
+   ============================================================================ */
+
+svg.lucide, i[data-lucide] svg {
+  stroke-width: 1.85px !important;
+}
+
+/* Modal Open & Close State Overrides */
+div[id$="-modal"].flex {
+  display: flex !important;
+}
+
+div[id$="-modal"].hidden,
+#scanner-wrapper.hidden,
+#sender-view.hidden,
+#receiver-view.hidden,
+#sender-queue-list.hidden,
+#receiver-complete-card.hidden,
+#cold-start-banner.hidden,
+#quick-beam-container.hidden,
+#incoming-text-section.hidden,
+#quick-beam-timer-wrapper.hidden,
+#sender-text-composer.hidden,
+#pro-license-modal.hidden,
+#pro-badge-header.hidden,
+#pro-active-cta.hidden,
+#pro-nav-cta.hidden,
+#paywall-modal.hidden,
+#auth-modal.hidden {
+  display: none !important;
+}
+
+/* Hidden Utility */
+.hidden {
+  display: none !important;
+}
+
+/* Quick Beam Component Animations & Link Styling */
+.qb-text-content a {
+  word-break: break-all;
+}
+
+.qb-burn-flash {
+  animation: qbBurnFlash 0.5s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes qbBurnFlash {
+  0% {
+    background-color: rgba(244, 63, 94, 0.4);
+    border-color: #f43f5e;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* ============================================================================
+   DIRECT BEAM PRO (LEMON SQUEEZY) MONETIZATION STYLES
+   ============================================================================ */
+
+.pro-upgrade-btn {
+  font-family: var(--font-mono) !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 0.38rem 0.85rem !important;
+  background: #f59e0b !important;
+  color: #000000 !important;
+  border: 1px solid #f59e0b !important;
+  border-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.4rem !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.35) !important;
+}
+
+.pro-upgrade-btn:hover {
+  background: #fbbf24 !important;
+  border-color: #fbbf24 !important;
+  color: #000000 !important;
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.7) !important;
+  transform: translateY(-1px) !important;
+}
+
+#pro-badge-header {
+  font-family: var(--font-mono) !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 800 !important;
+  padding: 0.22rem 0.6rem !important;
+  background: rgba(120, 53, 15, 0.35) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(251, 191, 36, 0.6) !important;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25) !important;
+}
+
+/* ============================================================================
+   MINIMALIST ICON NAVIGATION & TOOLTIPS
+   ============================================================================ */
+
+.nav-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 15, 15, 0.85);
+  color: #e5e7eb;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+}
+
+.nav-icon-btn:hover {
+  border-color: #ffffff;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.nav-tooltip {
+  pointer-events: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  background: rgba(8, 8, 8, 0.96);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  white-space: nowrap;
+  z-index: 60;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
+}
+
+.group:hover > .nav-tooltip,
+.group:focus-within > .nav-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+#header-quota-pill {
+  transition: all 0.2s ease;
+}
+
+

@@ -4,13 +4,16 @@
   "description": "Zero-cloud high-throughput WebRTC disk-to-disk transfer",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "express": "^4.19.2",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
-    "socket.io-client": "^4.8.4"
+    "socket.io-client": "^4.8.4",
+    "wrangler": "^4.151.1"
   }
 }

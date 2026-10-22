@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 
 const app = express();
 
-// Trust reverse proxy (Cloudflare / Render) for accurate client IP detection
+// Trust reverse proxy (Cloudflare) for accurate client IP detection
 app.set('trust proxy', 1);
 
 const server = http.createServer(app);
@@ -35,6 +35,89 @@ app.get('/api/ice-servers', (req, res) => {
 
   res.setHeader('Cache-Control', 'no-store');
   res.json({ iceServers });
+});
+
+app.use(express.json());
+
+// In-memory user & session store for local dev
+const localUsers = new Map();
+const localSessions = new Map();
+
+app.post('/api/auth/register', (req, res) => {
+  const { email, password, name } = req.body || {};
+  if (!email || !password || password.length < 6) {
+    return res.status(400).json({ error: 'Valid email and password (min 6 chars) required.' });
+  }
+  const normEmail = email.trim().toLowerCase();
+  if (localUsers.has(normEmail)) {
+    return res.status(409).json({ error: 'An account with this email already exists.' });
+  }
+  const token = 'local_sess_' + Math.random().toString(36).substring(2);
+  const user = {
+    id: 'usr_' + Math.random().toString(36).substring(2, 10),
+    email: normEmail,
+    name: name || normEmail.split('@')[0],
+    transfersCount: 0,
+    pro: false
+  };
+  localUsers.set(normEmail, { ...user, password });
+  localSessions.set(token, normEmail);
+  res.status(201).json({ success: true, token, user });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body || {};
+  const normEmail = (email || '').trim().toLowerCase();
+  const user = localUsers.get(normEmail);
+  if (!user || user.password !== password) {
+    return res.status(401).json({ error: 'Invalid email or password.' });
+  }
+  const token = 'local_sess_' + Math.random().toString(36).substring(2);
+  localSessions.set(token, normEmail);
+  const { password: _, ...safeUser } = user;
+  res.json({ success: true, token, user: safeUser });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const auth = req.headers['authorization'] || '';
+  const token = auth.replace('Bearer ', '').trim();
+  const email = localSessions.get(token);
+  if (!email || !localUsers.has(email)) {
+    return res.status(401).json({ error: 'Session expired or invalid.' });
+  }
+  const { password: _, ...safeUser } = localUsers.get(email);
+  res.json({ success: true, user: safeUser });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const auth = req.headers['authorization'] || '';
+  const token = auth.replace('Bearer ', '').trim();
+  localSessions.delete(token);
+  res.json({ success: true, message: 'Logged out' });
+});
+
+app.post('/api/auth/sync', (req, res) => {
+  const auth = req.headers['authorization'] || '';
+  const token = auth.replace('Bearer ', '').trim();
+  const email = localSessions.get(token);
+  if (!email || !localUsers.has(email)) {
+    return res.status(401).json({ error: 'Session expired or invalid.' });
+  }
+  const user = localUsers.get(email);
+  const { transfersCount, pro } = req.body || {};
+  if (typeof transfersCount === 'number') {
+    user.transfersCount = Math.max(user.transfersCount || 0, transfersCount);
+  }
+  if (pro === true) {
+    user.pro = true;
+  }
+  localUsers.set(email, user);
+  const { password: _, ...safeUser } = user;
+  res.json({ success: true, user: safeUser });
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Serve static assets from public/

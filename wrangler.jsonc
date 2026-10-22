@@ -1,0 +1,47 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "p2p-direct-beam",
+  "main": "src/worker.js",
+  "compatibility_date": "2024-09-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "*directbeam.space/*",
+      "zone_name": "directbeam.space"
+    },
+    {
+      "pattern": "directbeam.space/*",
+      "zone_name": "directbeam.space"
+    },
+    {
+      "pattern": "www.directbeam.space/*",
+      "zone_name": "directbeam.space"
+    }
+  ],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "USERS_KV",
+      "id": "6226ab1f246c49f3a40fe36fdfed552b",
+      "preview_id": "b0aaf9c5002c490ab86062fa2d2701d0"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SIGNALING",
+        "class_name": "SignalingServer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["SignalingServer"]
+    }
+  ]
+}

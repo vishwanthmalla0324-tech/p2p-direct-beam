@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Direct Beam — Account Authentication & Cloudflare KV Portal</title>
+  <meta name="description" content="Secure account authentication powered by Cloudflare Worker KV database for Direct Beam P2P data streaming." />
+  <link rel="canonical" href="https://directbeam.space/login" />
+
+  <!-- Favicon & Brand Icons -->
+  <link rel="icon" type="image/jpeg" href="/assets/direct_beam_logo.jpg" />
+  <link rel="apple-touch-icon" href="/assets/direct_beam_logo.jpg" />
+
+  <!-- Fonts: Road Rage (Heading) & JetBrains Mono (Terminal/Body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&family=Road+Rage&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN + Grunge Palette Config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            grunge: ['"Road Rage"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+          },
+          colors: {
+            base: {
+              100: '#121212',
+              200: '#1a1a19',
+              300: '#262624',
+              400: '#3f3e3b',
+              500: '#595854',
+              600: '#7b7974',
+              700: '#a3a19b',
+              800: '#d4d2cc',
+              900: '#fbfbf9',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Custom scanlines & glow effects */
+    .scanline-bg {
+      background: radial-gradient(circle at 50% 20%, rgba(6, 182, 212, 0.08) 0%, rgba(18, 18, 18, 0.98) 75%),
+                  linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
+    }
+    .neon-border {
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.15), inset 0 0 20px rgba(6, 182, 212, 0.05);
+    }
+    .active-tab {
+      background-color: rgba(6, 182, 212, 0.15);
+      color: #22d3ee;
+      border-bottom: 2px solid #22d3ee;
+    }
+    .inactive-tab {
+      color: #7b7974;
+      border-bottom: 2px solid transparent;
+    }
+    .inactive-tab:hover {
+      color: #fbfbf9;
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+  </style>
+</head>
+
+<body class="bg-[#101010] text-[#d4d2cc] font-mono min-h-screen flex flex-col justify-between scanline-bg relative selection:bg-cyan-500 selection:text-black">
+  
+  <!-- Ambient background glow elements -->
+  <div class="fixed top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[128px] pointer-events-none"></div>
+  <div class="fixed bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[128px] pointer-events-none"></div>
+
+  <!-- Header Navigation -->
+  <header class="w-full border-b border-white/10 bg-[#121212]/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/assets/direct_beam_logo.jpg" alt="Direct Beam" class="w-8 h-8 rounded-full border border-cyan-500/50 object-cover group-hover:scale-105 transition" />
+        <div class="flex flex-col">
+          <span class="font-grunge text-2xl tracking-wider text-white group-hover:text-cyan-400 transition">DIRECT BEAM</span>
+          <span class="text-[9px] text-zinc-500 tracking-widest font-mono uppercase -mt-1">P2P DATA PIPELINE</span>
+        </div>
+      </a>
+
+      <div class="flex items-center gap-4">
+        <div class="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded bg-black/60 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>CLOUDFLARE KV: LIVE</span>
+        </div>
+        <a href="/" class="text-xs px-3 py-1.5 border border-white/20 rounded hover:border-cyan-400 hover:text-cyan-400 transition flex items-center gap-1.5">
+          <span>←</span>
+          <span>RETURN TO BEAM</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Login / Auth Container -->
+  <main class="flex-1 flex items-center justify-center p-4 py-12 relative z-10">
+    <div class="w-full max-w-md bg-[#161616]/95 border border-white/15 rounded-xl shadow-2xl backdrop-blur-xl neon-border overflow-hidden">
+      
+      <!-- Top Cyber Deco Header -->
+      <div class="bg-black/60 px-6 py-3 border-b border-white/10 flex items-center justify-between text-[11px] text-zinc-400">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
+          <span class="tracking-wider uppercase">AUTH_SERVICE // USERS_KV</span>
+        </div>
+        <span class="text-[10px] font-mono text-zinc-500">DTLS 1.3 READY</span>
+      </div>
+
+      <!-- Logged-in Banner (Shown if user already has an active session) -->
+      <div id="already-logged-in" class="hidden p-6 text-center space-y-4">
+        <div class="w-12 h-12 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-white font-mono">ACTIVE SESSION DETECTED</h2>
+          <p id="logged-user-email" class="text-xs text-cyan-400 mt-1 font-mono break-all"></p>
+          <p id="logged-user-tier" class="text-[11px] text-zinc-400 mt-1 font-mono"></p>
+        </div>
+        <div class="pt-2 flex flex-col gap-2">
+          <a href="/" class="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs rounded transition uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+            <span>⚡ ENTER STREAMING PIPELINE</span>
+          </a>
+          <button id="btn-logout" type="button" class="w-full py-2 bg-transparent hover:bg-white/5 border border-white/20 text-zinc-300 font-mono text-xs rounded transition">
+            SIGN OUT / SWITCH ACCOUNT
+          </button>
+        </div>
+      </div>
+
+      <!-- Auth Tabs & Forms (Shown when not logged in) -->
+      <div id="auth-forms-container" class="p-6">
+        
+        <!-- Tab Selectors -->
+        <div class="grid grid-cols-2 border-b border-white/10 mb-6 text-xs font-mono font-bold tracking-wider">
+          <button id="tab-signin" type="button" onclick="switchTab('signin')" class="py-2.5 text-center transition active-tab">
+            [01 // SIGN IN]
+          </button>
+          <button id="tab-signup" type="button" onclick="switchTab('signup')" class="py-2.5 text-center transition inactive-tab">
+            [02 // REGISTER]
+          </button>
+        </div>
+
+        <!-- Alert Notification Box -->
+        <div id="auth-alert" class="hidden mb-4 p-3 rounded text-xs font-mono border"></div>
+
+        <!-- 1. SIGN IN FORM -->
+        <form id="form-signin" onsubmit="handleSignIn(event)" class="space-y-4">
+          <div>
+            <label class="block text-[11px] text-zinc-400 uppercase tracking-wider mb-1.5">
+              Email Address
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-500 text-xs">USR&gt;</span>
+              <input 
+                id="signin-email" 
+                type="email" 
+                required 
+                placeholder="operator@directbeam.space"
+                class="w-full pl-11 pr-3 py-2.5 bg-black/60 border border-white/20 rounded focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 text-white text-xs font-mono placeholder:text-zinc-600 transition" 
+              />
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-[11px] text-zinc-400 uppercase tracking-wider">
+                Password
+              </label>
+              <button type="button" onclick="togglePasswordVisibility('signin-password')" class="text-[10px] text-cyan-400 hover:text-cyan-300">
+                SHOW/HIDE
+              </button>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-500 text-xs">KEY&gt;</span>
+              <input 
+                id="signin-password" 
+                type="password" 
+                required 
+                placeholder="••••••••••••"
+                class="w-full pl-11 pr-3 py-2.5 bg-black/60 border border-white/20 rounded focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 text-white text-xs font-mono placeholder:text-zinc-600 transition" 
+              />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-zinc-400 pt-1">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="remember-me" checked class="rounded bg-black border-white/30 text-cyan-500 focus:ring-0" />
+              <span>Remember session (30d)</span>
+            </label>
+            <span class="text-zinc-500 text-[10px]">Cloudflare KV Store</span>
+          </div>
+
+          <button 
+            id="btn-submit-signin" 
+            type="submit" 
+            class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs rounded transition uppercase tracking-wider shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] flex items-center justify-center gap-2 cursor-pointer mt-2"
+          >
+            <span>⚡ AUTHENTICATE TO KV</span>
+          </button>
+        </form>
+
+        <!-- 2. SIGN UP / REGISTRATION FORM -->
+        <form id="form-signup" onsubmit="handleSignUp(event)" class="space-y-4 hidden">
+          <div>
+            <label class="block text-[11px] text-zinc-400 uppercase tracking-wider mb-1.5">
+              Operator Call-Sign / Name
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-500 text-xs">ID&gt;</span>
+              <input 
+                id="signup-name" 
+                type="text" 
+                placeholder="Cipher_99"
+                class="w-full pl-10 pr-3 py-2.5 bg-black/60 border border-white/20 rounded focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 text-white text-xs font-mono placeholder:text-zinc-600 transition" 
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-zinc-400 uppercase tracking-wider mb-1.5">
+              Email Address
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-500 text-xs">USR&gt;</span>
+              <input 
+                id="signup-email" 
+                type="email" 
+                required 
+                placeholder="operator@directbeam.space"
+                class="w-full pl-11 pr-3 py-2.5 bg-black/60 border border-white/20 rounded focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 text-white text-xs font-mono placeholder:text-zinc-600 transition" 
+              />
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-[11px] text-zinc-400 uppercase tracking-wider">
+                Create Password (Min 6 chars)
+              </label>
+              <button type="button" onclick="togglePasswordVisibility('signup-password')" class="text-[10px] text-cyan-400 hover:text-cyan-300">
+                SHOW/HIDE
+              </button>
+            </div>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-zinc-500 text-xs">KEY&gt;</span>
+              <input 
+                id="signup-password" 
+                type="password" 
+                required 
+                minlength="6"
+                placeholder="••••••••••••"
+                class="w-full pl-11 pr-3 py-2.5 bg-black/60 border border-white/20 rounded focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 text-white text-xs font-mono placeholder:text-zinc-600 transition" 
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-zinc-400 uppercase tracking-wider mb-1.5">
+              Confirm Password
+            </label>
+            <input 
+              id="signup-password-confirm" 
+              type="password" 
+              required 
+              minlength="6"
+              placeholder="••••••••••••"
+              class="w-full px-3 py-2.5 bg-black/60 border border-white/20 rounded focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 text-white text-xs font-mono placeholder:text-zinc-600 transition" 
+            />
+          </div>
+
+          <p class="text-[10px] text-zinc-500 font-mono">
+            * Passwords hashed via PBKDF2 (100k rounds) before Cloudflare KV commit.
+          </p>
+
+          <button 
+            id="btn-submit-signup" 
+            type="submit" 
+            class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-mono text-xs rounded transition uppercase tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.6)] flex items-center justify-center gap-2 cursor-pointer mt-2"
+          >
+            <span>⚡ INITIALIZE KV ACCOUNT</span>
+          </button>
+        </form>
+
+        <!-- Guest Access Divider -->
+        <div class="relative my-6 text-center">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-white/10"></div>
+          </div>
+          <span class="relative bg-[#161616] px-3 text-[10px] text-zinc-500 font-mono uppercase tracking-widest">
+            OR PROCEED WITHOUT SIGN IN
+          </span>
+        </div>
+
+        <!-- Continue as Guest Action -->
+        <a 
+          href="/" 
+          class="w-full py-2.5 border border-white/15 hover:border-white/30 text-zinc-400 hover:text-white text-xs font-mono rounded flex items-center justify-center gap-2 transition"
+        >
+          <span>CONTINUE AS GUEST (3 FREE BEAMS) →</span>
+        </a>
+      </div>
+
+      <!-- Footer Info Strip -->
+      <div class="bg-black/40 px-6 py-3 border-t border-white/10 text-[10px] text-zinc-500 flex items-center justify-between font-mono">
+        <span>STORAGE: CLOUDFLARE WORKER KV</span>
+        <span>E2E ZERO-CLOUD DATA</span>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full border-t border-white/10 py-6 text-center text-xs text-zinc-500 font-mono">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span>DIRECT BEAM // ARCHITECTED BY VISHWANTH MALLA</span>
+      <div class="flex items-center gap-4">
+        <a href="https://wa.me/918501820073?text=Hi%20DirectBeam%20Support" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-400 transition">WHATSAPP</a>
+        <span>•</span>
+        <a href="https://www.instagram.com/vishwanth___24?rpxt=MTBtN2NnZ3Y5aHA0dg%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" class="hover:text-rose-400 transition">INSTAGRAM</a>
+        <span>•</span>
+        <a href="/" class="hover:text-cyan-400 transition">BEAM PIPELINE</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Auth Script Controller -->
+  <script>
+    const STORAGE_KEY_TOKEN = 'direct_beam_auth_token';
+    const STORAGE_KEY_USER = 'direct_beam_auth_user';
+    const STORAGE_KEY_PRO = 'direct_beam_pro_status';
+
+    function showAlert(message, isError = false) {
+      const alertBox = document.getElementById('auth-alert');
+      alertBox.textContent = message;
+      alertBox.className = isError
+        ? 'mb-4 p-3 rounded text-xs font-mono border border-rose-500/50 bg-rose-500/10 text-rose-300 block'
+        : 'mb-4 p-3 rounded text-xs font-mono border border-emerald-500/50 bg-emerald-500/10 text-emerald-300 block';
+    }
+
+    function hideAlert() {
+      const alertBox = document.getElementById('auth-alert');
+      alertBox.className = 'hidden';
+      alertBox.textContent = '';
+    }
+
+    function switchTab(tab) {
+      hideAlert();
+      const tabSignIn = document.getElementById('tab-signin');
+      const tabSignUp = document.getElementById('tab-signup');
+      const formSignIn = document.getElementById('form-signin');
+      const formSignUp = document.getElementById('form-signup');
+
+      if (tab === 'signin') {
+        tabSignIn.className = 'py-2.5 text-center transition active-tab';
+        tabSignUp.className = 'py-2.5 text-center transition inactive-tab';
+        formSignIn.classList.remove('hidden');
+        formSignUp.classList.add('hidden');
+      } else {
+        tabSignUp.className = 'py-2.5 text-center transition active-tab';
+        tabSignIn.className = 'py-2.5 text-center transition inactive-tab';
+        formSignUp.classList.remove('hidden');
+        formSignIn.classList.add('hidden');
+      }
+    }
+
+    function togglePasswordVisibility(fieldId) {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.type = field.type === 'password' ? 'text' : 'password';
+      }
+    }
+
+    // Check if user is already logged in
+    async function checkCurrentSession() {
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+      if (!token) return;
+
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+            const localCount = parseInt(localStorage.getItem('direct_beam_transfer_count') || '0', 10);
+            const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
+            const effectiveCount = Math.max(localCount, remoteCount);
+            localStorage.setItem('direct_beam_transfer_count', effectiveCount.toString());
+            data.user.transfersCount = effectiveCount;
+            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
+            if (data.user.pro) {
+              localStorage.setItem(STORAGE_KEY_PRO, 'active');
+            }
+            renderLoggedInState(data.user);
+        } else {
+          // Token expired or invalid
+          localStorage.removeItem(STORAGE_KEY_TOKEN);
+          localStorage.removeItem(STORAGE_KEY_USER);
+        }
+      } catch (err) {
+        console.warn('Session verification fallback:', err);
+      }
+    }
+
+    function renderLoggedInState(user) {
+      document.getElementById('auth-forms-container').classList.add('hidden');
+      const loggedInDiv = document.getElementById('already-logged-in');
+      loggedInDiv.classList.remove('hidden');
+      document.getElementById('logged-user-email').textContent = `${user.name || user.email} (${user.email})`;
+      document.getElementById('logged-user-tier').textContent = user.pro
+        ? 'STATUS: PRO LIFETIME (UNLIMITED TRANSFERS)'
+        : `STATUS: FREE TIER (${user.transfersCount || 0}/3 LIFETIME TRANSFERS USED)`;
+    }
+
+    document.getElementById('btn-logout').onclick = async () => {
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+      try {
+        if (token) {
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+        }
+      } catch (e) {}
+      localStorage.removeItem(STORAGE_KEY_TOKEN);
+      localStorage.removeItem(STORAGE_KEY_USER);
+      window.location.reload();
+    };
+
+    // Handle Sign In submission
+    async function handleSignIn(e) {
+      e.preventDefault();
+      hideAlert();
+      const email = document.getElementById('signin-email').value.trim();
+      const password = document.getElementById('signin-password').value;
+      const btn = document.getElementById('btn-submit-signin');
+      const originalText = btn.innerHTML;
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>⚡ CONNECTING TO KV...</span>';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Authentication failed. Please verify credentials.');
+        }
+
+        // Store session and user data
+        localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
+        const localCount = parseInt(localStorage.getItem('direct_beam_transfer_count') || '0', 10);
+        const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
+        const effectiveCount = Math.max(localCount, remoteCount);
+        localStorage.setItem('direct_beam_transfer_count', effectiveCount.toString());
+        data.user.transfersCount = effectiveCount;
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
+        if (data.user.pro) {
+          localStorage.setItem(STORAGE_KEY_PRO, 'active');
+        }
+
+        showAlert('Access Granted. Redirecting to Direct Beam pipeline...', false);
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 800);
+      } catch (err) {
+        showAlert(err.message, true);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // Handle Sign Up submission
+    async function handleSignUp(e) {
+      e.preventDefault();
+      hideAlert();
+      const name = document.getElementById('signup-name').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+      const confirmPassword = document.getElementById('signup-password-confirm').value;
+      const btn = document.getElementById('btn-submit-signup');
+      const originalText = btn.innerHTML;
+
+      if (password !== confirmPassword) {
+        showAlert('Passwords do not match.', true);
+        return;
+      }
+      if (password.length < 6) {
+        showAlert('Password must be at least 6 characters.', true);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>⚡ COMMITTING TO KV...</span>';
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Registration failed.');
+        }
+
+        localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
+        const localCount = parseInt(localStorage.getItem('direct_beam_transfer_count') || '0', 10);
+        const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
+        const effectiveCount = Math.max(localCount, remoteCount);
+        localStorage.setItem('direct_beam_transfer_count', effectiveCount.toString());
+        data.user.transfersCount = effectiveCount;
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
+        if (data.user.pro) {
+          localStorage.setItem(STORAGE_KEY_PRO, 'active');
+        }
+
+        showAlert('Account created in Cloudflare KV. Redirecting to Direct Beam...', false);
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 800);
+      } catch (err) {
+        showAlert(err.message, true);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // Initialize check
+    window.addEventListener('DOMContentLoaded', checkCurrentSession);
+  </script>
+</body>
+</html>
