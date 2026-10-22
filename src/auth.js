@@ -291,9 +291,6 @@ export async function handleAuthRequest(request, env) {
       if (typeof body.transfersCount === "number") {
         user.transfersCount = Math.max(user.transfersCount || 0, body.transfersCount);
       }
-      if (body.pro === true) {
-        user.pro = true;
-      }
 
       await kv.put(`user:${session.email}`, JSON.stringify(user));
 
@@ -310,6 +307,116 @@ export async function handleAuthRequest(request, env) {
     } catch (err) {
       console.error("Auth sync error:", err);
       return jsonResponse({ error: "Sync failed." }, 500);
+    }
+  }
+
+  // 6b. Single-Use User-Bound License Key Activation (POST /api/auth/license/activate)
+  if (url.pathname === "/api/auth/license/activate" && request.method === "POST") {
+    try {
+      const token = extractToken(request);
+      if (!token) {
+        return jsonResponse({ error: "Please log in first to activate your Pro license." }, 401);
+      }
+
+      const session = await kv.get(`session:${token}`, "json");
+      if (!session || !session.email) {
+        return jsonResponse({ error: "Session invalid or expired. Please sign in again." }, 401);
+      }
+
+      const user = await kv.get(`user:${session.email}`, "json");
+      if (!user) {
+        return jsonResponse({ error: "User account not found." }, 404);
+      }
+
+      const body = await request.json();
+      const rawKey = body?.license_key;
+      const key = typeof rawKey === "string" ? rawKey.trim() : "";
+
+      if (!key) {
+        return jsonResponse({ error: "Please enter a valid license key." }, 400);
+      }
+
+      const normalizedKey = key.toUpperCase();
+
+      // Check if this key has already been activated in Cloudflare KV
+      const existingLicense = await kv.get(`license:${normalizedKey}`, "json");
+      if (existingLicense) {
+        // Enforce SINGLE-USER: If activated by a different email or userId, reject!
+        if (existingLicense.email !== user.email && existingLicense.userId !== user.id) {
+          return jsonResponse({
+            error: "This activation key has already been redeemed by another account. License keys can only be used once for a single user."
+          }, 400);
+        }
+
+        // Already active for this specific user
+        user.pro = true;
+        await kv.put(`user:${user.email}`, JSON.stringify(user));
+        return jsonResponse({
+          success: true,
+          message: "Pro subscription is active on your account.",
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            transfersCount: user.transfersCount || 0,
+            pro: true
+          }
+        });
+      }
+
+      // Verify and activate with LemonSqueezy API
+      const params = new URLSearchParams();
+      params.append("license_key", key);
+      params.append("instance_name", `DirectBeam_${user.id}`);
+
+      let lsData = null;
+      try {
+        const lsRes = await fetch("https://api.lemonsqueezy.com/v1/licenses/activate", {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: params.toString()
+        });
+        lsData = await lsRes.json();
+      } catch (networkErr) {
+        return jsonResponse({ error: "Could not reach license verification server. Please try again." }, 502);
+      }
+
+      if (!lsData || !lsData.activated) {
+        const errMessage = lsData?.error || "Invalid, expired, or already used license key.";
+        return jsonResponse({ error: errMessage }, 400);
+      }
+
+      // Single-use lock: permanently bind this license key to this user in Cloudflare KV
+      await kv.put(`license:${normalizedKey}`, JSON.stringify({
+        userId: user.id,
+        email: user.email,
+        activatedAt: new Date().toISOString(),
+        instanceId: lsData.instance?.id || null,
+        meta: lsData.meta || {}
+      }));
+
+      // Update user status in Cloudflare KV
+      user.pro = true;
+      user.licenseKey = normalizedKey;
+      await kv.put(`user:${user.email}`, JSON.stringify(user));
+
+      return jsonResponse({
+        success: true,
+        message: "Pro lifetime subscription activated successfully!",
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          transfersCount: user.transfersCount || 0,
+          pro: true
+        }
+      });
+    } catch (err) {
+      console.error("License activate error:", err);
+      return jsonResponse({ error: "Failed to activate license: " + (err.message || "") }, 500);
     }
   }
 

@@ -1600,9 +1600,10 @@
 
   function isProUser() {
     const user = getLoggedInUser();
-    return localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_PRO) === 'active' || 
-           window.DIRECT_BEAM_PRO === true || 
-           (user && user.pro === true);
+    // Pro is STRICTLY bound to an active, logged-in user account!
+    // Guests or signed-out states are never Pro.
+    if (!user || !user.email) return false;
+    return user.pro === true;
   }
 
   function canInitiateTransfer() {
@@ -1829,9 +1830,20 @@
     localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
     localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_LEGACY_USER);
     localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+    localStorage.removeItem('direct_beam_pro');
+    localStorage.removeItem('direct_beam_pro_status');
+    localStorage.removeItem('direct_beam_pro_key');
+    localStorage.removeItem('direct_beam_instance_id');
+    localStorage.removeItem('direct_beam_pro_meta');
+    window.DIRECT_BEAM_PRO = false;
+    updateProUI(false);
     updateQuotaBadge();
     closeAuthModal();
-    showToast('Signed out of Direct Beam KV session.');
+    showToast('Signed out of Direct Beam.');
+    setTimeout(() => {
+      window.location.reload();
+    }, 250);
   }
 
   function updateQuotaBadge() {
@@ -1949,6 +1961,13 @@
             localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
             window.DIRECT_BEAM_PRO = true;
             updateProUI(true);
+          } else {
+            localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+            localStorage.removeItem('direct_beam_pro');
+            localStorage.removeItem('direct_beam_pro_status');
+            localStorage.removeItem('direct_beam_pro_key');
+            window.DIRECT_BEAM_PRO = false;
+            updateProUI(false);
           }
 
           if (localCount > remoteCount) {
@@ -2208,14 +2227,29 @@
   }
 
   function checkProStatus() {
-    const status = localStorage.getItem('direct_beam_pro_status');
-    const key = localStorage.getItem('direct_beam_pro_key');
-    const isPro = status === 'active' && !!key;
+    const isPro = isProUser();
     window.DIRECT_BEAM_PRO = isPro;
     updateProUI(isPro);
     return isPro;
   }
 
+  // Dynamic Lemon Squeezy Checkout with User Email Binding
+  function startProCheckout(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const user = getLoggedInUser();
+    if (!user || !user.email) {
+      showToast('Please sign in first so your Pro license is delivered directly to your email!');
+      openAuthModal();
+      return;
+    }
+    const checkoutBase = 'https://directbeam.lemonsqueezy.com/checkout/buy/fc8b75f3-55cb-4a02-9d30-f397a0aa16c0';
+    const emailParam = encodeURIComponent(user.email);
+    const userParam = encodeURIComponent(user.id || '');
+    const checkoutUrl = `${checkoutBase}?checkout[email]=${emailParam}&checkout[custom][user_id]=${userParam}`;
+    window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  // Single-Use User-Bound License Key Activation
   async function verifyAndActivateLicenseKey(rawKey) {
     const key = (rawKey || '').trim();
     if (!key) {
@@ -2224,6 +2258,14 @@
         licenseStatusMsg.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>Please enter a license key.</span>';
         if (typeof lucide !== 'undefined') lucide.createIcons();
       }
+      return;
+    }
+
+    const user = getLoggedInUser();
+    const token = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+    if (!user || !token) {
+      showToast('Please sign in to your account first before activating a license.');
+      openAuthModal();
       return;
     }
 
@@ -2239,42 +2281,37 @@
     }
 
     try {
-      const params = new URLSearchParams();
-      params.append('license_key', key);
-      params.append('instance_name', 'DirectBeamWebClient');
-
-      const response = await fetch('https://api.lemonsqueezy.com/v1/licenses/activate', {
+      const response = await fetch('/api/auth/license/activate', {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: params.toString()
+        body: JSON.stringify({ license_key: key })
       });
 
       const data = await response.json();
 
-      if (response.ok && data && data.activated) {
-        // Persist Pro status to localStorage
+      if (response.ok && data && data.success) {
+        // Update user profile in local storage
+        if (data.user) {
+          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+        }
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
         localStorage.setItem('direct_beam_pro_key', key);
         localStorage.setItem('direct_beam_pro_status', 'active');
-        if (data.instance && data.instance.id) {
-          localStorage.setItem('direct_beam_instance_id', data.instance.id);
-        }
-        if (data.meta) {
-          localStorage.setItem('direct_beam_pro_meta', JSON.stringify(data.meta));
-        }
 
         window.DIRECT_BEAM_PRO = true;
         updateProUI(true);
+        updateQuotaBadge();
 
         if (licenseStatusMsg) {
           licenseStatusMsg.className = 'text-xs font-mono p-3 border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 block flex items-center gap-2';
-          licenseStatusMsg.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>License activated! Direct Beam Pro unlocked.</span>';
+          licenseStatusMsg.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>${data.message || 'License activated! Direct Beam Pro unlocked.'}</span>`;
           if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
-        showToast('⭐ Direct Beam Pro Activated Successfully!');
+        showToast('⭐ Pro Activated for ' + user.email + '!');
 
         setTimeout(() => {
           closeProLicense();
@@ -2282,13 +2319,13 @@
           if (licenseStatusMsg) licenseStatusMsg.classList.add('hidden');
         }, 1400);
       } else {
-        const errorMsg = (data && data.error) ? data.error : 'License key is invalid or has expired.';
+        const errorMsg = (data && data.error) ? data.error : 'License key is invalid or has already been used.';
         if (licenseStatusMsg) {
           licenseStatusMsg.className = 'text-xs font-mono p-3 border border-rose-500/50 bg-rose-950/40 text-rose-300 block flex items-center gap-2';
           licenseStatusMsg.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>${errorMsg}</span>`;
           if (typeof lucide !== 'undefined') lucide.createIcons();
         }
-        showToast('License activation failed: ' + errorMsg);
+        showToast(errorMsg);
       }
     } catch (err) {
       console.error('License validation network error:', err);
@@ -2314,36 +2351,22 @@
       return;
     }
 
-    const storedKey = localStorage.getItem('direct_beam_pro_key');
-    const instanceId = localStorage.getItem('direct_beam_instance_id');
-
-    if (storedKey) {
-      try {
-        const params = new URLSearchParams();
-        params.append('license_key', storedKey);
-        if (instanceId) params.append('instance_id', instanceId);
-
-        await fetch('https://api.lemonsqueezy.com/v1/licenses/deactivate', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: params.toString()
-        });
-      } catch (err) {
-        console.warn('Deactivate API error (clearing local state anyway):', err);
-      }
-    }
-
     localStorage.removeItem('direct_beam_pro_key');
     localStorage.removeItem('direct_beam_pro_status');
     localStorage.removeItem('direct_beam_instance_id');
     localStorage.removeItem('direct_beam_pro_meta');
+    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+
+    const user = getLoggedInUser();
+    if (user) {
+      user.pro = false;
+      localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(user));
+    }
 
     window.DIRECT_BEAM_PRO = false;
     updateProUI(false);
-    showToast('Direct Beam Pro license deactivated.');
+    updateQuotaBadge();
+    showToast('Direct Beam Pro license deactivated on this browser.');
   }
 
   // Initialize Lemon Squeezy Modal Overlay
@@ -2379,6 +2402,7 @@
   window.checkProStatus = checkProStatus;
   window.verifyAndActivateLicenseKey = verifyAndActivateLicenseKey;
   window.deactivateProKey = deactivateProKey;
+  window.startProCheckout = startProCheckout;
 
   if (btnVerifyLicense) {
     btnVerifyLicense.onclick = () => {
