@@ -2349,7 +2349,7 @@
     return isPro;
   }
 
-  // Dynamic Lemon Squeezy Checkout with User Email Binding
+  // Dynamic Lemon Squeezy Checkout with User Email Binding & Overlay Support
   function startProCheckout(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const user = getLoggedInUser();
@@ -2360,9 +2360,17 @@
     }
     const checkoutBase = 'https://directbeam.lemonsqueezy.com/checkout/buy/fc8b75f3-55cb-4a02-9d30-f397a0aa16c0';
     const emailParam = encodeURIComponent(user.email);
+    const nameParam = encodeURIComponent(user.name || '');
     const userParam = encodeURIComponent(user.id || '');
-    const checkoutUrl = `${checkoutBase}?checkout[email]=${emailParam}&checkout[custom][user_id]=${userParam}`;
-    window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+    const checkoutUrl = `${checkoutBase}?checkout[email]=${emailParam}&checkout[name]=${nameParam}&checkout[custom][user_id]=${userParam}&embed=1`;
+
+    showToast(`Opening Pro checkout for: ${user.email}`);
+
+    if (window.LemonSqueezy && typeof window.LemonSqueezy.Url?.Open === 'function') {
+      window.LemonSqueezy.Url.Open(checkoutUrl);
+    } else {
+      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+    }
   }
 
   // Single-Use User-Bound License Key Activation
