@@ -1962,50 +1962,98 @@
     }
   }
 
-  async function handleModalSocialLogin(provider) {
-    let email = '';
-    if (authEmailInput && authEmailInput.value.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(authEmailInput.value.trim())) {
-      email = authEmailInput.value.trim();
-    } else {
-      const promptText = provider === 'apple' 
-        ? 'Enter your Apple ID email (e.g. user@icloud.com):' 
-        : 'Enter your Google Account email (e.g. user@gmail.com):';
-      const inputVal = window.prompt(promptText, '');
-      if (!inputVal || !inputVal.trim()) return;
-      email = inputVal.trim();
-    }
+  // ==========================================
+  // REAL GOOGLE OAUTH (Google Identity Services)
+  // ==========================================
+  const GOOGLE_CLIENT_ID = "464572597917-bj2jf591tfhc4lvqcqr0pn5q9sgps4d5.apps.googleusercontent.com";
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  function initGoogleSignIn() {
+    if (typeof google === 'undefined' || !google.accounts) {
+      setTimeout(initGoogleSignIn, 300);
+      return;
+    }
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredential,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+      context: 'signin'
+    });
+  }
+
+  function triggerGoogleSignIn() {
+    if (typeof google === 'undefined' || !google.accounts) {
       if (authStatusMsg) {
-        authStatusMsg.className = 'text-xs font-mono p-2.5 border border-rose-500/50 bg-rose-950/40 text-rose-300 block flex items-center gap-2';
-        authStatusMsg.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>Please provide a valid email address.</span>';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        authStatusMsg.className = 'text-xs font-mono p-2.5 border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 block';
+        authStatusMsg.textContent = 'Google Sign-In is initializing... please try again in a second.';
       }
       return;
     }
 
+    const loadingEl = document.getElementById('modal-google-loading');
+    const btn = document.getElementById('modal-btn-google-login');
+    const btnText = document.getElementById('modal-google-btn-text');
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Connecting...';
+
+    google.accounts.id.prompt((notification) => {
+      if (loadingEl) loadingEl.classList.add('hidden');
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'Continue with Google';
+
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // Fall back to popup button click if One Tap is blocked or dismissed
+        showGooglePopup();
+      }
+    });
+  }
+
+  function showGooglePopup() {
+    const tempDiv = document.createElement('div');
+    tempDiv.style.display = 'none';
+    document.body.appendChild(tempDiv);
+    google.accounts.id.renderButton(tempDiv, {
+      type: 'standard',
+      theme: 'filled_blue',
+      size: 'large'
+    });
+    const innerBtn = tempDiv.querySelector('div[role=button]') || tempDiv.querySelector('button');
+    if (innerBtn) innerBtn.click();
+    setTimeout(() => {
+      if (document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
+    }, 2000);
+  }
+
+  async function handleGoogleCredential(response) {
+    const loadingEl = document.getElementById('modal-google-loading');
+    const btn = document.getElementById('modal-btn-google-login');
+    const btnText = document.getElementById('modal-google-btn-text');
+
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Verifying with Google...';
+
     if (authStatusMsg) {
       authStatusMsg.className = 'text-xs font-mono p-2.5 border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 block flex items-center gap-2';
-      authStatusMsg.innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span>Authenticating ${provider === 'apple' ? 'Apple ID' : 'Google'} via Cloudflare KV...</span></span>`;
+      authStatusMsg.innerHTML = `<span class="inline-flex items-center gap-2"><svg class="animate-spin w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg><span>Verifying Google token with Cloudflare KV...</span></span>`;
     }
 
     try {
-      const res = await fetch('/api/auth/oauth/social', {
+      const res = await fetch('/api/auth/google/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider,
-          email,
-          name: email.split('@')[0]
-        })
+        body: JSON.stringify({ credential: response.credential })
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Social authentication failed.');
+        throw new Error(data.error || 'Google authentication failed.');
       }
 
-      if (data.token) localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
+      if (data.token) {
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
+      }
       if (data.user) {
         const localCount = parseInt(localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
         const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
@@ -2023,17 +2071,15 @@
 
       if (authStatusMsg) {
         authStatusMsg.className = 'text-xs font-mono p-2.5 border border-emerald-500/50 bg-emerald-950/40 text-emerald-300 block flex items-center gap-2';
-        authStatusMsg.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>${provider === 'apple' ? 'Apple ID' : 'Google'} verified and saved to Cloudflare KV!</span>`;
+        authStatusMsg.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>Google account verified and session saved!</span>`;
         if (typeof lucide !== 'undefined') lucide.createIcons();
       }
 
-      showToast(`Welcome, ${(data.user && data.user.name) || email.split('@')[0]}!`);
+      showToast(`Welcome, ${(data.user && data.user.name) || 'Direct Beam User'}!`);
       updateQuotaBadge();
 
       setTimeout(() => {
         closeAuthModal();
-        if (authEmailInput) authEmailInput.value = '';
-        if (authPasswordInput) authPasswordInput.value = '';
         if (authStatusMsg) authStatusMsg.classList.add('hidden');
       }, 700);
 
@@ -2043,6 +2089,10 @@
         authStatusMsg.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>${err.message}</span>`;
         if (typeof lucide !== 'undefined') lucide.createIcons();
       }
+    } finally {
+      if (loadingEl) loadingEl.classList.add('hidden');
+      if (btn) btn.disabled = false;
+      if (btnText) btnText.textContent = 'Continue with Google';
     }
   }
 
@@ -2064,9 +2114,19 @@
     } catch (e) {}
   }
 
+  // Auto-init Google Sign In
+  if (typeof window !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+    } else {
+      initGoogleSignIn();
+    }
+  }
+
   window.syncUserSession = syncUserSession;
   window.handleAuthSubmit = handleAuthSubmit;
-  window.handleModalSocialLogin = handleModalSocialLogin;
+  window.triggerGoogleSignIn = triggerGoogleSignIn;
+  window.initGoogleSignIn = initGoogleSignIn;
   window.checkCloudflareAccessSSO = checkCloudflareAccessSSO;
   window.signOutUser = signOutUser;
   window.canInitiateTransfer = canInitiateTransfer;
@@ -2497,6 +2557,9 @@
     initLemonSqueezy();
 
     const params = new URLSearchParams(window.location.search);
+    if (params.get('login') || params.get('auth')) {
+      setTimeout(openAuthModal, 300);
+    }
     const code = params.get('code');
     if (code && code.length >= 6) {
       if (manualCodeInput) manualCodeInput.value = code;
