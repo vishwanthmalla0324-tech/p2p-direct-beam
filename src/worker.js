@@ -293,46 +293,10 @@ export default {
       if (authRes) return withSecurityHeaders(authRes);
     }
 
-    // Rewrite clean /login path to /login.html
-    if (url.pathname === "/login" || url.pathname === "/login/") {
+    // Alias clean /founder path to /about
+    if (url.pathname === "/founder" || url.pathname === "/founder/") {
       if (env.ASSETS) {
-        const res = await env.ASSETS.fetch(new Request(new URL("/login.html", request.url), request));
-        return withSecurityHeaders(res);
-      }
-    }
-
-    // Rewrite clean /reset-password path to /reset-password.html
-    if (url.pathname === "/reset-password" || url.pathname === "/reset-password/") {
-      if (env.ASSETS) {
-        const res = await env.ASSETS.fetch(new Request(new URL("/reset-password.html", request.url), request));
-        return withSecurityHeaders(res);
-      }
-    }
-
-    // Rewrite clean /about and /founder paths to /about.html
-    if (url.pathname === "/about" || url.pathname === "/about/" || url.pathname === "/founder" || url.pathname === "/founder/") {
-      if (env.ASSETS) {
-        const res = await env.ASSETS.fetch(new Request(new URL("/about.html", request.url), request));
-        return withSecurityHeaders(res);
-      }
-    }
-
-    // Staging Preview Routes for UI Variants
-    if (url.pathname === "/preview/theme-1" || url.pathname === "/preview/theme-1/") {
-      if (env.ASSETS) {
-        const res = await env.ASSETS.fetch(new Request(new URL("/preview/theme-1.html", request.url), request));
-        return withSecurityHeaders(res);
-      }
-    }
-    if (url.pathname === "/preview/theme-2" || url.pathname === "/preview/theme-2/") {
-      if (env.ASSETS) {
-        const res = await env.ASSETS.fetch(new Request(new URL("/preview/theme-2.html", request.url), request));
-        return withSecurityHeaders(res);
-      }
-    }
-    if (url.pathname === "/preview/theme-3" || url.pathname === "/preview/theme-3/") {
-      if (env.ASSETS) {
-        const res = await env.ASSETS.fetch(new Request(new URL("/preview/theme-3.html", request.url), request));
+        const res = await env.ASSETS.fetch(new Request(new URL("/about", request.url), request));
         return withSecurityHeaders(res);
       }
     }

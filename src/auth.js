@@ -613,8 +613,15 @@ export async function handleAuthRequest(request, env) {
         return jsonResponse({ error: errMessage }, 400);
       }
 
-      // Production Guard: Strictly reject test-mode orders/licenses
-      if (lsData.license_key && lsData.license_key.test_mode === true) {
+      // Production Guard: Strictly reject test-mode orders and ensure live mode is verified
+      const isTestMode = lsData.meta?.test_mode === true ||
+                         lsData.license_key?.test_mode === true ||
+                         lsData.test_mode === true;
+      const isVerifiedLive = lsData.meta?.test_mode === false ||
+                             lsData.license_key?.test_mode === false ||
+                             lsData.test_mode === false;
+
+      if (isTestMode || !isVerifiedLive) {
         return jsonResponse({
           error: "Test-mode license keys cannot be redeemed in live production. Please complete an official Direct Beam Pro checkout."
         }, 400);

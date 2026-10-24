@@ -5,7 +5,7 @@
 ## Main Resources
 - [Direct Beam App](https://directbeam.space/): Core peer-to-peer file transfer and data streaming interface.
 - [About & Founder](https://directbeam.space/about): Architectural mission, engineering philosophy, and background of Vishwanth Malla.
-- [Technology & Security](https://directbeam.space/#security): DTLS 1.3 encryption, SCTP DataChannels, and zero cloud retention.
+- [Technology & Security](https://directbeam.space/#faq-section): DTLS 1.3 encryption, SCTP DataChannels, and zero cloud retention.
 - [Pro Lifetime Tier](https://directbeam.space/#pro-pricing): Unlimited peer-to-peer transfers with dedicated high-speed TURN relays.
 - [Privacy Model](https://directbeam.space/about#privacy): Complete zero-knowledge, browser-memory streaming with zero server storage.
 

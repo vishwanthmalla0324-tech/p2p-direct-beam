@@ -244,9 +244,24 @@
     .orbital-inner {
       animation: spinReverse 14s linear infinite;
     }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
     @keyframes spinReverse {
       from { transform: rotate(360deg); }
       to { transform: rotate(0deg); }
+    }
+
+    @keyframes beamGlow {
+      0% {
+        transform: translate(-50%, -20%) scale(0.95);
+        opacity: 0.4;
+      }
+      100% {
+        transform: translate(-50%, -18%) scale(1.1);
+        opacity: 0.75;
+      }
     }
 
     /* Shimmering Text Gradient (Linear / Raycast Style) */
@@ -1252,7 +1267,7 @@
 
       <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
         <span class="text-zinc-400">Direct Support:</span>
-        <button id="modal-copy-email-btn" onclick="navigator.clipboard && navigator.clipboard.writeText('support@directbeam.space').then(() => showToast('Email copied to clipboard!'))" class="text-cyan-300 hover:underline cursor-pointer">support@directbeam.space</button>
+        <button id="modal-copy-email-btn" onclick="navigator.clipboard && navigator.clipboard.writeText('support@directbeam.space').then(() => (window.showToast ? window.showToast('Support email copied!') : null))" class="text-cyan-300 hover:underline cursor-pointer">support@directbeam.space</button>
       </div>
     </div>
   </div>
@@ -1430,6 +1445,7 @@
   <!-- Deferred Core Libraries (Non-Render-Blocking) -->
   <script src="/socket.io.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
   <script src="https://unpkg.com/lucide@latest" defer></script>
   <script src="/app.js" defer></script>
   <script type="module" src="/js/beam-canvas.js"></script>

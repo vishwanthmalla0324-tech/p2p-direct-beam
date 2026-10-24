@@ -231,6 +231,7 @@
       toastEl.classList.remove('translate-y-0', 'opacity-100');
     }, duration);
   }
+  window.showToast = showToast;
 
   function formatBytes(bytes, decimals = 2) {
     if (!+bytes) return '0 Bytes';
@@ -1446,15 +1447,25 @@
     };
   }
 
+  let isQrScannerLoading = false;
+
   function startQrScanner() {
     if (typeof Html5Qrcode === 'undefined') {
+      if (isQrScannerLoading) return;
+      isQrScannerLoading = true;
       showToast('Initializing QR Scanner...');
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
       script.onload = () => {
-        startQrScanner();
+        isQrScannerLoading = false;
+        if (typeof Html5Qrcode !== 'undefined') {
+          startQrScanner();
+        } else {
+          showToast('Unable to load QR Scanner engine.');
+        }
       };
       script.onerror = () => {
+        isQrScannerLoading = false;
         showToast('Unable to load QR Scanner engine.');
       };
       document.body.appendChild(script);
