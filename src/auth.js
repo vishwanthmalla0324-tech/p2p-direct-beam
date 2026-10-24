@@ -613,6 +613,13 @@ export async function handleAuthRequest(request, env) {
         return jsonResponse({ error: errMessage }, 400);
       }
 
+      // Production Guard: Strictly reject test-mode orders/licenses
+      if (lsData.license_key && lsData.license_key.test_mode === true) {
+        return jsonResponse({
+          error: "Test-mode license keys cannot be redeemed in live production. Please complete an official Direct Beam Pro checkout."
+        }, 400);
+      }
+
       // Single-use lock: permanently bind this license key to this user in Cloudflare KV
       await kv.put(`license:${normalizedKey}`, JSON.stringify({
         userId: user.id,

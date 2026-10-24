@@ -1,32 +1,33 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Direct Beam — Secure P2P File Transfer & Real-Time Data Streaming</title>
-  <meta name="description" content="Direct Beam delivers browser-to-browser encrypted P2P file transfers and real-time streaming with zero cloud storage, unlimited file sizes, and DTLS 1.3 security." />
-  <meta name="keywords" content="P2P file transfer, WebRTC direct beam, encrypted file sharing, browser to browser transfer, zero cloud storage, large file sharing" />
+  <title>Direct Beam — Encrypted P2P File & Data Streaming</title>
+  <meta name="description" content="Direct Beam delivers fast browser-to-browser encrypted P2P file transfers with zero cloud retention, unlimited file size, and DTLS 1.3 security." />
+  <meta name="keywords" content="P2P file transfer, WebRTC direct beam, encrypted file sharing, browser to browser transfer, zero cloud storage, large file sharing, batch transfers" />
   <meta name="author" content="Vishwanth Malla" />
   <link rel="canonical" href="https://directbeam.space/" />
 
   <!-- OpenGraph Meta Tags for Rich Social Previews -->
-  <meta property="og:title" content="Direct Beam — Secure P2P File Transfer & Real-Time Data Streaming" />
-  <meta property="og:description" content="Encrypted peer-to-peer file transfers and real-time streaming with zero cloud storage and DTLS 1.3 encryption." />
+  <meta property="og:title" content="Direct Beam — Encrypted P2P File & Data Streaming" />
+  <meta property="og:description" content="Direct browser-to-browser encrypted file transfers with zero cloud retention, unlimited file size, and DTLS 1.3 encryption." />
   <meta property="og:url" content="https://directbeam.space/" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Direct Beam" />
   <meta property="og:image" content="https://directbeam.space/assets/direct_beam_banner.jpg" />
-  <meta property="og:logo" content="https://directbeam.space/assets/direct_beam_logo.jpg" />
+  <meta property="og:logo" content="https://directbeam.space/assets/direct_beam_logo.webp" />
 
   <!-- Twitter / X Cards -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Direct Beam — Secure P2P File Transfer" />
+  <meta name="twitter:title" content="Direct Beam — Encrypted P2P File & Data Streaming" />
   <meta name="twitter:description" content="Direct browser-to-browser encrypted file transfers with zero cloud retention, unlimited file size, and WebRTC DataChannels." />
   <meta name="twitter:image" content="https://directbeam.space/assets/direct_beam_banner.jpg" />
 
   <!-- Favicon & Brand Icons -->
-  <link rel="icon" type="image/jpeg" href="/assets/direct_beam_logo.jpg" />
-  <link rel="apple-touch-icon" href="/assets/direct_beam_logo.jpg" />
+  <link rel="icon" type="image/webp" href="/assets/direct_beam_logo.webp" />
+  <link rel="alternate icon" type="image/jpeg" href="/assets/direct_beam_logo.jpg" />
+  <link rel="apple-touch-icon" href="/assets/direct_beam_logo.webp" />
 
   <!-- JSON-LD Structured Data Schema -->
   <script type="application/ld+json">
@@ -66,7 +67,7 @@
         "@type": "Organization",
         "name": "Direct Beam",
         "url": "https://directbeam.space",
-        "logo": "https://directbeam.space/assets/direct_beam_logo.jpg",
+        "logo": "https://directbeam.space/assets/direct_beam_logo.webp",
         "sameAs": [
           "https://wa.me/918501820073",
           "https://instagram.com/directbeam.space",
@@ -77,35 +78,64 @@
   }
   </script>
 
-  <!-- Google Fonts: Road Rage (Heading) & JetBrains Mono (Terminal/Body) -->
+  <!-- Preconnect to CDNs & Non-Blocking Font Loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&family=Road+Rage&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
+  <link rel="preconnect" href="https://unpkg.com" crossorigin />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'" />
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" />
+  </noscript>
 
-  <!-- Google Identity Services (Real OAuth) -->
+  <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Tailwind CSS CDN + Grunge Palette Config -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            grunge: ['"Road Rage"', 'system-ui', 'sans-serif'],
-            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            display: ['"Plus Jakarta Sans"', 'sans-serif'],
+            grunge: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
           },
           colors: {
-            base: {
-              100: '#121212',
-              200: '#1a1a19',
-              300: '#262624',
-              400: '#3f3e3b',
-              500: '#595854',
-              600: '#7b7974',
-              700: '#a3a19b',
-              800: '#d4d2cc',
-              900: '#fbfbf9',
+            obsidian: {
+              950: '#030407',
+              900: '#07090e',
+              850: '#0d1017',
+              800: '#131722',
+              700: '#1e2436',
+              600: '#333c54'
+            },
+            brand: {
+              cyan: '#00f0ff',
+              indigo: '#6366f1',
+              purple: '#a855f7',
+              amber: '#f59e0b',
+              emerald: '#10b981'
+            }
+          },
+          animation: {
+            'beam-glow': 'beamGlow 8s ease-in-out infinite alternate',
+            'spin-slow': 'spin 20s linear infinite',
+            'pulse-subtle': 'pulseSubtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          },
+          keyframes: {
+            beamGlow: {
+              '0%': { transform: 'scale(0.9) translate(-50%, -50%)', opacity: '0.4' },
+              '100%': { transform: 'scale(1.15) translate(-45%, -52%)', opacity: '0.75' }
+            },
+            pulseSubtle: {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '0.6' }
             }
           }
         }
@@ -113,545 +143,728 @@
     };
   </script>
 
-  <!-- Theme CSS (Grunge v1.0.0 Design System) -->
-  <link rel="stylesheet" href="/css/theme.css" />
+  <!-- Ultra-Premium Bespoke Stylesheet (Linear / Apple Tier) -->
+  <style>
+    :root {
+      --brand-cyan: #00f0ff;
+      --brand-indigo: #6366f1;
+      --brand-purple: #a855f7;
+    }
+    body {
+      background-color: #030407;
+      color: #f1f5f9;
+      overflow-x: hidden;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      -webkit-font-smoothing: antialiased;
+    }
 
-  <!-- Core Libraries -->
-  <script src="/socket.io.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+    /* Ambient Dynamic Beam Canvas */
+    .ambient-aurora {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, -20%);
+      width: 1100px;
+      height: 650px;
+      background: radial-gradient(ellipse 60% 40% at 50% 50%, rgba(0, 240, 255, 0.16) 0%, rgba(99, 102, 241, 0.12) 40%, rgba(168, 85, 247, 0.05) 70%, transparent 100%);
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 0;
+      animation: beamGlow 10s ease-in-out infinite alternate;
+    }
+
+    /* Subtle architectural micro-grid */
+    .micro-grid {
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 25%, #000 60%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 25%, #000 60%, transparent 100%);
+    }
+
+    /* Ultra-Refined Frosted Glass Cards (Apple / Linear Spec) */
+    .glass-card {
+      background: rgba(13, 16, 23, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 35px 70px -10px rgba(0, 0, 0, 0.85), 0 0 40px -10px rgba(0, 240, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+    }
+
+    /* 100% GPU-Composited Rotating Conic Beam Glow */
+    .conic-beam-border {
+      position: relative;
+      padding: 1.5px;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 0 50px -10px rgba(0, 240, 255, 0.35);
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .conic-beam-border::before {
+      content: '';
+      position: absolute;
+      top: -60%;
+      left: -60%;
+      width: 220%;
+      height: 220%;
+      background: conic-gradient(from 0deg at 50% 50%, #00f0ff 0%, #6366f1 30%, #a855f7 50%, #00f0ff 100%);
+      animation: rotateBeamGpu 6s linear infinite;
+      z-index: 0;
+      will-change: transform;
+    }
+    @keyframes rotateBeamGpu {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .conic-beam-border:hover {
+      box-shadow: 0 0 75px -5px rgba(0, 240, 255, 0.6), 0 35px 80px -15px rgba(0, 0, 0, 0.9);
+      transform: translateY(-2px);
+    }
+    .conic-beam-inner {
+      position: relative;
+      z-index: 1;
+      background: radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.12) 0%, rgba(13, 16, 23, 0.95) 55%),
+                  linear-gradient(180deg, rgba(19, 23, 34, 0.95) 0%, rgba(7, 9, 14, 0.98) 100%);
+      border-radius: 26.5px;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Concentric Orbital Rings */
+    .orbital-outer {
+      animation: spin 24s linear infinite;
+    }
+    .orbital-inner {
+      animation: spinReverse 14s linear infinite;
+    }
+    @keyframes spinReverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+
+    /* Shimmering Text Gradient (Linear / Raycast Style) */
+    .shimmer-text {
+      background: linear-gradient(110deg, #ffffff 20%, #7dd3fc 45%, #ffffff 55%, #c084fc 80%, #ffffff 100%);
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: textShine 8s linear infinite;
+    }
+    @keyframes textShine {
+      to { background-position: 200% center; }
+    }
+
+    /* Ultra-Smooth 120 FPS GPU-Accelerated Micro-Elevation */
+    .gpu-hover-card {
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+      will-change: transform;
+    }
+    .gpu-hover-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85), 0 0 35px -5px rgba(0, 240, 255, 0.2);
+      border-color: rgba(0, 240, 255, 0.4);
+    }
+
+    /* Refined Luxury Pill Badges */
+    .premium-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.725rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      transition: all 0.2s ease;
+    }
+    .premium-pill:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+
+    /* World-Class Metallic CTA */
+    .btn-luxury-primary {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+      color: #030407;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      padding: 0.75rem 1.75rem;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 10px 25px -5px rgba(255, 255, 255, 0.25), 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .btn-luxury-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px -5px rgba(255, 255, 255, 0.4), 0 0 25px rgba(0, 240, 255, 0.3);
+      background: #ffffff;
+    }
+
+    /* Kinetic Gold Pro Pass */
+    .btn-gold-pro {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #000000;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      padding: 0.75rem 1.75rem;
+      border-radius: 14px;
+      border: 1px solid rgba(251, 191, 36, 0.7);
+      box-shadow: 0 8px 25px -4px rgba(245, 158, 11, 0.4);
+      transition: all 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .btn-gold-pro:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 35px rgba(245, 158, 11, 0.65);
+      background: #fbbf24;
+    }
+
+    /* Compatibility Mappings for app.js */
+    .db-card, .cyber-card {
+      background: rgba(13, 16, 23, 0.75) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 18px !important;
+      backdrop-filter: blur(20px) !important;
+    }
+    .db-card-heavy, .cyber-card-heavy {
+      background: rgba(8, 10, 16, 0.94) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border-radius: 22px !important;
+      backdrop-filter: blur(28px) !important;
+    }
+    .db-pill {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.4rem !important;
+      padding: 0.28rem 0.7rem !important;
+      border-radius: 9999px !important;
+      font-size: 0.7rem !important;
+      font-family: 'JetBrains Mono', monospace !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #cbd5e1 !important;
+    }
+    .cyber-btn-primary {
+      background: linear-gradient(135deg, #00f0ff 0%, #0284c7 100%) !important;
+      color: #030407 !important;
+      font-weight: 700 !important;
+      border-radius: 12px !important;
+    }
+    .cyber-btn-secondary {
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #f1f5f9 !important;
+      border-radius: 12px !important;
+    }
+    .cyber-btn-danger {
+      background: rgba(244, 63, 94, 0.15) !important;
+      border: 1px solid rgba(244, 63, 94, 0.3) !important;
+      color: #fda4af !important;
+      border-radius: 12px !important;
+    }
+  </style>
 </head>
-<body class="bg-base-100 text-base-900 font-mono antialiased selection:bg-white selection:text-black min-h-screen">
+<body class="selection:bg-cyan-400 selection:text-black min-h-screen relative font-sans">
 
-  <!-- Background Grunge Film Grain Noise -->
-  <div class="grunge-noise"></div>
+  <!-- Ambient Dynamic Lighting -->
+  <div class="ambient-aurora"></div>
+  <div class="micro-grid fixed inset-0 pointer-events-none z-0"></div>
 
   <!-- Floating Toast Notification -->
-  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 -translate-y-20 opacity-0 pointer-events-none db-card-heavy px-5 py-2.5 shadow-2xl text-xs font-mono flex items-center gap-3 border-2 border-base-900 text-white">
-    <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" width="16" height="16" class="w-4 h-4 rounded-full object-cover shrink-0 border border-emerald-400/40" />
+  <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 -translate-y-20 opacity-0 pointer-events-none glass-card px-5 py-2.5 rounded-2xl shadow-2xl text-xs font-mono flex items-center gap-3 border border-cyan-400/40 text-white">
+    <img src="/assets/direct_beam_logo.webp" alt="DirectBeam Logo" width="18" height="18" class="w-4.5 h-4.5 rounded-full object-cover shrink-0 border border-cyan-400" />
     <span id="toast-message">Notification</span>
   </div>
 
   <!-- Cold Start Alert -->
-  <div id="cold-start-banner" class="hidden relative z-30 bg-black/90 border-b-2 border-base-900 text-white text-xs py-2.5 px-4 text-center backdrop-blur-md flex items-center justify-center gap-2">
-    <i data-lucide="zap" class="w-3.5 h-3.5 text-white animate-pulse"></i>
-    <span>Direct Beam signaling server is establishing connection. This takes around 20-30 seconds on cold start...</span>
+  <div id="cold-start-banner" class="hidden relative z-30 bg-black/90 border-b border-cyan-500/30 text-cyan-300 text-xs py-2 px-4 text-center backdrop-blur-md flex items-center justify-center gap-2 font-mono">
+    <i data-lucide="zap" class="w-3.5 h-3.5 text-cyan-400 animate-pulse"></i>
+    <span>Signaling mesh is connecting...</span>
   </div>
 
-  <!-- Main Application Wrapper -->
-  <div class="content-wrapper min-h-screen w-full flex flex-col justify-between p-4 md:p-8 max-w-5xl mx-auto space-y-10">
+  <!-- Main Viewport Wrapper with Accessible <main> Landmark -->
+  <main id="main-content" class="relative z-10 min-h-screen flex flex-col justify-between p-4 md:p-8 max-w-6xl mx-auto space-y-16">
 
-    <!-- Top Navbar -->
-    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 border-b-2 border-base-900 pb-6">
-      <div class="flex items-center gap-3 cursor-pointer group" id="brand-home-link">
-        <img src="/assets/direct_beam_logo.jpg" alt="Direct Beam Logo" width="44" height="44" class="w-11 h-11 rounded-lg object-cover border-2 border-base-900 shadow-xl transition-transform duration-200 group-hover:scale-105 group-hover:border-white" />
-        <div>
-          <h1 class="text-2xl font-grunge tracking-wide text-white flex items-center gap-2">
-            DIRECT BEAM <span class="db-pill text-[10px]">V1.2 MESH</span>
-            <span id="pro-badge-header" class="hidden db-pill text-[10px] text-amber-300 border-amber-400 bg-amber-950/40 font-bold uppercase tracking-wider items-center gap-1 shadow-sm"><i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i> PRO ⭐</span>
-          </h1>
+    <!-- FLOATING DYNAMIC ISLAND NAVBAR -->
+    <header class="sticky top-4 z-40 w-full">
+      <div class="glass-card rounded-2xl px-4 py-2.5 flex items-center justify-between gap-4 border border-white/10 shadow-2xl backdrop-blur-2xl">
+        
+        <!-- Brand -->
+        <div class="flex items-center gap-3 cursor-pointer group" id="brand-home-link">
+          <div class="relative">
+            <img src="/assets/direct_beam_logo.webp" alt="Direct Beam Logo" width="38" height="38" class="w-9 h-9 rounded-xl object-cover border border-white/20 shadow-md transition duration-300 group-hover:scale-105 group-hover:border-cyan-400" />
+            <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-black animate-pulse"></span>
+          </div>
+          <div>
+            <h1 class="text-base font-display font-extrabold text-white tracking-tight flex items-center gap-2">
+              DIRECT BEAM
+              <span class="premium-pill text-[9px] py-0.5 px-2 bg-cyan-500/10 text-cyan-300 border-cyan-400/30">P2P CORE</span>
+              <span id="pro-badge-header" class="hidden premium-pill text-[9px] text-amber-300 border-amber-400/50 bg-amber-950/40 font-bold uppercase tracking-wider items-center gap-1 shadow-sm">
+                <i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i> PRO ⭐
+              </span>
+            </h1>
+          </div>
         </div>
+
+        <!-- Center Dynamic Network Beacon -->
+        <div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/5 text-[11px] font-mono text-zinc-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Mesh: <strong class="text-white" id="beam-status-text">Active</strong></span>
+          <span class="text-zinc-600">•</span>
+          <span>RTT: <strong class="text-emerald-400" id="beam-latency-text">&lt; 1ms</strong></span>
+          <span class="text-zinc-600">•</span>
+          <span>Room: <strong class="text-cyan-300" id="mesh-room-display">STANDBY</strong></span>
+        </div>
+
+        <!-- Right Controls -->
+        <nav class="flex items-center gap-2 text-xs font-mono">
+          <!-- How It Works / Security / Founder Tooltips -->
+          <button id="nav-beam-btn" class="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition" title="Mesh Topology">
+            <i data-lucide="radio" class="w-4 h-4 text-emerald-400"></i>
+          </button>
+          <button id="nav-faq-btn" class="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition" title="How It Works">
+            <i data-lucide="help-circle" class="w-4 h-4"></i>
+          </button>
+          <button id="nav-security-btn" class="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition" title="DTLS 1.3 Security">
+            <i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i>
+          </button>
+          <button id="nav-founder-btn" class="p-1.5 rounded-xl hover:bg-white/5 transition" title="Architect Profile">
+            <img src="/profile.webp" alt="Founder" width="20" height="20" class="w-5 h-5 rounded-full object-cover border border-cyan-400/50" onerror="this.src='/profile.jpg'" />
+          </button>
+
+          <!-- Sign In Button -->
+          <button id="nav-auth-btn" type="button" onclick="window.openAuthModal && window.openAuthModal()" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10 flex items-center gap-1.5 cursor-pointer transition">
+            <i data-lucide="user" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span id="nav-auth-status" class="text-[11px] font-semibold uppercase">Sign In</span>
+            <span class="hidden" id="nav-auth-tooltip">Sign In</span>
+          </button>
+
+          <!-- Free Quota Counter -->
+          <span id="header-quota-pill" class="premium-pill text-[10px] text-zinc-300 border-white/10 bg-black/60">
+            <i data-lucide="gauge" class="w-3 h-3 text-cyan-400"></i>
+            <span><strong id="quota-used-count" class="text-amber-400">0</strong>/3 Free</span>
+          </span>
+
+          <!-- Pro Upgrade Action -->
+          <div id="pro-nav-cta" class="flex items-center gap-1.5">
+            <a 
+              href="#pro-pricing" 
+              onclick="window.startProCheckout && window.startProCheckout(event)"
+              id="btn-upgrade-pro"
+              class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-extrabold text-[11px] font-mono shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_25px_rgba(245,158,11,0.6)] cursor-pointer tracking-wide flex items-center gap-1 transition"
+            >
+              <span>⚡ PRO — ₹300</span>
+            </a>
+            <button id="btn-open-license-modal" type="button" onclick="window.openProLicense && window.openProLicense()" class="text-[11px] font-mono text-zinc-400 hover:text-amber-300 transition underline underline-offset-4 cursor-pointer px-1 py-1">
+              Key
+            </button>
+          </div>
+
+          <div id="pro-active-cta" class="hidden items-center gap-2">
+            <span class="premium-pill text-[10px] text-amber-300 border-amber-400/40 bg-amber-950/30">
+              <i data-lucide="shield-check" class="w-3 h-3 text-amber-400"></i>
+              <span>PRO ACTIVE</span>
+            </span>
+            <button id="btn-deactivate-pro" type="button" onclick="window.deactivateProKey && window.deactivateProKey()" title="Deactivate License" class="text-[10px] font-mono text-zinc-500 hover:text-rose-400 transition cursor-pointer underline">
+              Deactivate
+            </button>
+          </div>
+        </nav>
       </div>
-
-      <nav class="flex flex-wrap items-center gap-2.5 text-xs font-mono">
-        <!-- 1. Beam Icon -->
-        <button id="nav-beam-btn" class="nav-icon-btn group" aria-label="Beam">
-          <span class="relative flex items-center justify-center">
-            <span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/>
-              <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/>
-              <circle cx="12" cy="12" r="2"/>
-              <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/>
-              <path d="M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/>
-            </svg>
-          </span>
-          <span class="nav-tooltip">Beam ((•))</span>
-        </button>
-
-        <!-- 2. How It Works Icon -->
-        <button id="nav-faq-btn" class="nav-icon-btn group" aria-label="How It Works">
-          <svg class="w-4 h-4 text-base-300 group-hover:text-white transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="4 17 10 11 4 5"/>
-            <line x1="12" y1="19" x2="20" y2="19"/>
-          </svg>
-          <span class="nav-tooltip">How It Works</span>
-        </button>
-
-        <!-- 3. Security Icon -->
-        <button id="nav-security-btn" class="nav-icon-btn group" aria-label="E2E Security & DTLS 1.3">
-          <svg class="w-4 h-4 text-base-300 group-hover:text-emerald-400 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            <path d="m9 12 2 2 4-4"/>
-          </svg>
-          <span class="nav-tooltip">E2E Security &amp; DTLS 1.3</span>
-        </button>
-
-        <!-- 4. Founder Icon -->
-        <button id="nav-founder-btn" class="nav-icon-btn group" aria-label="Founder">
-          <img src="/profile.jpg" alt="Founder" width="16" height="16" class="w-4 h-4 rounded-full object-cover border border-white/60 group-hover:border-white transition" onerror="this.style.display='none'" />
-          <span class="nav-tooltip">Founder</span>
-        </button>
-
-        <!-- 5. WhatsApp Support Icon -->
-        <a id="nav-whatsapp-btn" href="https://wa.me/918501820073?text=Hi%20DirectBeam%20Support" target="_blank" rel="noopener noreferrer" class="nav-icon-btn group text-[#25D366] hover:bg-[#25D366]/20 transition" aria-label="WhatsApp Support">
-          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-          </svg>
-          <span class="nav-tooltip">WhatsApp Support</span>
-        </a>
-
-        <!-- 6. Instagram Profile Icon -->
-        <a id="nav-instagram-btn" href="https://www.instagram.com/vishwanth___24?rpxt=MTBtN2NnZ3Y5aHA0dg%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" class="nav-icon-btn group text-[#E4405F] hover:bg-[#E4405F]/20 transition" aria-label="Instagram Profile">
-          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-          </svg>
-          <span class="nav-tooltip">Instagram Profile</span>
-        </a>
-
-        <!-- 7. Account / Auth Button -->
-        <button id="nav-auth-btn" type="button" onclick="window.openAuthModal && window.openAuthModal()" class="nav-icon-btn group flex items-center gap-1.5 cursor-pointer" aria-label="Account / Sign In">
-          <svg class="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          <span id="nav-auth-status" class="text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider">Sign In</span>
-          <span class="nav-tooltip" id="nav-auth-tooltip">Sign In / Account</span>
-        </button>
-
-        <!-- 8. Transfer Quota Indicator (3 Free Limit) -->
-        <span id="header-quota-pill" class="db-pill text-[10px] text-white border-base-800 bg-black/70 font-mono tracking-wider flex items-center gap-1 shadow-sm">
-          <i data-lucide="gauge" class="w-3 h-3 text-cyan-400"></i>
-          <span>FREE: <strong id="quota-used-count" class="text-amber-400">0</strong>/3</span>
-        </span>
-
-        <!-- 9. Lemon Squeezy Pro Actions -->
-        <div id="pro-nav-cta" class="flex items-center gap-2">
-          <a 
-            href="javascript:void(0)" 
-            onclick="window.startProCheckout && window.startProCheckout(event)"
-            id="btn-upgrade-pro"
-            class="bg-amber-500 hover:bg-amber-400 text-black font-mono font-bold text-xs px-3 py-1.5 rounded transition-all inline-flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.3)] hover:shadow-[0_0_18px_rgba(245,158,11,0.6)] cursor-pointer tracking-wider"
-          >
-            ⚡ UPGRADE TO PRO — ₹300
-          </a>
-          <button id="btn-open-license-modal" type="button" onclick="window.openProLicense && window.openProLicense()" class="text-[11px] font-mono text-base-700 hover:text-amber-300 transition underline underline-offset-4 cursor-pointer px-1 py-1">
-            Enter Key
-          </button>
-        </div>
-
-        <div id="pro-active-cta" class="hidden items-center gap-2">
-          <span class="db-pill text-[10px] text-amber-300 border-amber-400/50 bg-amber-950/30 font-bold uppercase tracking-wider flex items-center gap-1">
-            <i data-lucide="shield-check" class="w-3 h-3 text-amber-400"></i>
-            <span>PRO ACTIVE</span>
-          </span>
-          <button id="btn-deactivate-pro" type="button" onclick="window.deactivateProKey && window.deactivateProKey()" title="Deactivate License" class="text-[10px] font-mono text-base-700 hover:text-rose-400 transition cursor-pointer underline underline-offset-2">
-            Deactivate
-          </button>
-        </div>
-      </nav>
     </header>
 
-    <!-- Header / Hero Section -->
-    <section class="text-center space-y-4 pt-2">
-      <div class="flex items-center justify-center gap-3">
-        <div class="db-pill">
-          <img src="/assets/symbolWhite.svg" alt="Mesh Symbol" width="16" height="14" class="w-4 h-3.5" />
-          <span>DIRECT DEVICE-TO-DEVICE MESH PIPELINE</span>
-        </div>
-        <img src="/assets/barcode.svg" alt="Barcode Stamp" width="60" height="24" class="grunge-stamp-barcode hidden sm:inline-block" />
-      </div>
-
-      <h2 class="text-6xl sm:text-8xl md:text-9xl font-grunge uppercase text-white tracking-tight leading-none">
-        DIRECT BEAM
-      </h2>
-
-      <p class="text-xs sm:text-sm md:text-base text-base-700 max-w-xl mx-auto leading-relaxed">
-        Encrypted point-to-point batch data streaming. Direct disk writes, unlimited size, and zero cloud retention.
-      </p>
-
-      <div class="flex flex-wrap items-center justify-center gap-4 text-xs font-mono pt-2">
-        <span class="db-pill">
-          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
-          <span>E2E ENCRYPTED (DTLS 1.3)</span>
-        </span>
-        <span class="db-pill">
-          <i data-lucide="radio" class="w-3.5 h-3.5"></i>
-          <span>DIRECT PEER-TO-PEER</span>
-        </span>
-        <span class="db-pill">
-          <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
-          <span>ZERO CLOUD RETENTION</span>
-        </span>
-      </div>
-    </section>
-
-    <!-- Native Three.js WebGL Particle Visualizer (Zero-Watermark) -->
-    <section class="relative w-full h-[360px] md:h-[420px] bg-black/85 border-2 border-base-900 shadow-2xl flex items-center justify-center overflow-hidden">
-      <canvas id="directbeam-webgl-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
-
-      <!-- Top Status Overlay Pills -->
-      <div class="absolute top-4 inset-x-4 flex items-center justify-between pointer-events-none">
-        <div class="db-pill">
-          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-          <span id="beam-status-text">MESH READY</span>
-        </div>
-        <div class="db-pill">
-          ROOM: <span class="text-white font-bold" id="mesh-room-display">STANDBY</span>
-        </div>
-        <div class="db-pill">
-          RTT: <span id="beam-latency-text">&lt; 1ms P2P</span>
-        </div>
-      </div>
-
-      <!-- Bottom Controls & DirectBeam Stamp -->
-      <div class="absolute bottom-4 left-4 pointer-events-none flex items-center gap-2 db-pill">
-        <i data-lucide="globe" class="w-3.5 h-3.5"></i>
-        <span>INTERACTIVE 3D • DRAG TO TILT</span>
-      </div>
-
-      <div class="absolute bottom-4 right-4 pointer-events-none flex items-center gap-2 db-pill">
-        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-        <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" width="14" height="14" class="w-3.5 h-3.5 rounded-full object-cover" />
-        <span>DIRECTBEAM P2P CORE</span>
-      </div>
-    </section>
-
-    <!-- Telemetry Metrics Grid -->
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
-      <!-- Telemetry Card 1 -->
-      <div class="db-card p-6 flex flex-col justify-between">
-        <div class="flex items-center justify-between text-base-700 text-xs font-mono">
-          <span class="tracking-widest">THROUGHPUT</span>
-          <i data-lucide="activity" class="w-4 h-4 text-white"></i>
-        </div>
-        <div class="my-4">
-          <span class="text-4xl font-extrabold text-white font-mono" id="throughput-value">0.00</span>
-          <span class="text-sm text-base-700 font-mono ml-1">MB/s</span>
-        </div>
-        <div>
-          <div class="w-full bg-base-300 h-2 border border-base-400 overflow-hidden mb-2">
-            <div class="bg-white h-full w-0 transition-all duration-200" id="throughput-progress"></div>
-          </div>
-          <div class="flex justify-between items-center text-[10px] text-base-600 font-mono">
-            <span>REAL-TIME STREAM</span>
-            <img src="/assets/barcode.svg" width="35" height="14" class="h-3.5 opacity-60" alt="Barcode" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Telemetry Card 2 -->
-      <div class="db-card p-6 flex flex-col justify-between">
-        <div class="flex items-center justify-between text-base-700 text-xs font-mono">
-          <span class="tracking-widest">PROTOCOL</span>
-          <i data-lucide="shield" class="w-4 h-4 text-white"></i>
-        </div>
-        <div class="my-3">
-          <div class="text-base font-bold text-white font-mono uppercase">WebRTC SCTP</div>
-          <div class="text-xs text-base-700 font-mono">DTLS 1.3 / SRTP</div>
-        </div>
-        <div class="flex justify-between items-center text-[11px] font-mono text-white pt-2 border-t border-base-400">
-          <span>Zero Cloud Retention</span>
-          <img src="/assets/symbolWhite.svg" width="14" height="12" class="h-3 opacity-80" alt="Symbol" />
-        </div>
-      </div>
-
-      <!-- Telemetry Card 3 -->
-      <div class="db-card p-6 flex flex-col justify-between">
-        <div class="flex items-center justify-between text-base-700 text-xs font-mono">
-          <span class="tracking-widest">PACKET HEALTH</span>
-          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
-        </div>
-        <div class="my-3">
-          <div class="text-3xl font-bold text-white font-mono" id="telemetry-loss">0% <span class="text-xs text-base-700 font-normal">Loss</span></div>
-          <div class="text-xs text-base-700 font-mono">Ordered &amp; Reliable Channels</div>
-        </div>
-        <div class="text-[11px] font-mono text-base-600 pt-2 border-t border-base-400">
-          CRC32 Checksum Verified
-        </div>
-      </div>
-    </section>
-
     <!-- ======================================================================
-         VIEW 1: SELECTION & JOIN VIEW
+         HERO SECTION: FUSED HEADLINE + MAGNETIC DROPZONE ORB
          ====================================================================== -->
-    <section id="selection-view" class="space-y-6">
+    <section class="text-center space-y-8 pt-2">
+      
+      <!-- Headline & Value Prop -->
+      <div class="space-y-4 max-w-3xl mx-auto">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-cyan-500/30 bg-cyan-950/20 text-xs font-mono text-cyan-300 backdrop-blur-md">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+          <span>HARDWARE-ENCRYPTED WEBRTC DATACHANNELS • DTLS 1.3</span>
+        </div>
 
-      <!-- Mode Selection Tabs: Files vs Quick Beam Text -->
-      <div class="flex items-center gap-2 border-b-2 border-base-900 pb-3" role="tablist">
-        <button id="tab-files" type="button" role="tab" aria-selected="true" class="px-5 py-2.5 text-xs font-mono font-bold tracking-wider uppercase transition cursor-pointer border-2 border-white bg-white text-black flex items-center gap-2 shadow-sm">
-          <i data-lucide="files" class="w-4 h-4"></i>
-          <span>Send Files</span>
-        </button>
-        <button id="tab-text" type="button" role="tab" aria-selected="false" class="px-5 py-2.5 text-xs font-mono font-bold tracking-wider uppercase transition cursor-pointer border-2 border-base-900 bg-black/60 text-base-700 hover:text-white hover:border-base-700 flex items-center gap-2">
-          <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
-          <span>Quick Beam (Text)</span>
-          <span class="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 border border-amber-400/30 font-mono">P2P</span>
-        </button>
+        <h2 class="text-4xl sm:text-6xl md:text-7xl font-display font-extrabold tracking-tight text-white leading-[1.08]">
+          Send files directly between devices. <br />
+          <span class="bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-sky-200 to-indigo-300">Zero cloud storage.</span>
+        </h2>
+
+        <p class="text-sm sm:text-base text-zinc-400 font-sans max-w-xl mx-auto leading-relaxed">
+          High-throughput encrypted peer-to-peer streaming directly over browser memory. Unlimited file sizes, physical direct disk writing, and zero logs.
+        </p>
       </div>
 
-      <!-- File Dropzone Section -->
-      <label for="file-input" id="drop-zone" class="db-card block border-2 border-dashed border-base-900 hover:border-white p-8 md:p-12 text-center cursor-pointer transition group relative bg-base-100/75">
-        <input type="file" id="file-input" multiple class="hidden" />
+      <!-- PRIMARY FILE TRANSFER ZONE (MAGNETIC HERO ORB) -->
+      <div id="selection-view" class="space-y-6 max-w-3xl mx-auto">
 
-        <!-- Grunge UI Decorative Stamps -->
-        <div class="flex justify-between items-center mb-4">
-          <img src="/assets/symbolWhite.svg" alt="Symbol" width="16" height="16" class="h-4 opacity-80" />
-          <img src="/assets/barcode.svg" alt="Barcode" width="50" height="20" class="h-5 opacity-80" />
+        <!-- Tabs: Files vs Quick Beam Text -->
+        <div class="flex items-center justify-center gap-2" role="tablist">
+          <button id="tab-files" type="button" role="tab" aria-selected="true" class="px-5 py-2.5 rounded-full text-xs font-mono font-bold tracking-wider uppercase transition cursor-pointer bg-white text-black flex items-center gap-2 shadow-lg shadow-white/10">
+            <i data-lucide="folder" class="w-4 h-4"></i>
+            <span>Send Files &amp; Media</span>
+          </button>
+          <button id="tab-text" type="button" role="tab" aria-selected="false" class="px-5 py-2.5 rounded-full text-xs font-mono font-bold tracking-wider uppercase transition cursor-pointer bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 flex items-center gap-2">
+            <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+            <span>Quick Beam (Text &amp; Secrets)</span>
+            <span class="text-[9px] bg-amber-400/20 text-amber-300 px-1.5 py-0.2 rounded font-mono">P2P</span>
+          </button>
         </div>
 
-        <div class="flex flex-col items-center justify-center space-y-3">
-          <div class="w-14 h-14 border-2 border-base-900 bg-base-900 text-base-100 flex items-center justify-center group-hover:scale-105 group-hover:bg-white group-hover:text-black transition duration-200">
-            <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-          </div>
-          <h3 class="text-3xl md:text-5xl font-grunge uppercase text-white tracking-wide">
-            DRAG &amp; DROP FILES TO STREAM
-          </h3>
-          <p class="text-xs text-base-700 font-mono uppercase tracking-widest">
-            Unlimited file size • Direct peer-to-peer memory pipeline
-          </p>
-        </div>
-      </label>
+        <!-- Magnetic Hero Dropzone with Aceternity Rotating Conic Beam -->
+        <div class="conic-beam-border">
+          <label for="file-input" id="drop-zone" class="conic-beam-inner block p-10 md:p-16 text-center cursor-pointer relative overflow-hidden group">
+            <input type="file" id="file-input" multiple class="hidden" />
 
-      <!-- Quick Beam (Text) Input Section -->
-      <div id="quick-beam-container" class="hidden db-card p-6 md:p-8 space-y-5 bg-base-100/90 border-2 border-base-900">
-        <!-- Top Title Bar -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-base-900">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 border-2 border-base-900 bg-base-900 flex items-center justify-center text-amber-400 shrink-0">
-              <i data-lucide="zap" class="w-5 h-5"></i>
+            <!-- Internal ambient glowing core -->
+            <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-cyan-400/15 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-400/25 transition duration-500"></div>
+
+            <div class="flex justify-between items-center mb-8 text-xs font-mono text-zinc-400">
+              <span class="premium-pill text-[10px] bg-black/60 border-cyan-400/30 text-cyan-300">
+                <i data-lucide="cpu" class="w-3 h-3 text-cyan-400"></i>
+                <span>DIRECT MEMORY STREAM</span>
+              </span>
+              <span class="flex items-center gap-1.5 text-emerald-400 font-semibold font-mono text-xs">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>MESH STANDBY • READY</span>
+              </span>
             </div>
-            <div>
-              <h3 class="text-2xl font-grunge uppercase text-white tracking-wide">Quick Beam — Instant P2P Text</h3>
-              <p class="text-[11px] text-base-700 font-mono">Stream secret notes, passwords, 2FA codes, or URLs directly with 0 cloud storage</p>
+
+            <div class="flex flex-col items-center justify-center space-y-6">
+              <!-- Holographic Orbital Rings Core -->
+              <div class="relative w-28 h-28 flex items-center justify-center">
+                  <!-- Outer Dashed Ring -->
+                  <svg class="orbital-outer absolute inset-0 w-full h-full text-cyan-400/40" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 8" />
+                  </svg>
+                  <!-- Inner Reverse Ring -->
+                  <svg class="orbital-inner absolute inset-2 w-24 h-24 text-indigo-400/50" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="14 10 4 10" />
+                  </svg>
+                  <!-- Center Beacon -->
+                  <div class="w-16 h-16 rounded-2xl bg-cyan-400/15 border border-cyan-400/40 flex items-center justify-center text-cyan-300 group-hover:scale-110 group-hover:bg-cyan-400 group-hover:text-black transition-all duration-300 shadow-[0_0_40px_rgba(0,240,255,0.4)] backdrop-blur-md">
+                    <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <h3 class="text-3xl sm:text-4xl md:text-5xl font-display font-black text-white tracking-tight">
+                    DROP FILES TO BEAM
+                  </h3>
+                  <p class="text-xs sm:text-sm text-zinc-400 font-mono">
+                    or click to browse local storage • Unlimited file sizes • 100% P2P direct
+                  </p>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  <span class="px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-mono text-zinc-300 flex items-center gap-1.5">
+                    <i data-lucide="shield" class="w-3 h-3 text-cyan-400"></i> DTLS 1.3 End-to-End
+                  </span>
+                  <span class="px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-mono text-zinc-300 flex items-center gap-1.5">
+                    <i data-lucide="hard-drive" class="w-3 h-3 text-indigo-400"></i> Direct Disk Writer
+                  </span>
+                  <span class="px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[11px] font-mono text-zinc-300 flex items-center gap-1.5">
+                    <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i> 256KB Dynamic SCTP
+                  </span>
+                </div>
+              </div>
+            </label>
+          </div>
+
+        <!-- Quick Beam (Text) Container -->
+        <div id="quick-beam-container" class="hidden glass-card p-6 md:p-8 rounded-3xl space-y-5 border border-amber-500/30 text-left">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <i data-lucide="zap" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-display font-bold text-white">Quick Beam — Instant P2P Text</h3>
+                <p class="text-xs text-zinc-400 font-mono">Stream secret notes, passwords, or tokens with 0 cloud storage</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 text-xs font-mono text-zinc-400">
+              <span><strong id="quick-beam-char-count" class="text-white">0</strong> / 50,000 chars</span>
+              <span>•</span>
+              <span><strong id="quick-beam-word-count" class="text-white">0</strong> words</span>
             </div>
           </div>
-          <div class="flex items-center gap-3 text-xs font-mono text-base-700">
-            <span><span id="quick-beam-char-count" class="text-white font-bold">0</span> / 50,000 chars</span>
-            <span>•</span>
-            <span><span id="quick-beam-word-count" class="text-white font-bold">0</span> words</span>
-          </div>
-        </div>
 
-        <!-- Textarea -->
-        <div class="space-y-1.5">
           <textarea
             id="quick-beam-input"
-            rows="6"
+            rows="5"
             maxlength="50000"
-            placeholder="Paste links, passwords, 2FA codes, terminal commands, or secret notes here..."
-            class="w-full bg-black/85 border-2 border-base-900 focus:border-white p-4 font-mono text-sm text-white focus:outline-none transition resize-y min-h-[140px] placeholder:text-base-600 leading-relaxed"
+            placeholder="Paste secret links, terminal commands, Wi-Fi credentials, or sensitive notes here..."
+            class="w-full bg-black/60 border border-white/15 focus:border-amber-400 p-4 rounded-2xl font-mono text-sm text-white focus:outline-none transition resize-y min-h-[130px] placeholder:text-zinc-600 leading-relaxed"
           ></textarea>
-        </div>
 
-        <!-- Options & Action Button Row -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
-          <!-- Self Destruct Options -->
-          <div class="flex flex-wrap items-center gap-3">
-            <label class="flex items-center gap-2 cursor-pointer select-none db-pill hover:border-white transition">
-              <input type="checkbox" id="quick-beam-self-destruct-toggle" class="w-4 h-4 accent-amber-400 cursor-pointer" />
-              <span class="flex items-center gap-1.5 text-xs font-mono text-white">
-                <i data-lucide="flame" class="w-3.5 h-3.5 text-rose-400"></i>
-                <span>Self-Destruct on View</span>
-              </span>
-            </label>
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
+            <div class="flex flex-wrap items-center gap-3">
+              <label class="flex items-center gap-2 cursor-pointer select-none premium-pill hover:border-amber-400/50 transition">
+                <input type="checkbox" id="quick-beam-self-destruct-toggle" class="w-4 h-4 accent-amber-400 cursor-pointer" />
+                <span class="flex items-center gap-1.5 text-xs font-mono text-white">
+                  <i data-lucide="flame" class="w-3.5 h-3.5 text-rose-400"></i>
+                  <span>Self-Destruct on View</span>
+                </span>
+              </label>
 
-            <div id="quick-beam-timer-wrapper" class="hidden items-center gap-2">
-              <span class="text-xs font-mono text-base-700 uppercase">Burn after:</span>
-              <select id="quick-beam-timer-select" class="bg-black/90 border-2 border-base-900 focus:border-white text-white text-xs font-mono py-1.5 px-3 focus:outline-none cursor-pointer">
-                <option value="10">10 seconds</option>
-                <option value="30" selected>30 seconds</option>
-                <option value="60">60 seconds</option>
-                <option value="0">Instant (Read-Once)</option>
-              </select>
+              <div id="quick-beam-timer-wrapper" class="hidden items-center gap-2">
+                <span class="text-xs font-mono text-zinc-400">Burn after:</span>
+                <select id="quick-beam-timer-select" class="bg-black/90 border border-white/15 focus:border-amber-400 text-white text-xs font-mono py-1 px-2.5 rounded-lg focus:outline-none">
+                  <option value="10">10 seconds</option>
+                  <option value="30" selected>30 seconds</option>
+                  <option value="60">60 seconds</option>
+                  <option value="0">Instant (Read-Once)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button id="quick-beam-clear-btn" type="button" class="px-4 py-2 rounded-xl text-xs font-mono uppercase cursor-pointer hidden bg-white/5 hover:bg-white/10 text-zinc-300">
+                <span>Clear</span>
+              </button>
+              <button id="btn-send-text" type="button" class="btn-luxury-primary px-7 py-2.5 text-sm font-mono font-bold uppercase flex items-center justify-center gap-2 cursor-pointer transition shadow-xl opacity-60 cursor-not-allowed" disabled>
+                <i data-lucide="zap" class="w-4 h-4 text-amber-500"></i>
+                <span>Beam Text ⚡</span>
+              </button>
             </div>
           </div>
+        </div>
 
-          <!-- Actions -->
-          <div class="flex items-center gap-3">
-            <button id="quick-beam-clear-btn" type="button" class="cyber-btn-secondary px-4 py-3 text-xs font-mono uppercase cursor-pointer hidden">
-              <span>Clear</span>
+        <!-- Room Pairing & Code Connect Bar -->
+        <div class="space-y-4 max-w-md mx-auto pt-2">
+          <div class="relative flex items-center justify-center">
+            <div class="border-t border-white/10 w-full"></div>
+            <span class="bg-[#030407] px-4 text-xs font-mono tracking-widest text-zinc-400 uppercase">OR CONNECT WITH CODE</span>
+            <div class="border-t border-white/10 w-full"></div>
+          </div>
+
+          <div class="flex gap-2">
+            <input 
+              type="text" 
+              id="manual-code-input" 
+              maxlength="6" 
+              placeholder="6-DIGIT CODE" 
+              class="flex-1 bg-black/60 border border-white/15 focus:border-cyan-400 rounded-xl px-4 py-3 text-center tracking-widest font-mono text-base uppercase text-white focus:outline-none placeholder:text-zinc-600 shadow-inner" 
+            />
+            <button id="join-btn" class="btn-luxury-primary px-6 py-3 rounded-xl text-xs font-mono uppercase font-bold flex items-center gap-1.5 cursor-pointer">
+              <span>Connect</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
-            <button id="btn-send-text" type="button" class="cyber-btn-primary px-8 py-3 text-lg font-grunge uppercase flex items-center justify-center gap-2 cursor-pointer transition shadow-xl opacity-60 cursor-not-allowed" disabled>
-              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
-              <span>Beam Text ⚡</span>
+            <button id="scan-qr-btn" title="Scan QR Code" class="p-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 transition cursor-pointer flex items-center justify-center">
+              <i data-lucide="qr-code" class="w-5 h-5 text-cyan-400"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Camera QR Scanner Viewport Popup -->
+        <div id="scanner-wrapper" class="hidden glass-card p-5 text-center space-y-4 rounded-3xl max-w-md mx-auto">
+          <div class="flex items-center justify-between pb-3 border-b border-white/10">
+            <span class="premium-pill text-xs">
+              <i data-lucide="camera" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>CAMERA PAIRING</span>
+            </span>
+            <span class="text-xs text-zinc-400 font-mono">Scan partner QR</span>
+          </div>
+          <div id="qr-reader" class="overflow-hidden rounded-2xl border border-cyan-400/40 max-w-sm mx-auto bg-black"></div>
+          <div class="flex gap-3 justify-center pt-2">
+            <button id="flip-camera-btn" class="px-4 py-2 rounded-xl text-xs font-mono uppercase bg-white/5 hover:bg-white/10 border border-white/10">
+              <span>Flip Lens</span>
+            </button>
+            <button id="close-scanner-btn" class="px-4 py-2 rounded-xl text-xs font-mono uppercase bg-rose-500/20 text-rose-300 border border-rose-500/40">
+              <span>Cancel</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Room Pairing & Code Connect Block -->
-      <div class="space-y-3">
-        <div class="relative flex items-center justify-center">
-          <div class="border-t-2 border-base-400 w-full"></div>
-          <span class="bg-[#121212] px-4 text-xs font-mono tracking-widest text-base-700 uppercase">Or Pair with Code</span>
-          <div class="border-t-2 border-base-400 w-full"></div>
-        </div>
+    </section>
 
-        <div class="flex gap-3">
-          <input type="text" id="manual-code-input" maxlength="6" placeholder="6-DIGIT CODE" class="flex-1 bg-black/80 border-2 border-base-900 px-4 py-3 text-center tracking-widest font-mono text-base uppercase text-white focus:outline-none focus:border-white placeholder:text-base-600" />
-          <button id="join-btn" class="cyber-btn-primary px-8 py-3 text-xl flex items-center gap-2 cursor-pointer font-grunge uppercase">
-            <span>Connect</span>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </button>
-          <button id="scan-qr-btn" title="Scan QR Code" class="cyber-btn-secondary p-3.5 border-2 border-base-900 transition cursor-pointer flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          </button>
-        </div>
-      </div>
+    <!-- SECTION 2: LIGHTWEIGHT 3D WEBRTC TOPOLOGY & TELEMETRY -->
+    <section class="space-y-4">
+      <div class="relative w-full h-[320px] md:h-[380px] glass-card rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+        <canvas id="directbeam-webgl-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
 
-      <!-- QR Scanner Viewport Popup (Grunge Heavy Card) -->
-      <div id="scanner-wrapper" class="hidden db-card-heavy p-5 text-center space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b-2 border-base-900">
-          <span class="db-pill">
-            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            <span>CAMERA PAIRING</span>
-          </span>
-          <span class="text-xs text-base-700 font-mono">Scan partner device QR</span>
-        </div>
-        <div id="qr-reader" class="overflow-hidden border-2 border-base-900 max-w-sm mx-auto bg-black"></div>
-        <div class="flex gap-3 justify-center pt-2">
-          <button id="flip-camera-btn" class="cyber-btn-secondary text-xs px-4 py-2 font-mono uppercase">
-            <span>Flip Lens</span>
-          </button>
-          <button id="close-scanner-btn" class="cyber-btn-danger text-xs px-4 py-2 font-mono uppercase">
-            <span>Cancel</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Developer / Founder Promo Banner -->
-      <div class="db-card p-6 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden text-center md:text-left">
-        <div class="relative shrink-0">
-          <img src="/profile.jpg" alt="Founder" width="80" height="80" class="w-20 h-20 border-2 border-base-900 object-cover shadow-2xl" onerror="this.style.display='none'" />
-          <span class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-black" title="Active Core Engineer"></span>
-        </div>
-        <div class="space-y-1.5 flex-1">
-          <div class="flex flex-wrap items-center gap-2 justify-center md:justify-start">
-            <span class="db-pill">FULL-STACK &amp; WEBRTC ENGINEER</span>
-            <span class="text-[11px] text-base-700 font-mono">Vishwanth Malla</span>
+        <div class="absolute top-4 inset-x-4 flex items-center justify-between pointer-events-none z-10">
+          <div class="premium-pill bg-black/80 border-cyan-400/40 text-cyan-300">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span>TOPOLOGY: 3D PARTICLE MESH</span>
           </div>
-          <h3 class="text-base font-bold text-white font-mono">Need a Custom Distributed Web or P2P System?</h3>
-          <p class="text-xs text-base-700 font-mono leading-relaxed max-w-xl">
-            Architecting real-time engines, zero-knowledge WebRTC data channels, and high-concurrency cloud-native edge runtimes.
-          </p>
+          <div class="premium-pill bg-black/80 border-emerald-400/40 text-emerald-300">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>DIRECT PEER-TO-PEER</span>
+          </div>
         </div>
-        <button id="open-founder-modal-btn" class="cyber-btn-secondary px-4 py-2.5 text-xs font-mono uppercase tracking-wider shrink-0 cursor-pointer">
-          <span>Contact Founder &amp; Details</span>
-          <svg class="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </button>
+
+        <div class="absolute bottom-4 left-4 pointer-events-none flex items-center gap-2 premium-pill bg-black/80 z-10">
+          <i data-lucide="globe" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>INTERACTIVE 3D PARTICLES • DRAG TO ROTATE &amp; TILT</span>
+        </div>
+      </div>
+
+      <!-- Live Telemetry Readout Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+          <div class="flex items-center justify-between text-zinc-400 text-xs font-mono">
+            <span class="uppercase tracking-wider">LIVE THROUGHPUT</span>
+            <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+          </div>
+          <div class="my-3">
+            <span class="text-4xl font-extrabold text-white font-mono" id="throughput-value">0.00</span>
+            <span class="text-sm text-zinc-400 font-mono ml-1">MB/s</span>
+          </div>
+          <div>
+            <div class="w-full bg-black/60 h-2 rounded-full overflow-hidden mb-2 border border-white/10">
+              <div class="bg-gradient-to-r from-cyan-400 to-sky-500 h-full w-0 transition-all duration-200" id="throughput-progress"></div>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-zinc-400 font-mono">
+              <span>Dynamic SCTP Window</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+          <div class="flex items-center justify-between text-zinc-400 text-xs font-mono">
+            <span class="uppercase tracking-wider">PROTOCOL SPEC</span>
+            <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="my-2">
+            <div class="text-lg font-bold text-white font-mono">WebRTC SCTP Channels</div>
+            <div class="text-xs text-zinc-400 font-mono mt-0.5">DTLS 1.3 Cryptography</div>
+          </div>
+          <div class="flex justify-between items-center text-[11px] font-mono text-zinc-300 pt-2 border-t border-white/10">
+            <span>Zero Server Storage</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+          <div class="flex items-center justify-between text-zinc-400 text-xs font-mono">
+            <span class="uppercase tracking-wider">PACKET INTEGRITY</span>
+            <i data-lucide="check-circle" class="w-4 h-4 text-cyan-400"></i>
+          </div>
+          <div class="my-2">
+            <div class="text-3xl font-bold text-white font-mono" id="telemetry-loss">0% <span class="text-xs text-zinc-400 font-normal">Loss</span></div>
+            <div class="text-xs text-zinc-400 font-mono">CRC32 Validated</div>
+          </div>
+          <div class="text-[11px] font-mono text-zinc-400 pt-2 border-t border-white/10 flex justify-between items-center">
+            <span>256 KB Memory Slices</span>
+            <span class="text-cyan-400 font-mono">Reliable &amp; Ordered</span>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- ======================================================================
-         VIEW 2: SENDER VIEW (Active File Sharing Session)
-         ====================================================================== -->
-    <section id="sender-view" class="hidden space-y-5">
+    <!-- SECTION 3: SENDER ACTIVE SESSION VIEW -->
+    <section id="sender-view" class="hidden space-y-6">
       <div class="flex items-center justify-between">
-        <div class="db-pill">
+        <div class="premium-pill bg-emerald-950/40 border-emerald-400/40 text-emerald-300">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
           <span>SESSION BROADCASTING</span>
         </div>
-        <span id="connected-count-pill" class="db-pill text-white">
-          0 devices connected
-        </span>
+        <span id="connected-count-pill" class="premium-pill text-white">0 devices connected</span>
       </div>
 
-      <!-- QR & Room Code Box -->
-      <div class="db-card p-6 text-center space-y-5">
+      <div class="glass-card p-6 md:p-8 rounded-3xl text-center space-y-6">
         <div class="flex flex-col sm:flex-row items-center justify-center gap-8">
-          <div id="qrcode-box" class="bg-white p-3 border-2 border-base-900 shadow-2xl"></div>
+          <div id="qrcode-box" class="bg-white p-3 rounded-2xl border-2 border-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.3)]"></div>
           <div class="text-center sm:text-left space-y-2">
-            <span class="text-xs font-mono uppercase tracking-widest text-base-700 block">Security Room Code</span>
-            <div id="display-code" class="text-4xl sm:text-5xl font-extrabold font-mono tracking-widest text-white">------</div>
-            <p class="text-xs text-base-700 pt-1 font-mono">Scan code or share direct pairing link.</p>
-            <button id="copy-link-btn" class="cyber-btn-secondary mt-2 text-xs font-mono font-medium px-4 py-2.5 flex items-center justify-center gap-2 transition w-full cursor-pointer uppercase">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span class="text-xs font-mono uppercase tracking-widest text-zinc-400 block">Security Room Code</span>
+            <div id="display-code" class="text-4xl sm:text-5xl font-extrabold font-mono tracking-widest text-cyan-300">------</div>
+            <p class="text-xs text-zinc-400 pt-1 font-mono">Scan code or share direct pairing link.</p>
+            <button id="copy-link-btn" class="btn-luxury-primary mt-2 text-xs font-mono font-medium px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition w-full cursor-pointer uppercase">
+              <i data-lucide="copy" class="w-4 h-4"></i>
               <span>Copy Direct Share Link</span>
             </button>
           </div>
         </div>
 
-        <!-- Social Share Row -->
-        <div class="pt-4 border-t-2 border-base-900">
-          <span class="text-[10px] uppercase font-mono tracking-wider text-base-700 block mb-2 text-left">Quick Social Share</span>
+        <div class="pt-4 border-t border-white/10">
+          <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-400 block mb-2 text-left">Quick Social Share</span>
           <div class="flex items-center gap-2">
-            <button id="share-wa" title="WhatsApp" class="cyber-btn-secondary flex-1 p-2.5 text-emerald-400 flex items-center justify-center cursor-pointer">
-              <i data-lucide="message-circle" class="w-4 h-4"></i>
-            </button>
-            <button id="share-fb" title="Facebook" class="cyber-btn-secondary flex-1 p-2.5 text-blue-400 flex items-center justify-center cursor-pointer">
-              <i data-lucide="share-2" class="w-4 h-4"></i>
-            </button>
-            <button id="share-x" title="X / Twitter" class="cyber-btn-secondary flex-1 p-2.5 text-white flex items-center justify-center cursor-pointer">
-              <i data-lucide="send" class="w-4 h-4"></i>
-            </button>
-            <button id="share-li" title="LinkedIn" class="cyber-btn-secondary flex-1 p-2.5 text-sky-400 flex items-center justify-center cursor-pointer">
-              <i data-lucide="link" class="w-4 h-4"></i>
-            </button>
-            <button id="share-gmail" title="Email" class="cyber-btn-secondary flex-1 p-2.5 text-rose-400 flex items-center justify-center cursor-pointer">
-              <i data-lucide="mail" class="w-4 h-4"></i>
-            </button>
-            <button id="share-native" title="Share Sheet" class="cyber-btn-secondary flex-1 p-2.5 text-white flex items-center justify-center cursor-pointer">
-              <i data-lucide="share" class="w-4 h-4"></i>
-            </button>
+            <button id="share-wa" title="WhatsApp" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 flex-1 text-emerald-400 flex items-center justify-center cursor-pointer"><i data-lucide="message-circle" class="w-4 h-4"></i></button>
+            <button id="share-fb" title="Facebook" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 flex-1 text-blue-400 flex items-center justify-center cursor-pointer"><i data-lucide="share-2" class="w-4 h-4"></i></button>
+            <button id="share-x" title="X / Twitter" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 flex-1 text-white flex items-center justify-center cursor-pointer"><i data-lucide="send" class="w-4 h-4"></i></button>
+            <button id="share-li" title="LinkedIn" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 flex-1 text-sky-400 flex items-center justify-center cursor-pointer"><i data-lucide="link" class="w-4 h-4"></i></button>
+            <button id="share-gmail" title="Email" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 flex-1 text-rose-400 flex items-center justify-center cursor-pointer"><i data-lucide="mail" class="w-4 h-4"></i></button>
+            <button id="share-native" title="Share Sheet" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 flex-1 text-white flex items-center justify-center cursor-pointer"><i data-lucide="share" class="w-4 h-4"></i></button>
           </div>
         </div>
       </div>
 
-      <!-- File Queue Accordion -->
-      <div class="db-card p-4 space-y-2">
+      <div class="glass-card p-5 rounded-2xl space-y-2">
         <div class="flex items-center justify-between cursor-pointer" id="toggle-manifest-btn">
           <div class="flex items-center gap-2">
-            <i data-lucide="layers" class="w-4 h-4 text-white"></i>
+            <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
             <span id="queue-summary-count" class="text-xs font-semibold text-white">0 files</span>
-            <span class="text-base-600">•</span>
-            <span id="queue-summary-size" class="text-xs text-base-700 font-mono">0 MB</span>
+            <span class="text-zinc-600">•</span>
+            <span id="queue-summary-size" class="text-xs text-zinc-400 font-mono">0 MB</span>
           </div>
-          <button class="text-xs text-white hover:underline font-mono cursor-pointer flex items-center gap-1 uppercase">
+          <button class="text-xs text-cyan-400 hover:underline font-mono cursor-pointer flex items-center gap-1 uppercase">
             <span>View files</span>
             <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
           </button>
         </div>
-        <ul id="sender-queue-list" class="mt-3 space-y-1.5 text-xs text-base-800 max-h-40 overflow-y-auto hidden"></ul>
+        <ul id="sender-queue-list" class="mt-3 space-y-1.5 text-xs text-zinc-300 max-h-40 overflow-y-auto hidden"></ul>
       </div>
 
-      <!-- Peer Activity Feed -->
-      <div class="db-card p-4">
+      <div class="glass-card p-5 rounded-2xl">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-[10px] uppercase font-mono tracking-wider text-base-700">Device Connection Activity</span>
-          <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+          <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Connection Activity</span>
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
         </div>
-        <div id="receivers-activity-feed" class="space-y-1.5 max-h-36 overflow-y-auto font-mono text-xs text-base-700">
-          <p class="italic">Waiting for peer handshakes...</p>
+        <div id="receivers-activity-feed" class="space-y-1.5 max-h-36 overflow-y-auto font-mono text-xs text-zinc-400">
+          <p class="italic">Waiting for peer WebRTC handshakes...</p>
         </div>
       </div>
 
-      <!-- Sender In-Session Quick Beam Composer Card -->
-      <div class="db-card p-5 space-y-3" id="sender-quick-beam-panel">
+      <div class="glass-card p-5 rounded-2xl space-y-3" id="sender-quick-beam-panel">
         <div class="flex items-center justify-between cursor-pointer" id="toggle-sender-text-btn">
           <div class="flex items-center gap-2">
             <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
             <span class="text-xs font-bold text-white font-mono uppercase tracking-wide">Quick Beam Note to Connected Devices</span>
           </div>
-          <button class="text-xs text-white hover:underline font-mono cursor-pointer flex items-center gap-1 uppercase" type="button">
+          <button class="text-xs text-cyan-400 hover:underline font-mono cursor-pointer flex items-center gap-1 uppercase" type="button">
             <span id="sender-text-toggle-label">Compose</span>
             <i data-lucide="chevron-down" id="sender-text-toggle-icon" class="w-3.5 h-3.5"></i>
           </button>
         </div>
         <div id="sender-text-composer" class="space-y-3 pt-2">
-          <textarea id="sender-quick-beam-input" rows="3" placeholder="Beam an instant link, password, or message to connected peer..." class="w-full bg-black/85 border-2 border-base-900 focus:border-white p-3 font-mono text-xs text-white focus:outline-none resize-none placeholder:text-base-600 leading-relaxed"></textarea>
+          <textarea id="sender-quick-beam-input" rows="3" placeholder="Beam an instant link or password to connected peer..." class="w-full bg-black/80 border border-white/10 focus:border-cyan-400 p-3 rounded-xl font-mono text-xs text-white focus:outline-none resize-none placeholder:text-zinc-600"></textarea>
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <label class="flex items-center gap-2 cursor-pointer select-none text-xs font-mono text-base-700 hover:text-white">
+            <label class="flex items-center gap-2 cursor-pointer select-none text-xs font-mono text-zinc-400 hover:text-white">
               <input type="checkbox" id="sender-self-destruct-toggle" class="accent-amber-400 cursor-pointer" />
               <span>Self-Destruct (30s)</span>
             </label>
-            <button id="sender-btn-send-text" type="button" class="cyber-btn-primary px-5 py-2 text-xs font-mono uppercase font-bold flex items-center gap-2 cursor-pointer">
+            <button id="sender-btn-send-text" type="button" class="btn-luxury-primary px-5 py-2 rounded-xl text-xs font-mono uppercase font-bold flex items-center gap-2 cursor-pointer">
               <i data-lucide="send" class="w-3.5 h-3.5"></i>
               <span>Beam to Peers</span>
             </button>
@@ -659,48 +872,43 @@
         </div>
       </div>
 
-      <button id="stop-sharing-btn" class="cyber-btn-danger w-full py-3.5 text-xs font-mono font-bold flex items-center justify-center gap-2 cursor-pointer uppercase">
+      <button id="stop-sharing-btn" class="w-full py-3.5 rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-2 cursor-pointer uppercase bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30">
         <i data-lucide="power" class="w-4 h-4"></i>
         <span>Stop Session &amp; Close Room</span>
       </button>
     </section>
 
-    <!-- ======================================================================
-         VIEW 3: RECEIVER VIEW (Active Incoming Stream)
-         ====================================================================== -->
-    <section id="receiver-view" class="hidden space-y-5">
-      <div class="text-center space-y-1.5">
-        <div class="db-pill">
-          <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-          <span>INCOMING DATA BATCH</span>
+    <!-- SECTION 4: RECEIVER ACTIVE VIEW -->
+    <section id="receiver-view" class="hidden space-y-6">
+      <div class="text-center space-y-2">
+        <div class="premium-pill bg-cyan-950/40 border-cyan-400/40 text-cyan-300">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span>INCOMING DATA CHANNEL STREAM</span>
         </div>
-        <h2 class="text-3xl font-grunge uppercase text-white">Receiving Stream</h2>
-        <p id="receiver-batch-subtitle" class="text-xs text-base-700 font-mono">Connecting direct mesh data channel...</p>
+        <h2 class="text-3xl font-display font-bold text-white">Receiving Stream</h2>
+        <p id="receiver-batch-subtitle" class="text-xs text-zinc-400 font-mono">Connecting direct WebRTC data pipeline...</p>
       </div>
 
-      <!-- Main Progress Card -->
-      <div id="receiver-progress-card" class="db-card p-6 space-y-4">
+      <div id="receiver-progress-card" class="glass-card p-6 md:p-8 rounded-3xl space-y-5">
         <div class="flex items-baseline justify-between">
-          <span id="receiver-percentage" class="text-4xl sm:text-5xl font-black font-mono text-white">0.0%</span>
+          <span id="receiver-percentage" class="text-5xl font-black font-mono text-white">0.0%</span>
           <div class="text-right">
-            <span id="receiver-speed-text" class="text-xs font-mono text-white font-bold">0.00 MB/s</span>
-            <span id="receiver-eta-text" class="text-[10px] text-base-700 block font-mono">Calculating...</span>
+            <span id="receiver-speed-text" class="text-xs font-mono text-cyan-400 font-bold">0.00 MB/s</span>
+            <span id="receiver-eta-text" class="text-[10px] text-zinc-400 block font-mono">Calculating...</span>
           </div>
         </div>
-
-        <div class="w-full bg-base-300 h-3 border border-base-400 overflow-hidden">
-          <div id="receiver-progress-bar" class="bg-white h-full w-0 transition-all duration-150"></div>
+        <div class="w-full bg-black/80 h-3 rounded-full overflow-hidden border border-white/10">
+          <div id="receiver-progress-bar" class="bg-gradient-to-r from-cyan-400 to-emerald-400 h-full w-0 transition-all duration-150"></div>
         </div>
       </div>
 
-      <!-- Quick Beam Incoming Text Stream Container -->
       <div id="incoming-text-section" class="hidden space-y-3">
-        <div class="flex items-center justify-between pb-1 border-b border-base-400">
+        <div class="flex items-center justify-between pb-1 border-b border-white/10">
           <span class="text-xs font-mono uppercase tracking-wider text-white font-bold flex items-center gap-2">
             <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
             <span>Quick Beam — Beamed Notes &amp; Secrets</span>
           </span>
-          <span id="incoming-text-badge" class="db-pill text-[10px] text-amber-300 border-amber-400/30">
+          <span id="incoming-text-badge" class="premium-pill text-[10px] text-amber-300 border-amber-400/30">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
             <span id="incoming-text-count">0 Notes</span>
           </span>
@@ -708,478 +916,467 @@
         <div id="incoming-text-list" class="space-y-4"></div>
       </div>
 
-      <!-- Manifest Item List -->
       <div id="receiver-manifest-section" class="space-y-2">
-        <span class="text-[10px] uppercase font-mono tracking-wider text-base-700">Incoming Files Manifest</span>
+        <span class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Incoming Files Manifest</span>
         <ul id="receiver-manifest-list" class="space-y-2 max-h-60 overflow-y-auto"></ul>
       </div>
 
-      <!-- Batch Complete Card -->
-      <div id="receiver-complete-card" class="hidden db-card p-6 text-center space-y-3 border-emerald-500 bg-emerald-950/30">
-        <div class="w-12 h-12 bg-emerald-500 text-black mx-auto flex items-center justify-center font-bold">
+      <div id="receiver-complete-card" class="hidden glass-card p-6 rounded-2xl text-center space-y-3 border-emerald-500/50 bg-emerald-950/20">
+        <div class="w-12 h-12 bg-emerald-500 text-black mx-auto rounded-full flex items-center justify-center font-bold">
           <i data-lucide="check" class="w-6 h-6"></i>
         </div>
         <p class="text-base font-bold text-white font-mono uppercase">Batch Transfer Complete!</p>
-        <button id="download-zip-btn" class="w-full bg-white hover:bg-base-200 text-black font-bold py-3.5 text-xs font-mono uppercase transition flex items-center justify-center gap-2 cursor-pointer shadow-lg">
+        <button id="download-zip-btn" class="w-full btn-luxury-primary py-3.5 rounded-xl text-xs font-mono uppercase transition flex items-center justify-center gap-2 cursor-pointer shadow-lg">
           <i data-lucide="archive" class="w-4 h-4"></i>
           <span>Download All as .ZIP Archive</span>
         </button>
       </div>
 
-      <button id="cancel-receiver-btn" class="cyber-btn-secondary w-full py-3.5 text-xs font-mono cursor-pointer flex items-center justify-center gap-2 uppercase">
+      <button id="cancel-receiver-btn" class="w-full py-3.5 rounded-xl text-xs font-mono cursor-pointer flex items-center justify-center gap-2 uppercase bg-white/5 hover:bg-white/10 border border-white/10">
         <i data-lucide="log-out" class="w-4 h-4"></i>
         <span>Exit Room</span>
       </button>
     </section>
 
-    <!-- System Architecture Grid -->
-    <section class="pt-2 space-y-4">
-      <div class="flex items-center justify-between">
-        <div class="db-pill">
-          <img src="/assets/symbolWhite.svg" alt="Symbol" width="14" height="12" class="w-3.5 h-3" />
-          <span>SYSTEM ARCHITECTURE</span>
+    <!-- SECTION 5: ASYMMETRIC BENTO GRID (LINEAR / APPLE STYLE) -->
+    <section class="space-y-6 pt-6">
+      <div class="text-center space-y-2 max-w-2xl mx-auto">
+        <div class="premium-pill">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>HARDWARE-GRADE ARCHITECTURE</span>
         </div>
-        <span class="text-[11px] font-mono text-base-700 uppercase">Zero Cloud Intermediary</span>
+        <h3 class="text-3xl font-display font-extrabold text-white">Engineered for raw throughput &amp; total privacy</h3>
+        <p class="text-xs sm:text-sm text-zinc-400">
+          Eliminate the cloud bottleneck. Direct Beam routes encrypted binary chunks straight between physical devices.
+        </p>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="db-card p-5 space-y-2">
-          <div class="flex justify-between items-center">
-            <div class="w-8 h-8 border-2 border-base-900 bg-base-900 flex items-center justify-center text-white">
-              <i data-lucide="radio" class="w-4 h-4"></i>
-            </div>
-            <img src="/assets/barcode.svg" width="35" height="14" class="h-3.5 opacity-60" alt="Barcode" />
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <!-- Card 1: Large Featured -->
+        <div class="md:col-span-2 glass-card gpu-hover-card p-8 rounded-3xl space-y-4 relative overflow-hidden group">
+          <div class="w-12 h-12 rounded-2xl bg-cyan-400/10 border border-cyan-400/30 flex items-center justify-center text-cyan-400 shadow-sm">
+            <i data-lucide="radio" class="w-6 h-6"></i>
           </div>
-          <h4 class="text-lg font-grunge text-white uppercase tracking-wide">1. Direct Mesh WebRTC</h4>
-          <p class="text-xs text-base-700 leading-relaxed font-mono">
-            Data packets stream over SCTP channels between peers. Signals negotiate via Cloudflare Workers without touching intermediate disk storage.
+          <div class="space-y-2">
+            <div class="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">01 // DIRECT SCTP MESH</div>
+            <h4 class="text-2xl font-display font-bold text-white">Browser-to-Browser WebRTC DataChannels</h4>
+            <p class="text-xs sm:text-sm text-zinc-300 font-sans leading-relaxed">
+              Direct point-to-point connections bypass servers entirely. Packets stream through low-latency UDP with selective SCTP acknowledgment, maximizing gigabit broadband throughput without third-party cloud ingestion limits.
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-2 text-[11px] font-mono">
+            <span class="premium-pill text-[10px]">Zero Cloud Retention</span>
+            <span class="premium-pill text-[10px]">Sub-10ms Latency</span>
+            <span class="premium-pill text-[10px]">Direct RAM-to-RAM</span>
+          </div>
+        </div>
+
+        <!-- Card 2: DTLS 1.3 -->
+        <div class="glass-card gpu-hover-card p-8 rounded-3xl space-y-4 relative overflow-hidden">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-400/10 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shadow-sm">
+            <i data-lucide="shield-check" class="w-6 h-6"></i>
+          </div>
+          <div class="space-y-2">
+            <div class="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider">02 // CRYPTOGRAPHY</div>
+            <h4 class="text-xl font-display font-bold text-white">DTLS 1.3 Hardware Shield</h4>
+            <p class="text-xs text-zinc-400 font-sans leading-relaxed">
+              Every chunk is cryptographically secured with Datagram Transport Layer Security. Ephemeral session keys are instantly destroyed on disconnect.
+            </p>
+          </div>
+        </div>
+
+        <!-- Card 3: STUN/TURN Traversal -->
+        <div class="glass-card gpu-hover-card p-8 rounded-3xl space-y-4 relative overflow-hidden">
+          <div class="w-12 h-12 rounded-2xl bg-violet-400/10 border border-violet-400/30 flex items-center justify-center text-violet-400 shadow-sm">
+            <i data-lucide="globe" class="w-6 h-6"></i>
+          </div>
+          <div class="space-y-2">
+            <div class="text-xs font-mono text-violet-400 font-bold uppercase tracking-wider">03 // TRAVERSAL</div>
+            <h4 class="text-xl font-display font-bold text-white">Global STUN &amp; TURN</h4>
+            <p class="text-xs text-zinc-400 font-sans leading-relaxed">
+              Sub-second ICE handshakes punch through symmetric NATs, cellular 5G networks, and restrictive enterprise Wi-Fi firewalls.
+            </p>
+          </div>
+        </div>
+
+        <!-- Card 4: Direct Disk I/O -->
+        <div class="md:col-span-2 glass-card gpu-hover-card p-8 rounded-3xl space-y-4 relative overflow-hidden group">
+          <div class="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400 shadow-sm">
+            <i data-lucide="hard-drive" class="w-6 h-6"></i>
+          </div>
+          <div class="space-y-2">
+            <div class="text-xs font-mono text-amber-400 font-bold uppercase tracking-wider">04 // DISK STREAMING</div>
+            <h4 class="text-2xl font-display font-bold text-white">File System Access API &amp; 256KB Memory Slicing</h4>
+            <p class="text-xs sm:text-sm text-zinc-300 font-sans leading-relaxed">
+              Direct-to-disk native stream writers bypass browser RAM ceiling limits completely, allowing reliable multi-gigabyte 4K media and ISO batch transfers with smooth chunk backpressure handling.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: CLEAN MINIMALIST PRICING GRID -->
+    <section id="pro-pricing" class="space-y-6 pt-4">
+      <div class="text-center space-y-2 max-w-2xl mx-auto">
+        <div class="premium-pill border-amber-500/30 text-amber-300">
+          <i data-lucide="tag" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>TRANSPARENT VALUE</span>
+        </div>
+        <h3 class="text-3xl font-display font-extrabold text-white">One Simple Lifetime License</h3>
+        <p class="text-xs sm:text-sm text-zinc-400">
+          No recurring subscriptions. Pay once, own permanent unmetered access forever.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <!-- Community Pass -->
+        <div class="glass-card gpu-hover-card p-8 rounded-3xl flex flex-col justify-between space-y-6 relative overflow-hidden">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="premium-pill text-xs">COMMUNITY</span>
+              <span class="text-xs font-mono text-zinc-400">Free Forever</span>
+            </div>
+            <div>
+              <div class="text-4xl font-display font-extrabold text-white">₹0</div>
+              <p class="text-xs text-zinc-400 font-mono mt-1">No credit card or setup required</p>
+            </div>
+            <p class="text-xs text-zinc-300 leading-relaxed font-sans">
+              Ideal for quick file beams, documents, encrypted text notes, and everyday sharing.
+            </p>
+
+            <ul class="space-y-2.5 text-xs font-mono text-zinc-300 pt-3 border-t border-white/10">
+              <li class="flex items-center gap-2">✓ 3 Free Transfers per account</li>
+              <li class="flex items-center gap-2">✓ Unlimited file size</li>
+              <li class="flex items-center gap-2">✓ Hardware DTLS 1.3 encryption</li>
+              <li class="flex items-center gap-2">✓ Zero cloud storage &amp; zero logs</li>
+            </ul>
+          </div>
+
+          <button onclick="document.getElementById('file-input').click()" class="w-full py-3 rounded-xl text-xs font-mono uppercase font-bold cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 text-white transition">
+            Start Free Transfer
+          </button>
+        </div>
+
+        <!-- Direct Beam Pro Titanium Pass -->
+        <div class="glass-card gpu-hover-card p-8 rounded-3xl flex flex-col justify-between space-y-6 border-amber-500/40 bg-gradient-to-b from-amber-950/20 via-obsidian-900 to-obsidian-950 shadow-[0_0_40px_rgba(245,158,11,0.15)] relative overflow-hidden">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="premium-pill bg-amber-950/60 text-amber-300 border-amber-400/40 text-xs font-bold">
+                DIRECT BEAM PRO
+              </span>
+              <span class="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider bg-amber-400/10 px-2.5 py-1 rounded-full border border-amber-400/30">
+                ⭐ LIFETIME PASS
+              </span>
+            </div>
+            <div>
+              <div class="flex items-baseline gap-2">
+                <span class="text-4xl font-display font-extrabold text-amber-400">₹300</span>
+                <span class="text-xs text-zinc-400 font-mono">/ ~$3.60 USD (ONE-TIME)</span>
+              </div>
+              <p class="text-xs text-amber-300/90 font-mono mt-1">Pay once, stream unlimited forever</p>
+            </div>
+            <p class="text-xs text-zinc-200 leading-relaxed font-sans">
+              Built for power creators, video editors, and systems engineers needing unrestricted high-speed TURN relays.
+            </p>
+
+            <ul class="space-y-2.5 text-xs font-mono text-zinc-100 pt-3 border-t border-amber-500/20">
+              <li class="flex items-center gap-2 text-amber-300">✓ <strong>Unlimited transfers</strong> — no quota or daily caps</li>
+              <li class="flex items-center gap-2 text-amber-300">✓ Dedicated high-speed TURN relay fallbacks</li>
+              <li class="flex items-center gap-2 text-amber-300">✓ Zero network throttling on large files</li>
+              <li class="flex items-center gap-2 text-amber-300">✓ Lifetime ownership (never recurring)</li>
+            </ul>
+          </div>
+
+          <div class="space-y-2">
+            <a 
+              href="#pro-pricing" 
+              onclick="window.startProCheckout && window.startProCheckout(event)"
+              class="btn-gold-pro w-full py-3.5 rounded-xl text-xs font-mono uppercase font-extrabold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+            >
+              <i data-lucide="zap" class="w-4 h-4 fill-current"></i>
+              <span>⚡ Get Pro Lifetime — ₹300</span>
+            </a>
+            <button 
+              id="footer-enter-key-btn" 
+              type="button" 
+              onclick="window.openProLicense && window.openProLicense()" 
+              class="w-full text-center text-xs font-mono text-zinc-400 hover:text-amber-300 transition underline underline-offset-4 cursor-pointer py-1"
+            >
+              Already have a license? Enter Key
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 7: TECHNICAL ARCHITECTURE & FREQUENTLY ASKED QUESTIONS -->
+    <section id="faq-section" class="space-y-8 pt-4">
+      <div class="text-center space-y-2 max-w-2xl mx-auto">
+        <div class="premium-pill border-cyan-500/30 text-cyan-300">
+          <i data-lucide="help-circle" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>SYSTEM SPECIFICATIONS</span>
+        </div>
+        <h3 class="text-3xl font-display font-extrabold text-white">Frequently Asked Questions &amp; Architecture</h3>
+        <p class="text-xs sm:text-sm text-zinc-400">
+          Everything you need to know about peer-to-peer WebRTC streaming, encryption standards, and zero-cloud architecture.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl mx-auto">
+        <div class="glass-card p-6 rounded-2xl space-y-2">
+          <h4 class="text-base font-display font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            How does Direct Beam transfer files without cloud storage?
+          </h4>
+          <p class="text-xs text-zinc-300 leading-relaxed font-sans">
+            Direct Beam creates a direct browser-to-browser WebRTC DataChannel connection. When you select a file or folder, your browser slices data into encrypted 256 KB memory packets and streams them directly to the receiver device via SCTP protocols. Your files are written straight to the recipient's disk and never touch any intermediate cloud servers, databases, or third-party drives.
           </p>
         </div>
 
-        <div class="db-card p-5 space-y-2">
-          <div class="flex justify-between items-center">
-            <div class="w-8 h-8 border-2 border-base-900 bg-base-900 flex items-center justify-center text-white">
-              <i data-lucide="lock" class="w-4 h-4"></i>
-            </div>
-            <img src="/assets/symbolWhite.svg" width="14" height="12" class="h-3 opacity-60" alt="Symbol" />
-          </div>
-          <h4 class="text-lg font-grunge text-white uppercase tracking-wide">2. DTLS 1.3 Encryption</h4>
-          <p class="text-xs text-base-700 leading-relaxed font-mono">
-            Every byte transferred is cryptographically shielded with Datagram Transport Layer Security. Session keys are strictly ephemeral.
+        <div class="glass-card p-6 rounded-2xl space-y-2">
+          <h4 class="text-base font-display font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            Are there limits on batch transfers or maximum file size?
+          </h4>
+          <p class="text-xs text-zinc-300 leading-relaxed font-sans">
+            There are zero file size limitations. Unlike traditional cloud drives that cap single-file uploads at 2GB or 5GB, Direct Beam streams data using native File System Access and chunk backpressure mechanisms. You can easily beam 50GB 4K videos, massive disk images, or batch folders containing thousands of files with full CRC32 data integrity validation.
           </p>
         </div>
 
-        <div class="db-card p-5 space-y-2">
-          <div class="flex justify-between items-center">
-            <div class="w-8 h-8 border-2 border-base-900 bg-base-900 flex items-center justify-center text-white">
-              <i data-lucide="cpu" class="w-4 h-4"></i>
-            </div>
-            <img src="/assets/barcode.svg" width="35" height="14" class="h-3.5 opacity-60" alt="Barcode" />
-          </div>
-          <h4 class="text-lg font-grunge text-white uppercase tracking-wide">3. Adaptive Backpressure</h4>
-          <p class="text-xs text-base-700 leading-relaxed font-mono">
-            Smart 256 KB memory slicing throttles buffer queues dynamically, preventing browser freezing on gigabyte-scale transfers.
+        <div class="glass-card p-6 rounded-2xl space-y-2">
+          <h4 class="text-base font-display font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            How does DTLS 1.3 and WebRTC DataChannel security work?
+          </h4>
+          <p class="text-xs text-zinc-300 leading-relaxed font-sans">
+            Direct Beam connections enforce DTLS 1.3 (Datagram Transport Layer Security) with peer-negotiated ephemeral keys. All traffic across the WebRTC stream is hardware-accelerated and end-to-end encrypted. Even if network traffic is intercepted on public Wi-Fi or cellular networks, the payload cannot be decrypted without the private ephemeral keys generated on your device.
           </p>
         </div>
 
-        <div class="db-card p-5 space-y-2">
-          <div class="flex justify-between items-center">
-            <div class="w-8 h-8 border-2 border-base-900 bg-base-900 flex items-center justify-center text-white">
-              <i data-lucide="hard-drive" class="w-4 h-4"></i>
-            </div>
-            <img src="/assets/symbolWhite.svg" width="14" height="12" class="h-3 opacity-60" alt="Symbol" />
-          </div>
-          <h4 class="text-lg font-grunge text-white uppercase tracking-wide">4. Direct-to-Disk Stream</h4>
-          <p class="text-xs text-base-700 leading-relaxed font-mono">
-            Supports File System Access API writing incoming stream packets directly to disk, bypassing browser RAM ceiling limits.
+        <div class="glass-card p-6 rounded-2xl space-y-2">
+          <h4 class="text-base font-display font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            How does Direct Beam punch through NATs and corporate firewalls?
+          </h4>
+          <p class="text-xs text-zinc-300 leading-relaxed font-sans">
+            Direct Beam integrates automated STUN and dedicated TURN traversal relays powered by Cloudflare Workers Durable Objects. If both peers are on home or office networks, ICE candidates negotiate a direct zero-latency connection. If a symmetric NAT or strict enterprise firewall blocks direct UDP packets, connection automatically falls back to encrypted TURN relays.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- Unified Footer with Founder Info & Support Email -->
-    <footer class="border-t-2 border-base-900 pt-8 space-y-6">
-      <div class="flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-base-700 font-mono">
+    <!-- SECTION 8: ARCHITECT PROFILE BANNER -->
+    <section class="glass-card p-6 md:p-8 rounded-3xl flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
+      <div class="relative shrink-0">
+        <img src="/profile.webp" alt="Founder" width="76" height="76" loading="lazy" class="w-18 h-18 rounded-2xl border-2 border-cyan-400/50 object-cover shadow-xl" onerror="this.src='/profile.jpg'" />
+        <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-black" title="Active Core Engineer"></span>
+      </div>
+      <div class="space-y-1.5 flex-1 text-center md:text-left">
+        <div class="flex flex-wrap items-center gap-2 justify-center md:justify-start">
+          <span class="premium-pill text-[10px]">CORE ARCHITECT</span>
+          <span class="text-xs font-mono text-cyan-300 font-semibold">Vishwanth Malla</span>
+        </div>
+        <h3 class="text-base font-display font-bold text-white tracking-wide">Need a Custom Real-Time Distributed Web System?</h3>
+        <p class="text-xs text-zinc-400 font-sans leading-relaxed max-w-xl">
+          Architecting distributed web systems, zero-knowledge WebRTC data channels, and cloud-native edge runtimes on Cloudflare Workers &amp; Durable Objects.
+        </p>
+      </div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <a href="/about" class="btn-luxury-primary px-4 py-2 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer">
+          <span>Portfolio</span>
+        </a>
+        <button id="open-founder-modal-btn" class="px-4 py-2 rounded-xl text-xs font-mono uppercase tracking-wider cursor-pointer bg-white/5 hover:bg-white/10 border border-white/10 text-white">
+          <span>Contact</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-white/10 pt-8 pb-4 space-y-6">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-zinc-400 font-mono">
         <div class="flex items-center gap-3">
-          <img src="/profile.jpg" alt="Founder" width="36" height="36" class="w-9 h-9 object-cover border-2 border-base-900 shadow-sm" onerror="this.style.display='none'" />
+          <img src="/profile.webp" alt="Founder" width="34" height="34" loading="lazy" class="w-8 h-8 rounded-xl object-cover border border-cyan-400/30" onerror="this.src='/profile.jpg'" />
           <div>
             <span class="text-white font-bold">DirectBeam Core Infrastructure</span>
-            <span class="block text-base-600">Architected by <button id="open-founder-footer-btn" class="text-white hover:underline cursor-pointer">Vishwanth Malla</button></span>
+            <span class="block text-zinc-400">Architected by <a href="/about" class="text-cyan-300 hover:underline">Vishwanth Malla</a> (<button id="open-founder-footer-btn" class="hover:text-cyan-400 transition cursor-pointer underline">Contact</button>)</span>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-5">
-          <button id="footer-enter-key-btn" type="button" onclick="window.openProLicense && window.openProLicense()" class="text-xs font-mono text-base-700 hover:text-amber-300 transition cursor-pointer underline underline-offset-4">
-            Already have a license? Enter Key
+          <a href="https://github.com/vishwanthmalla0324-tech" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-400 transition">GitHub</a>
+          <a href="https://www.linkedin.com/in/vishwanth-malla-7b7a76359" target="_blank" rel="noopener noreferrer" class="hover:text-cyan-400 transition">LinkedIn</a>
+          <button onclick="window.openFounderModal && window.openFounderModal()" class="text-white hover:underline cursor-pointer flex items-center gap-1.5">
+            <i data-lucide="mail" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Contact Support</span>
           </button>
-          <a href="https://github.com/vishwanthmalla0324-tech" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">GitHub</a>
-          <a href="https://www.linkedin.com/in/vishwanth-malla-7b7a76359" target="_blank" rel="noopener noreferrer" class="hover:text-white transition">LinkedIn</a>
-          <div class="flex items-center gap-2">
-            <span>Support:</span>
-            <a href="#" onclick="window.location.href='mai'+'lto:'+'support'+'@'+'directbeam.space';return false;" class="text-white hover:underline">support&#64;directbeam.space</a>
-            <button id="copy-email-dock-btn" title="Copy Support Email" class="cyber-btn-secondary px-2 py-0.5 text-[10px] uppercase cursor-pointer">
-              Copy
-            </button>
-          </div>
         </div>
       </div>
 
-      <!-- Bottom Decorative Barcode & Direct Beam Copyright -->
-      <div class="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-base-400/40 text-[11px] text-base-600 font-mono gap-2">
+      <div class="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-white/5 text-[11px] text-zinc-400 font-mono gap-2">
         <div class="flex items-center gap-2">
-          <img src="/assets/direct_beam_logo.jpg" alt="DirectBeam Logo" width="16" height="16" class="w-4 h-4 rounded-sm object-cover opacity-90" />
-          <span>Direct Beam © 2026 All Rights Reserved</span>
+          <img src="/assets/direct_beam_logo.webp" alt="DirectBeam Logo" width="16" height="16" loading="lazy" class="w-4 h-4 rounded-sm object-cover opacity-80" />
+          <span>Direct Beam © 2026. All Rights Reserved.</span>
         </div>
-        <img src="/assets/barcode.svg" alt="Barcode Stamp" width="60" height="24" class="grunge-stamp-barcode" />
+        <span class="text-[10px] text-zinc-400 font-mono tracking-widest uppercase">DTLS 1.3 ENCRYPTED • ZERO CLOUD STORAGE</span>
       </div>
     </footer>
 
-  </div>
+  </main>
 
-  <!-- ======================================================================
-       MODAL 1: FOUNDER MODAL (Full Grunge Glass Surface)
-       ====================================================================== -->
+  <!-- ALL 6 MODALS -->
+  <!-- MODAL 1: FOUNDER MODAL -->
   <div id="founder-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="founder-modal-backdrop" class="fixed inset-0 bg-black/85 backdrop-blur-xl cursor-pointer"></div>
-    <div id="founder-modal-content" class="relative db-card-heavy max-w-md w-full p-6 text-left space-y-4 shadow-2xl transition-all border-2 border-base-900">
+    <div id="founder-modal-content" class="relative glass-card max-w-md w-full p-6 rounded-3xl text-left space-y-4 shadow-2xl border border-cyan-500/40">
       <div class="flex justify-between items-center">
-        <span class="db-pill">FOUNDER &amp; LEAD ARCHITECT</span>
-        <button id="close-founder-modal-btn" class="cyber-btn-secondary p-1.5 text-base-700 hover:text-white cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+        <span class="premium-pill text-xs">FOUNDER &amp; ARCHITECT</span>
+        <button id="close-founder-modal-btn" class="p-1.5 rounded-lg text-zinc-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
 
       <div class="flex flex-col items-center text-center space-y-3 pt-2">
-        <div class="relative">
-          <img src="/profile.jpg" alt="Support / Founder" width="128" height="128" class="w-32 h-32 object-cover shadow-2xl border-2 border-base-900" />
-          <span class="absolute bottom-1 right-1 w-4 h-4 bg-emerald-400 border-2 border-black" title="Online Core Engineer"></span>
-        </div>
+        <img src="/profile.webp" alt="Vishwanth Malla" width="96" height="96" loading="lazy" class="w-24 h-24 rounded-2xl object-cover shadow-2xl border-2 border-cyan-400/50" onerror="this.src='/profile.jpg'" />
         <div>
-          <h3 class="text-xl font-bold text-white font-mono uppercase">Vishwanth Malla</h3>
-          <p class="text-xs text-base-700 font-mono mt-0.5">Full-Stack &amp; WebRTC Systems Architect</p>
+          <h3 class="text-xl font-display font-bold text-white">Vishwanth Malla</h3>
+          <p class="text-xs text-zinc-400 font-mono mt-0.5">Full-Stack &amp; WebRTC Systems Architect</p>
         </div>
       </div>
-
-      <p class="text-xs text-base-800 leading-relaxed text-center font-mono">
-        Architect of high-throughput distributed web systems, zero-knowledge WebRTC mesh data channels, and cloud-native applications.
-      </p>
 
       <div class="flex items-center gap-3 pt-1">
-        <a href="https://github.com/vishwanthmalla0324-tech" target="_blank" rel="noopener noreferrer" class="cyber-btn-secondary flex-1 py-2.5 text-xs flex items-center justify-center gap-2 font-mono uppercase">
-          <i data-lucide="github" class="w-4 h-4"></i>
-          <span>GitHub</span>
-        </a>
-        <a href="https://www.linkedin.com/in/vishwanth-malla-7b7a76359" target="_blank" rel="noopener noreferrer" class="cyber-btn-secondary flex-1 py-2.5 text-xs flex items-center justify-center gap-2 font-mono uppercase">
-          <i data-lucide="linkedin" class="w-4 h-4"></i>
-          <span>LinkedIn</span>
-        </a>
+        <a href="https://github.com/vishwanthmalla0324-tech" target="_blank" rel="noopener noreferrer" class="flex-1 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 font-mono uppercase bg-white/5 hover:bg-white/10 border border-white/10 text-white">GitHub</a>
+        <a href="https://www.linkedin.com/in/vishwanth-malla-7b7a76359" target="_blank" rel="noopener noreferrer" class="flex-1 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 font-mono uppercase bg-white/5 hover:bg-white/10 border border-white/10 text-white">LinkedIn</a>
       </div>
 
-      <div class="pt-4 border-t-2 border-base-900 space-y-2">
-        <span class="text-[10px] font-mono uppercase tracking-wider text-base-700 block">Direct Support &amp; Inquiries</span>
-        <div class="flex items-center justify-between bg-black/80 p-2.5 border border-base-900 text-xs font-mono">
-          <a href="#" onclick="window.location.href='mai'+'lto:'+'support'+'@'+'directbeam.space';return false;" class="text-base-800 hover:text-white truncate transition">support&#64;directbeam.space</a>
-          <button id="modal-copy-email-btn" class="cyber-btn-secondary px-3 py-1 text-white text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer uppercase">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-            <span>Copy</span>
-          </button>
-        </div>
+      <a href="/about" class="btn-luxury-primary w-full py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 font-mono uppercase tracking-wider">
+        <span>Explore Founder Portfolio &rarr;</span>
+      </a>
+
+      <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+        <span class="text-zinc-400">Direct Support:</span>
+        <button id="modal-copy-email-btn" onclick="navigator.clipboard && navigator.clipboard.writeText('support@directbeam.space').then(() => showToast('Email copied to clipboard!'))" class="text-cyan-300 hover:underline cursor-pointer">support@directbeam.space</button>
       </div>
     </div>
   </div>
 
-  <!-- ======================================================================
-       MODAL 2: HOW IT WORKS / FAQ MODAL
-       ====================================================================== -->
+  <!-- MODAL 2: FAQ -->
   <div id="faq-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="faq-modal-backdrop" class="fixed inset-0 bg-black/85 backdrop-blur-xl cursor-pointer"></div>
-    <div class="relative db-card-heavy max-w-lg w-full p-6 text-left space-y-4 shadow-2xl border-2 border-base-900">
-      <div class="flex items-center justify-between pb-3 border-b-2 border-base-900">
-        <div class="flex items-center gap-2">
-          <i data-lucide="help-circle" class="w-5 h-5 text-white"></i>
-          <h3 class="text-sm font-bold text-white font-mono uppercase">How Direct Beam Works</h3>
-        </div>
-        <button id="close-faq-modal-btn" class="cyber-btn-secondary p-1.5 text-base-700 hover:text-white cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+    <div class="relative glass-card max-w-lg w-full p-6 rounded-3xl text-left space-y-4 shadow-2xl border border-cyan-500/40">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <h3 class="text-sm font-display font-bold text-white uppercase font-mono">How Direct Beam Works</h3>
+        <button id="close-faq-modal-btn" class="p-1.5 rounded-lg text-zinc-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-
-      <div class="space-y-3.5 text-xs text-base-800 leading-relaxed max-h-96 overflow-y-auto pr-1">
-        <div class="db-card p-4 space-y-1">
-          <h4 class="font-bold text-white flex items-center gap-2 font-mono text-xs uppercase">
-            <i data-lucide="radio" class="w-4 h-4"></i>
-            <span>1. Direct Peer-to-Peer Pipeline</span>
-          </h4>
-          <p class="text-base-700 text-xs font-mono">
-            Files are never stored on any cloud database or server disk. Senders stream binary buffers directly to receiver browser memory via WebRTC DataChannels.
-          </p>
+      <div class="space-y-3.5 text-xs text-zinc-300 leading-relaxed max-h-96 overflow-y-auto pr-1">
+        <div class="glass-card p-4 rounded-xl space-y-1">
+          <h4 class="font-bold text-white flex items-center gap-2 font-mono text-xs uppercase">1. Direct Peer-to-Peer Pipeline</h4>
+          <p class="text-zinc-400 text-xs">Files stream directly between browser memories over WebRTC DataChannels with zero intermediate servers.</p>
         </div>
-
-        <div class="db-card p-4 space-y-1">
-          <h4 class="font-bold text-white flex items-center gap-2 font-mono text-xs uppercase">
-            <i data-lucide="cpu" class="w-4 h-4"></i>
-            <span>2. 256 KB Adaptive Chunking</span>
-          </h4>
-          <p class="text-base-700 text-xs font-mono">
-            Incoming files are chunked into 256 KB frames. When backpressure ceiling is reached (8 MB), transfer yields to avoid page freezing.
-          </p>
+        <div class="glass-card p-4 rounded-xl space-y-1">
+          <h4 class="font-bold text-white flex items-center gap-2 font-mono text-xs uppercase">2. 256 KB Adaptive Framing</h4>
+          <p class="text-zinc-400 text-xs">Dynamic backpressure throttling prevents memory overflows during large batch transfers.</p>
         </div>
-
-        <div class="db-card p-4 space-y-1">
-          <h4 class="font-bold text-white flex items-center gap-2 font-mono text-xs uppercase">
-            <i data-lucide="shield-check" class="w-4 h-4"></i>
-            <span>3. End-to-End Cryptography</span>
-          </h4>
-          <p class="text-base-700 text-xs font-mono">
-            All packets are secured via native DTLS 1.3 protocol. Ephemeral session tokens expire as soon as the session closes.
-          </p>
+        <div class="glass-card p-4 rounded-xl space-y-1">
+          <h4 class="font-bold text-white flex items-center gap-2 font-mono text-xs uppercase">3. Hardware-Grade DTLS 1.3</h4>
+          <p class="text-zinc-400 text-xs">End-to-end cryptographic shielding ensures packets cannot be intercepted in transit.</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ======================================================================
-       MODAL 3: SECURITY & PRIVACY MODAL
-       ====================================================================== -->
+  <!-- MODAL 3: SECURITY MODAL -->
   <div id="security-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="security-modal-backdrop" class="fixed inset-0 bg-black/85 backdrop-blur-xl cursor-pointer"></div>
-    <div class="relative db-card-heavy max-w-lg w-full p-6 text-left space-y-4 shadow-2xl border-2 border-base-900">
-      <div class="flex items-center justify-between pb-3 border-b-2 border-base-900">
-        <div class="flex items-center gap-2">
-          <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
-          <h3 class="text-sm font-bold text-white font-mono uppercase">Security &amp; Privacy Protocol</h3>
-        </div>
-        <button id="close-security-modal-btn" class="cyber-btn-secondary p-1.5 text-base-700 hover:text-white cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+    <div class="relative glass-card max-w-lg w-full p-6 rounded-3xl text-left space-y-4 shadow-2xl border border-emerald-500/40">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <h3 class="text-sm font-display font-bold text-white uppercase font-mono">Security Protocol</h3>
+        <button id="close-security-modal-btn" class="p-1.5 rounded-lg text-zinc-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-
-      <div class="space-y-3 text-xs text-base-800 font-mono">
-        <div class="db-card p-3.5 flex items-start gap-3">
-          <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
-          <p><strong class="text-white">Zero Cloud Intermediary:</strong> Cloudflare Workers edge hosts the signaling handshake only. File payloads never traverse our servers.</p>
-        </div>
-        <div class="db-card p-3.5 flex items-start gap-3">
-          <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
-          <p><strong class="text-white">Hardware-Grade DTLS:</strong> End-to-end cryptographic encryption prevents man-in-the-middle packet inspection.</p>
-        </div>
-        <div class="db-card p-3.5 flex items-start gap-3">
-          <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
-          <p><strong class="text-white">Ephemeral Session Keys:</strong> All cryptographic keys and temporary codes expire immediately upon disconnect.</p>
-        </div>
+      <div class="space-y-3 text-xs text-zinc-300 font-mono">
+        <p>• Zero server storage: File bytes never traverse intermediary servers.</p>
+        <p>• DTLS 1.3 hardware-grade encryption with ephemeral session keys.</p>
       </div>
     </div>
   </div>
 
-  <!-- ======================================================================
-       MODAL 4: PRO LICENSE KEY ACTIVATION MODAL (Lemon Squeezy)
-       ====================================================================== -->
+  <!-- MODAL 4: PRO LICENSE KEY ACTIVATION MODAL -->
   <div id="pro-license-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="pro-license-modal-backdrop" onclick="window.closeProLicense && window.closeProLicense()" class="fixed inset-0 bg-black/85 backdrop-blur-xl cursor-pointer"></div>
-    <div id="pro-license-modal-content" class="relative db-card-heavy max-w-md w-full p-6 text-left space-y-4 shadow-2xl transform transition-all duration-200 scale-95 opacity-0 border-2 border-base-900">
-      
-      <!-- Modal Header -->
-      <div class="flex items-center justify-between pb-3 border-b-2 border-base-900">
-        <div class="flex items-center gap-2">
-          <span class="db-pill text-[10px] text-amber-300 border-amber-400/50 bg-amber-950/30 flex items-center gap-1 font-bold">
-            <i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i>
-            <span>DIRECT BEAM PRO</span>
-          </span>
-          <span class="text-xs font-mono text-base-700 uppercase">License Activation</span>
-        </div>
-        <button id="btn-close-modal" type="button" onclick="window.closeProLicense && window.closeProLicense()" class="cyber-btn-secondary p-1.5 text-base-700 hover:text-white cursor-pointer" title="Close Modal">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+    <div id="pro-license-modal-content" class="relative glass-card max-w-md w-full p-6 rounded-3xl text-left space-y-4 shadow-2xl border border-amber-500/50">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <span class="premium-pill text-[10px] text-amber-300 border-amber-400/50 bg-amber-950/30 font-bold">DIRECT BEAM PRO</span>
+        <button id="btn-close-modal" type="button" onclick="window.closeProLicense && window.closeProLicense()" class="p-1.5 rounded-lg text-zinc-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-
-      <!-- Modal Body -->
       <div class="space-y-3.5 pt-1">
-        <div>
-          <h3 class="text-xl font-grunge uppercase text-white tracking-wide">Enter License Key</h3>
-          <p class="text-xs text-base-700 font-mono leading-relaxed mt-1">
-            Activate your Lemon Squeezy order key to unlock unlimited high-speed TURN relays, custom room vanity URLs, and Pro telemetry.
-          </p>
-        </div>
-
-        <!-- Input Box -->
-        <div class="space-y-1.5">
-          <label for="license-key-input" class="text-[11px] font-mono uppercase tracking-wider text-base-700 block">
-            License Key (UUID)
-          </label>
-          <input
-            type="text"
-            id="license-key-input"
-            placeholder="e.g., 8f3c7e2b-4d2a-4a9f-b981-123456789abc"
-            class="w-full bg-black/90 border-2 border-base-900 focus:border-amber-400 px-4 py-3 font-mono text-xs text-white focus:outline-none transition placeholder:text-base-600 uppercase"
-          />
-        </div>
-
-        <!-- Status Message Feedback Area -->
-        <div id="license-status-msg" class="hidden text-xs font-mono p-3 border"></div>
-
-        <!-- Action Button -->
-        <div class="pt-1">
-          <button id="btn-verify-license" type="button" onclick="window.verifyAndActivateLicenseKey && window.verifyAndActivateLicenseKey(document.getElementById('license-key-input').value)" class="cyber-btn-primary w-full py-3 text-sm font-grunge uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer bg-amber-400 text-black border-amber-400 hover:bg-amber-300 transition shadow-lg">
-            <i data-lucide="key" class="w-4 h-4"></i>
-            <span id="btn-verify-license-text">Activate License Key</span>
-          </button>
-        </div>
-
-        <div class="pt-3 border-t border-base-400/40 flex items-center justify-between text-[11px] font-mono text-base-700">
-          <span>Need a Pro license?</span>
-          <a href="javascript:void(0)" onclick="window.startProCheckout && window.startProCheckout(event)" class="text-amber-300 hover:underline uppercase font-bold flex items-center gap-1 cursor-pointer">
-            <span>Get Pro Now (₹300 Lifetime)</span>
-            <i data-lucide="external-link" class="w-3 h-3"></i>
-          </a>
+        <h3 class="text-xl font-display font-bold text-white">Enter License Key</h3>
+        <p class="text-xs text-zinc-400 font-mono">Activate your Lemon Squeezy lifetime key to unlock unlimited high-speed relays.</p>
+        <input type="text" id="license-key-input" placeholder="e.g., 8f3c7e2b-4d2a-4a9f-b981-123456789abc" class="w-full bg-black/90 border border-white/15 focus:border-amber-400 px-4 py-3 rounded-xl font-mono text-xs text-white focus:outline-none uppercase" />
+        <div id="license-status-msg" class="hidden text-xs font-mono p-3 rounded-xl border"></div>
+        <button id="btn-verify-license" type="button" onclick="window.verifyAndActivateLicenseKey && window.verifyAndActivateLicenseKey(document.getElementById('license-key-input').value)" class="btn-gold-pro w-full py-3 rounded-xl text-xs font-mono uppercase font-bold cursor-pointer">
+          <span id="btn-verify-license-text">Activate License Key</span>
+        </button>
+        <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+          <span>Need a license?</span>
+          <a href="#pro-pricing" onclick="window.startProCheckout && window.startProCheckout(event)" class="text-amber-300 hover:underline uppercase font-bold">Get Pro (₹300 Lifetime)</a>
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- ======================================================================
-       MODAL 5: PAYWALL / FREE TIER LIMIT REACHED MODAL (3 Free Limit)
-       ====================================================================== -->
+  <!-- MODAL 5: PAYWALL MODAL -->
   <div id="paywall-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="paywall-modal-backdrop" onclick="window.closePaywallModal && window.closePaywallModal()" class="fixed inset-0 bg-black/85 backdrop-blur-xl cursor-pointer"></div>
-    <div id="paywall-modal-content" class="relative db-card-heavy max-w-md w-full p-6 text-left space-y-4 shadow-2xl transform transition-all duration-200 scale-95 opacity-0 border-2 border-amber-500/80 bg-black">
-      
-      <!-- Modal Header -->
-      <div class="flex items-center justify-between pb-3 border-b-2 border-base-900">
-        <div class="flex items-center gap-2">
-          <span class="db-pill text-[10px] text-amber-300 border-amber-400/50 bg-amber-950/30 flex items-center gap-1 font-bold">
-            <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span>LIMIT REACHED</span>
-          </span>
-          <span class="text-xs font-mono text-base-700 uppercase">Free Tier (3/3)</span>
-        </div>
-        <button id="btn-close-paywall" type="button" onclick="window.closePaywallModal && window.closePaywallModal()" class="cyber-btn-secondary p-1.5 text-base-700 hover:text-white cursor-pointer" title="Close Modal">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+    <div id="paywall-modal-content" class="relative glass-card max-w-md w-full p-6 rounded-3xl text-left space-y-4 shadow-2xl border border-amber-500/80">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <span class="premium-pill text-[10px] text-amber-300">LIMIT REACHED (3/3)</span>
+        <button id="btn-close-paywall" type="button" onclick="window.closePaywallModal && window.closePaywallModal()" class="p-1.5 rounded-lg text-zinc-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-
-      <!-- Modal Body -->
       <div class="space-y-4 pt-1">
-        <div>
-          <div class="flex items-baseline justify-between gap-2">
-            <h3 class="text-xl font-grunge uppercase text-white tracking-wide flex items-center gap-2">
-              <span>Free Tier Exhausted</span>
-            </h3>
-            <div class="text-right">
-              <span class="text-2xl font-grunge text-amber-400 font-bold">₹300</span>
-              <span class="text-[10px] font-mono text-base-700 uppercase block -mt-1">ONE-TIME • LIFETIME</span>
-            </div>
-          </div>
-          <p class="text-xs text-base-700 font-mono leading-relaxed mt-2">
-            You've reached your <strong class="text-white">3 free transfers limit</strong> on this device. Upgrade to <strong class="text-amber-400">Direct Beam Pro Lifetime for ₹300</strong> for unlimited, unmetered P2P WebRTC streaming with zero cloud storage.
-          </p>
+        <div class="flex items-baseline justify-between">
+          <h3 class="text-xl font-display font-bold text-white">Free Limit Reached</h3>
+          <span class="text-2xl font-display text-amber-400 font-bold">₹300</span>
         </div>
-
-        <!-- Benefits Checklist -->
-        <div class="bg-black/80 border border-base-900 p-3 space-y-2 text-xs font-mono text-base-700">
-          <div class="flex items-center gap-2 text-emerald-400">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-            <span>Permanent lifetime access — pay ₹300 once, own forever</span>
-          </div>
-          <div class="flex items-center gap-2 text-emerald-400">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-            <span>Unlimited peer-to-peer file transfers</span>
-          </div>
-          <div class="flex items-center gap-2 text-emerald-400">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-            <span>Gigabyte-scale files with zero throttling</span>
-          </div>
-          <div class="flex items-center gap-2 text-emerald-400">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-            <span>High-speed dedicated TURN relay fallbacks</span>
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
+        <p class="text-xs text-zinc-400 font-mono">You've reached your 3 free transfers limit. Upgrade to Direct Beam Pro Lifetime for unlimited P2P streaming.</p>
         <div class="space-y-2 pt-2">
-          <a 
-            href="javascript:void(0)" 
-            onclick="window.startProCheckout && window.startProCheckout(event)"
-            class="cyber-btn-primary w-full py-3 text-sm font-grunge uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer bg-amber-400 text-black border-amber-400 hover:bg-amber-300 transition shadow-lg"
-          >
-            <i data-lucide="zap" class="w-4 h-4 fill-current"></i>
+          <a href="#pro-pricing" onclick="window.startProCheckout && window.startProCheckout(event)" class="btn-gold-pro w-full py-3.5 rounded-xl text-xs font-mono uppercase font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg">
             <span>⚡ Upgrade to Pro (Lifetime) — ₹300</span>
-            <i data-lucide="external-link" class="w-3.5 h-3.5 ml-1 opacity-70"></i>
           </a>
-
-          <button 
-            type="button" 
-            id="paywall-btn-enter-key" 
-            onclick="window.closePaywallModal && window.closePaywallModal(); setTimeout(window.openProLicense, 200);"
-            class="cyber-btn-secondary w-full py-2.5 text-xs font-mono uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer text-white hover:border-amber-400"
-          >
-            <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
+          <button type="button" id="paywall-btn-enter-key" onclick="window.closePaywallModal && window.closePaywallModal(); setTimeout(window.openProLicense, 200);" class="w-full py-2.5 rounded-xl text-xs font-mono uppercase flex items-center justify-center gap-2 cursor-pointer text-white bg-white/5 hover:bg-white/10 border border-white/10">
             <span>Already have a license? Enter Key</span>
           </button>
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- ======================================================================
-       MODAL 6: USER AUTHENTICATION / ACCOUNT ACCESS MODAL
-       ====================================================================== -->
+  <!-- MODAL 6: AUTH MODAL -->
   <div id="auth-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="auth-modal-backdrop" onclick="window.closeAuthModal && window.closeAuthModal()" class="fixed inset-0 bg-black/85 backdrop-blur-xl cursor-pointer"></div>
-    <div id="auth-modal-content" class="relative db-card-heavy max-w-md w-full p-6 text-left space-y-4 shadow-2xl transform transition-all duration-200 scale-95 opacity-0 border-2 border-base-900 bg-black">
-      
-      <!-- Modal Header -->
-      <div class="flex items-center justify-between pb-3 border-b-2 border-base-900">
-        <div class="flex items-center gap-2">
-          <span class="db-pill text-[10px] text-cyan-400 border-cyan-400/50 bg-cyan-950/30 flex items-center gap-1 font-bold">
-            <i data-lucide="user-check" class="w-3.5 h-3.5 text-cyan-400"></i>
-            <span>DIRECT BEAM ID</span>
-          </span>
-          <span class="text-xs font-mono text-base-700 uppercase">Account Access</span>
-        </div>
-        <button id="btn-close-auth" type="button" onclick="window.closeAuthModal && window.closeAuthModal()" class="cyber-btn-secondary p-1.5 text-base-700 hover:text-white cursor-pointer" title="Close Modal">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+    <div id="auth-modal-content" class="relative glass-card max-w-md w-full p-6 rounded-3xl text-left space-y-4 shadow-2xl border border-cyan-500/40">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <span class="premium-pill text-[10px] text-cyan-400">DIRECT BEAM ID</span>
+        <button id="btn-close-auth" type="button" onclick="window.closeAuthModal && window.closeAuthModal()" class="p-1.5 rounded-lg text-zinc-400 hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
 
-      <!-- Logged-In Account View -->
       <div id="auth-logged-in-view" class="hidden space-y-4 pt-1">
-        <div class="border border-base-900 bg-base-950/70 p-4 space-y-2">
+        <div class="border border-white/10 bg-black/70 p-4 rounded-2xl space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-[10px] font-mono text-base-700 uppercase tracking-wider">Active Account</span>
-            <span id="auth-profile-badge" class="db-pill text-[10px] text-emerald-400 border-emerald-400/40">FREE TIER</span>
+            <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Active Account</span>
+            <span id="auth-profile-badge" class="premium-pill text-[10px] text-emerald-400">FREE TIER</span>
           </div>
           <div id="auth-profile-email" class="text-white font-mono font-bold text-sm truncate">user@example.com</div>
-          <div class="text-xs font-mono text-base-700 flex items-center justify-between pt-2 border-t border-base-900/80">
+          <div class="text-xs font-mono text-zinc-400 flex items-center justify-between pt-2 border-t border-white/10">
             <span>Transfer Balance:</span>
             <span id="auth-profile-quota" class="text-white font-bold">0 / 3 Used</span>
           </div>
         </div>
-
         <div class="space-y-2">
-          <button id="auth-btn-enter-license" type="button" onclick="window.closeAuthModal && window.closeAuthModal(); setTimeout(window.openProLicense, 200);" class="cyber-btn-secondary w-full py-2.5 text-xs font-mono uppercase flex items-center justify-center gap-2 text-amber-300 border-amber-400/40 hover:bg-amber-950/20">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span>Link Pro License Key</span>
-          </button>
-          <button id="auth-btn-signout" type="button" onclick="window.signOutUser && window.signOutUser()" class="cyber-btn-danger w-full py-2.5 text-xs font-mono uppercase flex items-center justify-center gap-2">
-            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-            <span>Sign Out</span>
-          </button>
+          <button id="auth-btn-enter-license" type="button" onclick="window.closeAuthModal && window.closeAuthModal(); setTimeout(window.openProLicense, 200);" class="w-full py-2.5 rounded-xl text-xs font-mono uppercase flex items-center justify-center gap-2 text-amber-300 bg-white/5 border border-white/10">Link Pro License Key</button>
+          <button id="auth-btn-signout" type="button" onclick="window.signOutUser && window.signOutUser()" class="w-full py-2.5 rounded-xl text-xs font-mono uppercase flex items-center justify-center gap-2 bg-rose-500/20 text-rose-300 border border-rose-500/40">Sign Out</button>
         </div>
       </div>
 
-      <!-- Unauthenticated View: Sign In / Create Account / Forgot Password -->
       <div id="auth-form-view" class="space-y-4">
-
-        <!-- Real Google OAuth (Cloudflare KV Verified) -->
         <div id="auth-google-section" class="space-y-2">
-          <button 
-            type="button" 
-            id="modal-btn-google-login" 
-            onclick="window.triggerGoogleSignIn && window.triggerGoogleSignIn()" 
-            class="w-full py-2.5 px-3 bg-white hover:bg-neutral-100 text-neutral-900 rounded font-mono text-xs font-semibold flex items-center justify-center gap-2.5 transition-all border border-white/20 cursor-pointer shadow-sm group"
-          >
+          <button type="button" id="modal-btn-google-login" onclick="window.triggerGoogleSignIn && window.triggerGoogleSignIn()" class="w-full py-2.5 px-3 bg-white text-neutral-900 rounded-xl font-mono text-xs font-semibold flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-sm">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -1188,157 +1385,70 @@
             </svg>
             <span id="modal-google-btn-text" class="tracking-wide font-bold">Continue with Google</span>
           </button>
-          
           <div id="modal-google-loading" class="hidden text-center py-1">
-            <span class="inline-flex items-center gap-2 text-xs font-mono text-cyan-400">
-              <svg class="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-              <span>Verifying with Google...</span>
-            </span>
+            <span class="inline-flex items-center gap-2 text-xs font-mono text-cyan-400">Verifying with Google...</span>
           </div>
-
           <div class="relative my-3 text-center">
-            <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-base-900"></div>
-            </div>
-            <span class="relative bg-black px-2 text-[10px] text-base-700 font-mono uppercase tracking-widest">
-              OR WITH EMAIL
-            </span>
+            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
+            <span class="relative bg-black px-2 text-[10px] text-zinc-400 font-mono uppercase tracking-widest">OR WITH EMAIL</span>
           </div>
         </div>
 
-        <!-- Tabs (hidden in forgot password mode) -->
-        <div id="auth-tabs-row" class="grid grid-cols-2 gap-2 border-b border-base-900 pb-3">
-          <button id="auth-tab-signin" type="button" class="py-2 text-xs font-mono uppercase font-bold text-white border-b-2 border-cyan-400 cursor-pointer">
-            Sign In
-          </button>
-          <button id="auth-tab-signup" type="button" class="py-2 text-xs font-mono uppercase font-bold text-base-700 hover:text-white border-b-2 border-transparent cursor-pointer">
-            Create Account
-          </button>
+        <div id="auth-tabs-row" class="grid grid-cols-2 gap-2 border-b border-white/10 pb-3">
+          <button id="auth-tab-signin" type="button" class="py-2 text-xs font-mono uppercase font-bold text-white border-b-2 border-cyan-400 cursor-pointer">Sign In</button>
+          <button id="auth-tab-signup" type="button" class="py-2 text-xs font-mono uppercase font-bold text-zinc-400 hover:text-white border-b-2 border-transparent cursor-pointer">Create Account</button>
         </div>
 
-        <!-- Forgot Password Banner (shown only in forgot password mode) -->
         <div id="auth-reset-banner" class="hidden flex items-center justify-between border-b border-cyan-500/30 pb-2.5">
-          <span class="text-xs font-mono text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1.5">
-            <i data-lucide="key-round" class="w-3.5 h-3.5 text-cyan-400"></i>
-            <span>Forgot Password</span>
-          </span>
-          <button type="button" onclick="window.toggleForgotPasswordMode && window.toggleForgotPasswordMode(false)" class="text-[11px] font-mono text-zinc-400 hover:text-white transition flex items-center gap-1 cursor-pointer">
-            <span>← Back to Sign In</span>
-          </button>
+          <span class="text-xs font-mono text-cyan-300 font-bold uppercase tracking-wider">Forgot Password</span>
+          <button type="button" onclick="window.toggleForgotPasswordMode && window.toggleForgotPasswordMode(false)" class="text-[11px] font-mono text-zinc-400">Back</button>
         </div>
 
         <form id="auth-form" onsubmit="event.preventDefault(); window.handleAuthSubmit && window.handleAuthSubmit();" class="space-y-3">
-          <!-- Email Input Field -->
           <div class="space-y-1">
-            <label for="auth-email-input" class="text-[11px] font-mono uppercase tracking-wider text-base-700 block">
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="auth-email-input"
-              required
-              placeholder="e.g., user@domain.com"
-              class="w-full bg-black/90 border-2 border-base-900 focus:border-cyan-400 px-4 py-2.5 font-mono text-xs text-white focus:outline-none transition placeholder:text-base-600"
-            />
-            <p id="auth-reset-hint" class="hidden text-[10px] font-mono text-cyan-400/90 pt-0.5">
-              Enter your registered email address. We will send a secure single-use reset link (15-minute expiry).
-            </p>
+            <label for="auth-email-input" class="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">Email</label>
+            <input type="email" id="auth-email-input" required placeholder="user@domain.com" class="w-full bg-black/90 border border-white/15 focus:border-cyan-400 px-4 py-2.5 rounded-xl font-mono text-xs text-white focus:outline-none" />
+            <p id="auth-reset-hint" class="hidden text-[10px] font-mono text-cyan-400/90 pt-0.5">Reset link will be sent to this email.</p>
           </div>
-
-          <!-- Password Input Field (completely hidden in Forgot Password mode) -->
           <div id="auth-password-wrapper" class="space-y-1">
             <div class="flex items-center justify-between text-[11px] font-mono">
-              <label id="auth-password-label" for="auth-password-input" class="uppercase tracking-wider text-base-700 block">
-                Password
-              </label>
-              <button type="button" id="btn-forgot-password" onclick="window.toggleForgotPasswordMode && window.toggleForgotPasswordMode(true)" class="text-cyan-400 hover:underline cursor-pointer">
-                Forgot Password?
-              </button>
+              <label id="auth-password-label" for="auth-password-input" class="uppercase text-zinc-400 block">Password</label>
+              <button type="button" id="btn-forgot-password" onclick="window.toggleForgotPasswordMode && window.toggleForgotPasswordMode(true)" class="text-cyan-400 hover:underline">Forgot?</button>
             </div>
-            <input
-              type="password"
-              id="auth-password-input"
-              required
-              placeholder="••••••••••••"
-              class="w-full bg-black/90 border-2 border-base-900 focus:border-cyan-400 px-4 py-2.5 font-mono text-xs text-white focus:outline-none transition placeholder:text-base-600"
-            />
+            <input type="password" id="auth-password-input" required placeholder="••••••••••••" class="w-full bg-black/90 border border-white/15 focus:border-cyan-400 px-4 py-2.5 rounded-xl font-mono text-xs text-white focus:outline-none" />
           </div>
-
-          <!-- Auth Status Feedback Area -->
-          <div id="auth-status-msg" class="hidden text-xs font-mono p-2.5 border"></div>
-
-          <button id="auth-submit-btn" type="submit" class="cyber-btn-primary w-full py-2.5 text-xs font-mono uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer bg-white text-black border-white hover:bg-neutral-200 transition">
-            <i id="auth-submit-icon" data-lucide="log-in" class="w-4 h-4"></i>
+          <div id="auth-status-msg" class="hidden text-xs font-mono p-2.5 rounded-xl border"></div>
+          <button id="auth-submit-btn" type="submit" class="btn-luxury-primary w-full py-2.5 rounded-xl text-xs font-mono uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer">
             <span id="auth-submit-text">Sign In</span>
           </button>
         </form>
-
-        <div id="auth-footer-note" class="pt-3 border-t border-base-900 text-center space-y-2">
-          <p class="text-[11px] font-mono text-base-700 leading-normal">
-            Sign in or create an account to activate your 3 free transfers.
-          </p>
-          <button id="auth-guest-btn" type="button" onclick="window.closeAuthModal && window.closeAuthModal()" class="text-xs font-mono text-zinc-500 hover:text-white transition uppercase tracking-wider cursor-pointer">
-            ✕ Dismiss & Explore App
-          </button>
-        </div>
+        <button id="auth-guest-btn" type="button" onclick="window.closeAuthModal && window.closeAuthModal()" class="w-full text-center text-xs font-mono text-zinc-500 hover:text-white transition uppercase tracking-wider">✕ Dismiss</button>
       </div>
-
     </div>
   </div>
 
-  <!-- Fixed Floating Support Contact Group (WhatsApp & Instagram) -->
-  <div class="fixed bottom-5 right-5 flex items-center gap-2.5 z-40">
-    <!-- WhatsApp Help Desk -->
-    <a 
-      href="https://wa.me/918501820073?text=Hello%20DirectBeam%20Support" 
-      target="_blank" 
-      rel="noopener noreferrer"
-      class="p-3 rounded-full bg-[#25D366]/20 border border-[#25D366]/50 hover:bg-[#25D366]/40 text-[#25D366] hover:scale-105 transition-all backdrop-blur shadow-2xl group relative flex items-center justify-center cursor-pointer"
-      title="Chat on WhatsApp"
-    >
-      <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-      </svg>
-      <span class="pointer-events-none absolute -top-8 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/95 text-[#25D366] text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-1 border border-[#25D366]/40 shadow-xl whitespace-nowrap">
-        WhatsApp Support
-      </span>
-    </a>
-
-    <!-- Instagram Profile -->
-    <a 
-      href="https://www.instagram.com/vishwanth___24?rpxt=MTBtN2NnZ3Y5aHA0dg%3D%3D&utm_source=qr" 
-      target="_blank" 
-      rel="noopener noreferrer"
-      class="p-3 rounded-full bg-[#E4405F]/20 border border-[#E4405F]/50 hover:bg-[#E4405F]/40 text-[#E4405F] hover:scale-105 transition-all backdrop-blur shadow-2xl group relative flex items-center justify-center cursor-pointer"
-      title="Follow on Instagram"
-    >
-      <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-      </svg>
-      <span class="pointer-events-none absolute -top-8 right-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/95 text-[#E4405F] text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-1 border border-[#E4405F]/40 shadow-xl whitespace-nowrap">
-        Instagram
-      </span>
-    </a>
-  </div>
-
-  <!-- Application Logic Controller (WebRTC, Signaling, Chunks, Socket Handlers) -->
-  <script src="/app.js"></script>
-
-  <!-- Lucide Icon Initializer -->
-  <script>
-    if (typeof lucide !== 'undefined') {
-      lucide.createIcons();
-    }
-  </script>
-
-  <!-- Native Zero-Watermark Three.js 3D WebGL Canvas Module -->
+  <!-- Deferred Core Libraries (Non-Render-Blocking) -->
+  <script src="/socket.io.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <script src="/app.js" defer></script>
   <script type="module" src="/js/beam-canvas.js"></script>
-
-  <!-- Footer Founder Modal Bridge -->
+  <script>
+    function refreshLucideIcons() {
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', refreshLucideIcons);
+    } else {
+      refreshLucideIcons();
+    }
+    window.addEventListener('load', refreshLucideIcons);
+  </script>
   <script>
     const footerFounderBtn = document.getElementById('open-founder-footer-btn');
     if (footerFounderBtn) {
-      footerFounderBtn.addEventListener('click', () => {
+      footerFounderBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         const founderBtn = document.getElementById('open-founder-modal-btn');
         if (founderBtn) founderBtn.click();
       });

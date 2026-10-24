@@ -1,17 +1,45 @@
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-
 const canvas = document.getElementById('directbeam-webgl-canvas');
+
 if (canvas) {
   const container = canvas.parentElement;
+
+  let initialized = false;
+  let initPromise = null;
+
+  function loadThreeAndInit() {
+    if (initialized || initPromise) return;
+    initPromise = import('https://unpkg.com/three@0.160.0/build/three.module.min.js').then((THREE) => {
+      initialized = true;
+      runCanvas(THREE, canvas, container);
+    }).catch((err) => {
+      console.warn('WebGL particle canvas lazy-load bypassed:', err);
+    });
+  }
+
+  // Use IntersectionObserver to lazy-load Three.js only when canvas is near viewport
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0] && entries[0].isIntersecting) {
+        observer.disconnect();
+        loadThreeAndInit();
+      }
+    }, { rootMargin: '150px' });
+    observer.observe(container);
+  } else {
+    window.addEventListener('load', () => setTimeout(loadThreeAndInit, 1000));
+  }
+}
+
+function runCanvas(THREE, canvas, container) {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x030712, 0.08);
 
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
   camera.position.set(0, 1.2, 5.5);
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
   scene.add(ambientLight);
@@ -103,7 +131,6 @@ if (canvas) {
     }
   });
 
-  // Touch support for mobile dragging
   container.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
       isDragging = true;
@@ -132,8 +159,15 @@ if (canvas) {
   };
 
   const clock = new THREE.Clock();
+  let isCanvasVisible = true;
+  let animationFrameId = null;
+
   function animate() {
-    requestAnimationFrame(animate);
+    if (!isCanvasVisible) {
+      animationFrameId = null;
+      return;
+    }
+    animationFrameId = requestAnimationFrame(animate);
     const elapsedTime = clock.getElapsedTime();
 
     nodeA.group.position.y = Math.sin(elapsedTime * 2) * 0.08;
@@ -159,7 +193,17 @@ if (canvas) {
 
     renderer.render(scene, camera);
   }
-  animate();
+
+  const visibilityObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      isCanvasVisible = entry.isIntersecting;
+      if (isCanvasVisible && !animationFrameId) {
+        clock.start();
+        animate();
+      }
+    });
+  }, { threshold: 0.05 });
+  visibilityObserver.observe(container);
 
   window.addEventListener('resize', () => {
     if (!container) return;

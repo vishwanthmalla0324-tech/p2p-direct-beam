@@ -1,50 +1,66 @@
 /* ============================================================================
-   DIRECT BEAM — GRUNGE THEME DESIGN SYSTEM (grunge-v1.0.0 PORT)
-   Strictly preserving all WebRTC and P2P data channel bindings.
+   DIRECT BEAM — CINEMATIC DARK DESIGN SYSTEM (MARCUS VANE LUXURY TECH AESTHETIC)
+   Engineered for directbeam.space. Strictly preserves all WebRTC, DataChannel,
+   and DOM element bindings with zero functional regressions.
    ============================================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&family=Road+Rage&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Grunge Token Palette (from grunge-v1.0.0 global.css) */
-  --color-base-100: #121212;
-  --color-base-200: #1a1a19;
-  --color-base-300: #262624;
-  --color-base-400: #3f3e3b;
-  --color-base-500: #595854;
-  --color-base-600: #7b7974;
-  --color-base-700: #a3a19b;
-  --color-base-800: #d4d2cc;
-  --color-base-900: #fbfbf9;
+  /* Surface Tokens (Deep OLED Space Palette) */
+  --color-base-100: #070709;
+  --color-base-200: #0d0d12;
+  --color-base-300: #14141c;
+  --color-base-400: #20202c;
+  --color-base-500: #38384a;
+  --color-base-600: #6b7280;
+  --color-base-700: #9ca3af;
+  --color-base-800: #e5e7eb;
+  --color-base-900: rgba(255, 255, 255, 0.12);
 
-  /* Accent & Highlight Colors */
+  /* Glassmorphism & Border Tokens */
+  --glass-surface: rgba(13, 13, 18, 0.72);
+  --glass-surface-heavy: rgba(10, 10, 14, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(0, 240, 255, 0.35);
+  --glass-border-subtle: rgba(255, 255, 255, 0.04);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* Accent & Kinetic Lighting Tokens */
   --accent-cyan: #00f0ff;
-  --accent-cyan-dim: rgba(0, 240, 255, 0.2);
+  --accent-cyan-dim: rgba(0, 240, 255, 0.15);
+  --accent-cyan-glow: 0 0 25px rgba(0, 240, 255, 0.35);
   --accent-emerald: #10b981;
-  --accent-emerald-dim: rgba(16, 185, 129, 0.2);
+  --accent-emerald-dim: rgba(16, 185, 129, 0.15);
+  --accent-emerald-glow: 0 0 20px rgba(16, 185, 129, 0.3);
+  --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
+  --accent-violet: #8b5cf6;
 
   /* Typography Variables */
-  --font-grunge: 'Road Rage', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* Compatibility mapping: all legacy .font-grunge instances inherit modern Outfit display typography */
+  --font-grunge: var(--font-display);
 
   /* Typography Sizing Scale */
-  --text-216: clamp(5rem, 15vw, 13.5rem);
-  --text-128: clamp(4rem, 10vw, 8rem);
-  --text-96: clamp(3rem, 8vw, 6rem);
-  --text-80: clamp(2.5rem, 6.5vw, 5rem);
-  --text-64: clamp(2rem, 5vw, 4rem);
-  --text-48: 3rem;
-  --text-40: 2.5rem;
-  --text-32: 2rem;
-  --text-24: 1.5rem;
-  --text-20: 1.25rem;
+  --text-216: clamp(4.5rem, 13vw, 11rem);
+  --text-128: clamp(3.5rem, 9vw, 7.5rem);
+  --text-96: clamp(2.8rem, 7vw, 5.5rem);
+  --text-80: clamp(2.2rem, 5.5vw, 4.2rem);
+  --text-64: clamp(1.8rem, 4.5vw, 3.2rem);
+  --text-48: 2.75rem;
+  --text-40: 2.25rem;
+  --text-32: 1.85rem;
+  --text-24: 1.45rem;
+  --text-20: 1.2rem;
   --text-16: 1rem;
   --text-12: 0.75rem;
 }
 
 /* ============================================================================
-   GLOBAL HTML & BODY RESET WITH GRUNGE TEXTURE
+   GLOBAL RESET & CINEMATIC SPACE CANVAS
    ============================================================================ */
 
 *, *::before, *::after {
@@ -52,10 +68,9 @@
 }
 
 html {
-  scroll-behavior: smooth;
   background-color: var(--color-base-100);
-  color: var(--color-base-900);
-  font-family: var(--font-mono);
+  color: #f3f4f6;
+  font-family: var(--font-sans);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -66,40 +81,47 @@ body {
   padding: 0;
   min-height: 100vh;
   width: 100%;
-  background-color: #0d0d0d;
-  background-image: url('/assets/bg.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  color: var(--color-base-900);
-  font-family: var(--font-mono);
+  background-color: #070709;
+  color: #f3f4f6;
+  font-family: var(--font-sans);
   overflow-x: hidden;
   position: relative;
 }
 
-/* Authentic Grunge Film Noise Overlay */
-.grunge-noise {
+/* Hardware-accelerated fixed canvas background (zero scroll repaints, 120+ FPS) */
+body::before {
+  content: "";
   position: fixed;
   inset: 0;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -15%, rgba(0, 240, 255, 0.12), transparent 70%),
+    radial-gradient(circle 500px at 85% 45%, rgba(139, 92, 246, 0.07), transparent 60%),
+    radial-gradient(circle 500px at 15% 75%, rgba(16, 185, 129, 0.05), transparent 60%);
+  background-size: 100% 100%;
   pointer-events: none;
-  opacity: 0.16;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  z-index: 1;
+  z-index: 0;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
-/* Global Content Wrapper Layer */
+/* Disable heavy SVG noise filter on viewport */
+.grunge-noise {
+  display: none !important;
+}
+
+/* Global Content Wrapper */
 .content-wrapper {
   position: relative;
   z-index: 20;
 }
 
 /* ============================================================================
-   TYPOGRAPHY UTILITIES
+   TYPOGRAPHY
    ============================================================================ */
 
 .font-grunge {
-  font-family: var(--font-grunge) !important;
+  font-family: var(--font-display) !important;
+  letter-spacing: -0.02em !important;
 }
 
 .font-mono {
@@ -107,73 +129,91 @@ body {
 }
 
 h1, h2, h3, h4, .text-grunge {
-  font-family: var(--font-grunge);
-  text-transform: uppercase;
-  letter-spacing: -0.01em;
-  line-height: 0.95;
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+  line-height: 1.05;
 }
 
 /* ============================================================================
-   GRUNGE CARDS & SURFACES
+   GLASSMORPHIC CARDS & SURFACES (GPU OPTIMIZED)
    ============================================================================ */
 
 .db-card, .cyber-card, .grunge-card {
-  background: rgba(18, 18, 18, 0.86) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
-  border: 2px solid var(--color-base-900) !important;
-  border-radius: 0 !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85) !important;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  background: rgba(13, 13, 18, 0.82) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.7), var(--glass-highlight) !important;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
   position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .db-card:hover, .cyber-card:hover, .grunge-card:hover {
-  border-color: #ffffff !important;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 18px rgba(255, 255, 255, 0.12) !important;
+  border-color: var(--glass-border-hover) !important;
+  box-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.85), 0 0 24px rgba(0, 240, 255, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  transform: translateY(-2px) translateZ(0) !important;
 }
 
 /* Heavy Card for Modals & Overlay Drawers */
 .db-card-heavy, .cyber-card-heavy, .grunge-card-heavy {
-  background: rgba(14, 14, 14, 0.96) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 2px solid var(--color-base-900) !important;
-  border-radius: 0 !important;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.98), 0 0 25px rgba(255, 255, 255, 0.08) !important;
+  background: rgba(10, 10, 14, 0.94) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 30px rgba(0, 240, 255, 0.08), var(--glass-highlight) !important;
   position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* ============================================================================
-   GRUNGE STATUS PILLS & BADGES
+   STATUS PILLS & CAPSULE BADGES
    ============================================================================ */
 
 .db-pill, .cyber-pill, .grunge-pill {
   font-family: var(--font-mono) !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.06em !important;
-  font-size: 0.72rem !important;
-  padding: 0.32rem 0.75rem !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  background: rgba(18, 18, 18, 0.92) !important;
-  color: var(--color-base-900) !important;
-  border-radius: 0 !important;
+  letter-spacing: 0.08em !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  padding: 0.32rem 0.85rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(18, 18, 24, 0.75) !important;
+  color: #e5e7eb !important;
+  border-radius: 9999px !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 0.45rem !important;
-  backdrop-filter: blur(8px) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  transition: all 0.2s ease !important;
+}
+
+.db-pill:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  background: rgba(24, 24, 32, 0.85) !important;
 }
 
 .db-pill-invert {
-  background: var(--color-base-900) !important;
-  color: var(--color-base-100) !important;
-  border: 1px solid var(--color-base-900) !important;
+  background: #ffffff !important;
+  color: #08080a !important;
+  border: 1px solid #ffffff !important;
   font-weight: 700 !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2) !important;
 }
 
 .db-dot, .cyber-dot {
-  width: 0.45rem !important;
-  height: 0.45rem !important;
+  width: 0.42rem !important;
+  height: 0.42rem !important;
   border-radius: 9999px !important;
   background-color: var(--accent-cyan) !important;
   box-shadow: 0 0 8px var(--accent-cyan) !important;
@@ -185,21 +225,23 @@ h1, h2, h3, h4, .text-grunge {
 }
 
 /* ============================================================================
-   GRUNGE BUTTONS
+   KINETIC BUTTONS
    ============================================================================ */
 
 .cyber-btn-primary, .grunge-btn-primary {
-  font-family: var(--font-grunge) !important;
-  font-size: 1.35rem !important;
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.04em !important;
-  padding: 0.5rem 1.5rem !important;
-  border: 2px solid var(--color-base-900) !important;
-  background: var(--color-base-900) !important;
-  color: var(--color-base-100) !important;
-  border-radius: 0 !important;
+  letter-spacing: 0.06em !important;
+  padding: 0.65rem 1.65rem !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #00f0ff 0%, #00b4d8 100%) !important;
+  color: #06080e !important;
+  border: 1px solid rgba(0, 240, 255, 0.6) !important;
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.35), 0 4px 15px rgba(0, 0, 0, 0.5) !important;
   cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -208,42 +250,53 @@ h1, h2, h3, h4, .text-grunge {
 }
 
 .cyber-btn-primary:hover, .grunge-btn-primary:hover {
-  background: transparent !important;
-  color: var(--color-base-900) !important;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25) !important;
-  transform: translateY(-1px) !important;
+  background: linear-gradient(135deg, #33f3ff 0%, #00c6eb 100%) !important;
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.55), 0 6px 20px rgba(0, 0, 0, 0.6) !important;
+  transform: translateY(-2px) scale(1.01) !important;
+  color: #06080e !important;
+}
+
+.cyber-btn-primary:active, .grunge-btn-primary:active {
+  transform: translateY(0) scale(0.99) !important;
 }
 
 .cyber-btn-secondary, .grunge-btn-secondary {
-  font-family: var(--font-mono) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
   font-size: 0.8125rem !important;
-  border: 1px solid rgba(255, 255, 255, 0.35) !important;
-  background: rgba(26, 26, 25, 0.85) !important;
-  color: var(--color-base-900) !important;
-  border-radius: 0 !important;
-  transition: all 0.2s ease-in-out !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #e5e7eb !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: pointer !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 0.45rem !important;
   text-decoration: none !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
 }
 
 .cyber-btn-secondary:hover, .grunge-btn-secondary:hover {
-  border-color: var(--color-base-900) !important;
-  background: rgba(45, 45, 45, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.08) !important;
+  transform: translateY(-1px) !important;
 }
 
 .cyber-btn-danger, .grunge-btn-danger {
-  font-family: var(--font-mono) !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
   font-size: 0.8125rem !important;
-  border: 1px solid rgba(244, 63, 94, 0.6) !important;
-  background: rgba(244, 63, 94, 0.12) !important;
-  color: #fca5a5 !important;
-  border-radius: 0 !important;
+  border: 1px solid rgba(244, 63, 94, 0.4) !important;
+  background: rgba(244, 63, 94, 0.08) !important;
+  color: #fda4af !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(10px) !important;
   transition: all 0.2s ease-in-out !important;
   cursor: pointer !important;
   display: inline-flex !important;
@@ -256,83 +309,174 @@ h1, h2, h3, h4, .text-grunge {
   background: rgba(244, 63, 94, 0.85) !important;
   color: #ffffff !important;
   border-color: #f43f5e !important;
-  box-shadow: 0 0 20px rgba(244, 63, 94, 0.4) !important;
+  box-shadow: 0 0 25px rgba(244, 63, 94, 0.4) !important;
+  transform: translateY(-1px) !important;
 }
 
 /* ============================================================================
-   GRUNGE NAVIGATION LINKS (from Navigation.astro & Link.astro)
+   FORM CONTROLS & INPUTS
    ============================================================================ */
 
-.grunge-nav-link {
-  font-family: var(--font-grunge) !important;
-  font-size: 1.4rem !important;
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  border-radius: 12px !important;
+  background: rgba(10, 10, 14, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  transition: all 0.25s ease !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  outline: none !important;
+}
+
+/* Dropzone Hover & Dragging Aesthetics */
+label[for="file-input"] {
+  border-radius: 20px !important;
+  background: rgba(12, 12, 16, 0.6) !important;
+  border: 2px dashed rgba(255, 255, 255, 0.12) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+label[for="file-input"]:hover {
+  border-color: rgba(0, 240, 255, 0.5) !important;
+  background: rgba(0, 240, 255, 0.03) !important;
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.15) !important;
+}
+
+/* ============================================================================
+   NAVIGATION & TOOLTIPS
+   ============================================================================ */
+
+.nav-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 15, 20, 0.8);
+  color: #e5e7eb;
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.nav-icon-btn:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.nav-tooltip {
+  pointer-events: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  background: rgba(10, 10, 14, 0.96);
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 60;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 240, 255, 0.08);
+}
+
+.group:hover > .nav-tooltip,
+.group:focus-within > .nav-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ============================================================================
+   PRO / MONETIZATION BADGES & BUTTONS
+   ============================================================================ */
+
+.pro-upgrade-btn {
+  font-family: var(--font-display) !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
   text-transform: uppercase !important;
-  color: var(--color-base-900) !important;
-  text-decoration: underline !important;
-  text-underline-offset: 4px !important;
-  text-decoration-thickness: 2px !important;
-  letter-spacing: 0.04em !important;
-  transition: color 0.2s ease, text-decoration-color 0.2s ease !important;
-  background: transparent !important;
-  border: none !important;
+  letter-spacing: 0.06em !important;
+  padding: 0.45rem 1rem !important;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
+  color: #000000 !important;
+  border: 1px solid #fbbf24 !important;
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45rem !important;
+  text-decoration: none !important;
   cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4) !important;
 }
 
-.grunge-nav-link:hover {
-  color: var(--color-base-700) !important;
+.pro-upgrade-btn:hover {
+  background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%) !important;
+  border-color: #fde68a !important;
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.7) !important;
+  transform: translateY(-1px) scale(1.02) !important;
 }
 
-/* ============================================================================
-   DECORATIVE STAMPS & VINYL ASSETS
-   ============================================================================ */
-
-.grunge-stamp-barcode {
-  height: 24px;
-  width: auto;
-  opacity: 0.85;
-}
-
-.grunge-stamp-symbol {
-  height: 18px;
-  width: auto;
-  opacity: 0.9;
-}
-
-/* Vinyl Disc & Animation */
-@keyframes spinSlow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin-slow {
-  animation: spinSlow 6s linear infinite;
+#pro-badge-header {
+  font-family: var(--font-mono) !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 700 !important;
+  padding: 0.25rem 0.7rem !important;
+  background: rgba(120, 53, 15, 0.35) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(251, 191, 36, 0.5) !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25) !important;
 }
 
 /* ============================================================================
-   CUSTOM SCROLLBAR
+   MINIMALIST CUSTOM SCROLLBAR
    ============================================================================ */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #121212;
+  background: #070709;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3e3b;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #20202c;
+  border-radius: 9999px;
+  border: 2px solid #070709;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #595854;
+  background: #38384a;
 }
 
 /* ============================================================================
-   SPLINE & THIRD-PARTY WATERMARK CLEANUP
+   THIRD-PARTY CLEANUP & ICON STANDARDIZER
    ============================================================================ */
 
 spline-viewer,
@@ -343,15 +487,14 @@ spline-viewer,
   pointer-events: none !important;
 }
 
-/* ============================================================================
-   LUCIDE ICONS STANDARDIZER
-   ============================================================================ */
-
 svg.lucide, i[data-lucide] svg {
   stroke-width: 1.85px !important;
 }
 
-/* Modal Open & Close State Overrides */
+/* ============================================================================
+   STRICT MODAL & DOM STATE OVERRIDES (DO NOT MODIFY: PREVENTS WEBRTC BREAKAGES)
+   ============================================================================ */
+
 div[id$="-modal"].flex {
   display: flex !important;
 }
@@ -376,12 +519,11 @@ div[id$="-modal"].hidden,
   display: none !important;
 }
 
-/* Hidden Utility */
 .hidden {
   display: none !important;
 }
 
-/* Quick Beam Component Animations & Link Styling */
+/* Quick Beam animations */
 .qb-text-content a {
   word-break: break-all;
 }
@@ -400,109 +542,32 @@ div[id$="-modal"].hidden,
   }
 }
 
-/* ============================================================================
-   DIRECT BEAM PRO (LEMON SQUEEZY) MONETIZATION STYLES
-   ============================================================================ */
-
-.pro-upgrade-btn {
-  font-family: var(--font-mono) !important;
-  font-size: 0.72rem !important;
-  font-weight: 800 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  padding: 0.38rem 0.85rem !important;
-  background: #f59e0b !important;
-  color: #000000 !important;
-  border: 1px solid #f59e0b !important;
-  border-radius: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 0.4rem !important;
-  text-decoration: none !important;
-  cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  box-shadow: 0 0 14px rgba(245, 158, 11, 0.35) !important;
-}
-
-.pro-upgrade-btn:hover {
-  background: #fbbf24 !important;
-  border-color: #fbbf24 !important;
-  color: #000000 !important;
-  box-shadow: 0 0 22px rgba(245, 158, 11, 0.7) !important;
-  transform: translateY(-1px) !important;
-}
-
-#pro-badge-header {
-  font-family: var(--font-mono) !important;
-  font-size: 0.68rem !important;
-  letter-spacing: 0.08em !important;
-  font-weight: 800 !important;
-  padding: 0.22rem 0.6rem !important;
-  background: rgba(120, 53, 15, 0.35) !important;
-  color: #fbbf24 !important;
-  border: 1px solid rgba(251, 191, 36, 0.6) !important;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.25) !important;
-}
-
-/* ============================================================================
-   MINIMALIST ICON NAVIGATION & TOOLTIPS
-   ============================================================================ */
-
-.nav-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(15, 15, 15, 0.85);
-  color: #e5e7eb;
-  border-radius: 4px;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  text-decoration: none;
-}
-
-.nav-icon-btn:hover {
-  border-color: #ffffff;
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 14px rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
-}
-
-.nav-tooltip {
-  pointer-events: none;
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(-2px);
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  background: rgba(8, 8, 8, 0.96);
-  color: #ffffff;
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 0.25rem 0.55rem;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 2px;
-  white-space: nowrap;
-  z-index: 60;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
-}
-
-.group:hover > .nav-tooltip,
-.group:focus-within > .nav-tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
 #header-quota-pill {
   transition: all 0.2s ease;
 }
 
+/* Minimalist Stamp & Legacy Icon Cleanup */
+.grunge-stamp-barcode,
+.grunge-stamp-symbol,
+img[src*="barcode.svg"],
+img[src*="symbolWhite.svg"] {
+  display: none !important;
+}
+
+/* Upload Icon Container Styling */
+label[for="file-input"] .w-14 {
+  border-radius: 16px !important;
+  background: rgba(0, 240, 255, 0.08) !important;
+  border: 1px solid rgba(0, 240, 255, 0.35) !important;
+  color: #00f0ff !important;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.2) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+label[for="file-input"]:hover .w-14 {
+  background: rgba(0, 240, 255, 0.16) !important;
+  border-color: #00f0ff !important;
+  box-shadow: 0 0 35px rgba(0, 240, 255, 0.4) !important;
+  transform: scale(1.06) !important;
+}
 

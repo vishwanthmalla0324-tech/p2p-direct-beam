@@ -590,9 +590,9 @@
       if (coldStartBanner) coldStartBanner.classList.remove('hidden');
     }, 2500);
 
-    // Pure WebSocket transport for instant Cloudflare Worker edge signaling
+    // WebSocket first with polling fallback for Cloudflare Worker edge signaling
     socket = io({
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,
       reconnectionDelay: 1000
     });
@@ -600,6 +600,10 @@
     socket.on('connect', () => {
       clearTimeout(coldStartTimer);
       if (coldStartBanner) coldStartBanner.classList.add('hidden');
+    });
+
+    socket.on('connect_error', (err) => {
+      // Handled gracefully without logging fatal uncaught exceptions
     });
 
     socket.on('room-created', (payload) => {
@@ -1444,7 +1448,16 @@
 
   function startQrScanner() {
     if (typeof Html5Qrcode === 'undefined') {
-      showToast('QR Scanner engine not loaded.');
+      showToast('Initializing QR Scanner...');
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+      script.onload = () => {
+        startQrScanner();
+      };
+      script.onerror = () => {
+        showToast('Unable to load QR Scanner engine.');
+      };
+      document.body.appendChild(script);
       return;
     }
 

@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vishwanth Malla — Systems Architect · Founder · Full-Stack Developer</title>
+  <meta name="description" content="Vishwanth Malla — Full-Stack Developer & Systems Builder. Creator of Direct Beam: browser-to-browser encrypted P2P data streaming.">
+
+  <!-- Google Fonts: Anton (Display) & Onest (Sans) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- CDN Importmap for Lenis -->
+  <script type="importmap">
+  {
+    "imports": {
+      "lenis": "https://cdn.jsdelivr.net/npm/lenis@1.3.19/dist/lenis.mjs"
+    }
+  }
+  </script>
+
+  <style>
+    /* CSS Variables & Tokens */
+    :root {
+      --background: #08080a;
+      --foreground: #f3f1ea;
+      --surface: #111114;
+      --surface-2: #17171b;
+      --muted: #807f78;
+      --line: rgba(243, 241, 234, 0.1);
+      --line-strong: rgba(243, 241, 234, 0.22);
+      --accent: #ff3b1d;
+      --accent-2: #ff6a3d;
+
+      --gutter: 2.5rem;
+      --section: 9rem;
+
+      --font-display: "Anton", sans-serif;
+      --font-sans: "Onest", sans-serif;
+
+      /* Type scale (rem) */
+      --fs-hero: 24rem;
+      --lh-hero: 0.8;
+      --fs-mega: 11.5rem;
+      --lh-mega: 0.86;
+      --fs-display: 7.5rem;
+      --lh-display: 0.9;
+      --fs-h1: 5rem;
+      --lh-h1: 0.95;
+      --fs-h2: 3.25rem;
+      --lh-h2: 1;
+      --fs-h3: 1.75rem;
+      --lh-h3: 1.15;
+      --fs-lead: 1.375rem;
+      --lh-lead: 1.45;
+      --fs-body: 1.0625rem;
+      --lh-body: 1.6;
+      --fs-eyebrow: 0.8125rem;
+      --lh-eyebrow: 1.2;
+
+      /* Transitions */
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+      --ease-spring-wipe: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Minimal CSS Reset */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    img, video {
+      display: block;
+      max-width: 100%;
+    }
+    ul, ol {
+      list-style: none;
+    }
+    button, a {
+      font-family: inherit;
+      color: inherit;
+      text-decoration: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    ::selection {
+      background: #ff3b1d;
+      color: #08080a;
+    }
+
+    /* Rem-based Adaptive Grid */
+    html {
+      font-size: 16px;
+      background: #08080a;
+      scroll-behavior: auto;
+    }
+    @media (max-width: 1920px) { html { font-size: 0.833333vw; } }
+    @media (max-width: 1440px) { html { font-size: 1.111111vw; } }
+    @media (max-width: 1024px) { html { font-size: 1.5625vw; } }
+    @media (max-width: 640px) {
+      html { font-size: 4.444444vw; }
+      :root { --gutter: 16px; }
+    }
+
+    body {
+      background: #08080a;
+      color: #f3f1ea;
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+    }
+
+    main {
+      position: relative;
+      width: 100%;
+      overflow-x: hidden;
+    }
+
+    /* Common Eyebrow Component */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: var(--fs-eyebrow);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+      line-height: var(--lh-eyebrow);
+    }
+    .eyebrow-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 9999px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* Text Reveal Masks & Spans */
+    .reveal-mask {
+      overflow: hidden;
+      display: block;
+    }
+    .reveal-inner {
+      display: block;
+      transform: translateY(110%);
+      opacity: 0;
+      transition: transform 800ms var(--ease-out-expo), opacity 800ms var(--ease-out-expo);
+      will-change: transform, opacity;
+    }
+    .in-view .reveal-inner,
+    .revealed .reveal-inner {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Line Word Masks for Headings */
+    .line-word-mask {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: top;
+      margin-right: 0.28em;
+    }
+    .line-word-inner {
+      display: inline-block;
+      transform: translateY(110%);
+      opacity: 0;
+      transition: transform 850ms var(--ease-out-expo), opacity 850ms var(--ease-out-expo);
+      will-change: transform, opacity;
+    }
+    .in-view .line-word-inner {
+      transform: translateY(0) !important;
+      opacity: 1 !important;
+    }
+
+    /* Fade & Slide up blocks */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 560ms var(--ease-out-expo), transform 560ms var(--ease-out-expo);
+      will-change: transform, opacity;
+    }
+    .in-view.fade-up,
+    .in-view .fade-up,
+    .revealed.fade-up {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* =========================================================================
+       1) Preloader
+       ========================================================================= */
+    #preloader {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      padding: var(--gutter);
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      pointer-events: auto;
+      transition: transform 650ms var(--ease-spring-wipe);
+      will-change: transform;
+    }
+    @media (min-width: 640px) {
+      #preloader {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+    }
+    #preloader .preloader-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -10;
+      background: var(--background);
+    }
+    .preloader-brand {
+      font-family: var(--font-display);
+      font-size: var(--fs-h3);
+      text-transform: uppercase;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      color: var(--foreground);
+      transition: opacity 300ms ease;
+    }
+    .preloader-counter {
+      font-family: var(--font-display);
+      font-size: var(--fs-display);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      color: var(--foreground);
+      transition: opacity 300ms ease;
+    }
+    .preloader-counter .pct {
+      color: var(--accent);
+    }
+
+    /* =========================================================================
+       2) SiteNav (fixed top)
+       ========================================================================= */
+    #site-nav {
+      position: fixed;
+      inset-inline: 0;
+      top: 0;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .nav-inner {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem var(--gutter);
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .nav-monogram {
+      display: grid;
+      place-items: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 9999px;
+      border: 1px solid var(--line-strong);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      font-size: 0.9375rem;
+      color: var(--foreground);
+      transition: border-color 0.3s ease;
+    }
+    .nav-logo:hover .nav-monogram {
+      border-color: var(--accent);
+    }
+    .nav-name {
+      display: none;
+      font-size: var(--fs-eyebrow);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+    }
+    @media (min-width: 640px) {
+      .nav-name { display: block; }
+    }
+    .nav-desktop-links {
+      display: none;
+      gap: 2.5rem;
+      align-items: center;
+    }
+    @media (min-width: 768px) {
+      .nav-desktop-links { display: flex; }
+    }
+    .nav-link-item {
+      position: relative;
+      font-size: var(--fs-eyebrow);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      transition: color 0.3s ease;
+      padding: 0.25rem 0;
+    }
+    .nav-link-item:hover {
+      color: var(--foreground);
+    }
+    .nav-link-item::after {
+      content: "";
+      position: absolute;
+      bottom: -0.25rem;
+      left: 0;
+      height: 1px;
+      background: var(--accent);
+      width: 0;
+      transition: width 0.3s var(--ease-out-expo);
+    }
+    .nav-link-item:hover::after {
+      width: 100%;
+    }
+    .nav-burger {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      gap: 0.375rem;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+    @media (min-width: 768px) {
+      .nav-burger { display: none; }
+    }
+    .burger-bar {
+      width: 1.5rem;
+      height: 0.125rem;
+      background: var(--foreground);
+      transition: transform 420ms var(--ease-out-expo), opacity 300ms ease;
+      transform-origin: center;
+    }
+    .nav-burger.open .bar-top {
+      transform: translateY(0.5rem) rotate(45deg);
+    }
+    .nav-burger.open .bar-mid {
+      opacity: 0;
+    }
+    .nav-burger.open .bar-bot {
+      transform: translateY(-0.5rem) rotate(-45deg);
+    }
+
+    /* Mobile Menu Panel */
+    #mobile-menu {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      background: var(--background);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding-inline: var(--gutter);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 450ms ease-out;
+    }
+    #mobile-menu.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .mobile-nav-list {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .mobile-nav-item {
+      overflow: hidden;
+    }
+    .mobile-nav-link {
+      display: block;
+      font-family: var(--font-display);
+      font-size: var(--fs-h2);
+      text-transform: uppercase;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      color: var(--foreground);
+      transform: translateY(48px);
+      opacity: 0;
+      transition: transform 420ms var(--ease-out-expo), opacity 420ms var(--ease-out-expo), color 0.3s ease;
+    }
+    #mobile-menu.open .mobile-nav-link {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    .mobile-nav-link:hover {
+      color: var(--accent);
+    }
+
+    /* =========================================================================
+       3) Hero Section
+       ========================================================================= */
+    #top {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 100svh;
+      overflow: hidden;
+    }
+    .hero-top-row {
+      position: relative;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      padding: 7rem var(--gutter) 0;
+    }
+    @media (min-width: 640px) {
+      .hero-top-row {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding-top: 8rem;
+      }
+    }
+    .hero-roles {
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      color: var(--foreground);
+      font-size: var(--fs-h3);
+    }
+    @media (min-width: 640px) {
+      .hero-roles { font-size: var(--fs-h2); }
+    }
+    .hero-desc {
+      max-width: 28rem;
+      font-size: var(--fs-body);
+      color: var(--muted);
+      line-height: var(--lh-body);
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 520ms var(--ease-out-expo), transform 520ms var(--ease-out-expo);
+    }
+    @media (min-width: 640px) {
+      .hero-desc { text-align: right; }
+    }
+    .hero-desc.revealed {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Portrait Column */
+    .hero-portrait-col {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      height: 84vh;
+      width: 78vw;
+      z-index: 20;
+      pointer-events: none;
+    }
+    @media (min-width: 640px) {
+      .hero-portrait-col { width: 44vw; }
+    }
+    @media (min-width: 1024px) {
+      .hero-portrait-col { width: 34vw; }
+    }
+
+    /* Gradient base layer that melts portrait & giant name into page */
+    .hero-gradient-base {
+      position: absolute;
+      inset-inline: 0;
+      bottom: 0;
+      z-index: 25;
+      height: 28vh;
+      background: linear-gradient(to bottom, transparent, #08080a 90%);
+      pointer-events: none;
+    }
+
+    /* Giant Name (behind portrait) */
+    .hero-giant-name {
+      position: absolute;
+      inset-inline: 0;
+      bottom: 0;
+      transform: translateY(6%);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      line-height: var(--lh-mega);
+      letter-spacing: -0.01em;
+      color: var(--accent);
+      font-size: var(--fs-mega);
+      pointer-events: none;
+      user-select: none;
+    }
+    @media (min-width: 640px) {
+      .hero-giant-name {
+        font-size: var(--fs-hero);
+        line-height: var(--lh-hero);
+      }
+    }
+    .hero-name-line {
+      display: block;
+      white-space: nowrap;
+    }
+    .hero-letter {
+      display: inline-block;
+      overflow: hidden;
+    }
+    .hero-letter-inner {
+      display: inline-block;
+      transform: translateY(100%);
+      opacity: 0;
+      transition: transform 900ms var(--ease-out-expo), opacity 900ms var(--ease-out-expo);
+      will-change: transform, opacity;
+    }
+    .hero-letter.revealed .hero-letter-inner {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Scroll Cue */
+    .hero-scroll-cue {
+      position: absolute;
+      bottom: 2rem;
+      left: var(--gutter);
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity 600ms ease-out;
+      pointer-events: auto;
+    }
+    .hero-scroll-cue.revealed {
+      opacity: 1;
+    }
+    .hero-scroll-rule {
+      width: 2.5rem;
+      height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* =========================================================================
+       LiquidImage Component
+       ========================================================================= */
+    .liquid-image {
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
+      pointer-events: auto;
+    }
+    .liquid-image.bare {
+      background: transparent;
+    }
+    .liquid-svg-def {
+      position: absolute;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+    .liquid-placeholder {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(130% 130% at 30% 15%, var(--surface-2), var(--background));
+      z-index: 1;
+    }
+    .liquid-media {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      z-index: 2;
+    }
+    .liquid-image.bare .liquid-media {
+      object-position: center top;
+      filter: contrast(1.05) brightness(0.95);
+    }
+    .liquid-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3;
+      background: radial-gradient(120% 120% at 50% 120%, color-mix(in srgb, #08080a 70%, transparent), transparent 60%);
+    }
+    .liquid-veil {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 4;
+      background: var(--background);
+      mix-blend-mode: color;
+      opacity: 0.88;
+      transition: opacity 380ms ease-out;
+    }
+    .liquid-glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+      background: linear-gradient(120deg, transparent 30%, color-mix(in srgb, var(--accent) 35%, transparent) 50%, transparent 70%);
+      opacity: 0;
+      transition: opacity 340ms ease-out;
+    }
+    /* Hover effects for cards with liquid images */
+    .group:hover .liquid-veil,
+    .liquid-image:hover .liquid-veil {
+      opacity: 0;
+    }
+    .group:hover .liquid-glow,
+    .liquid-image:hover .liquid-glow {
+      opacity: 1;
+    }
+
+    /* =========================================================================
+       4) Marquee Section
+       ========================================================================= */
+    #marquee-section {
+      overflow: hidden;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 2rem 0;
+    }
+    .marquee-track {
+      display: flex;
+      width: max-content;
+      flex-wrap: nowrap;
+      animation: marquee 22s linear infinite;
+    }
+    .marquee-word-group {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .marquee-item {
+      display: flex;
+      align-items: center;
+      font-family: var(--font-display);
+      font-size: var(--fs-h2);
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      color: var(--foreground);
+    }
+    .marquee-dot {
+      margin-inline: 2rem;
+      width: 0.625rem;
+      height: 0.625rem;
+      border-radius: 9999px;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    /* =========================================================================
+       5) Story Section
+       ========================================================================= */
+    #story {
+      padding: var(--section) var(--gutter);
+    }
+    .story-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+    @media (min-width: 1024px) {
+      .story-grid {
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--gutter);
+      }
+    }
+    .story-left {
+      grid-column: span 1;
+    }
+    @media (min-width: 1024px) {
+      .story-left { grid-column: span 6; }
+    }
+    .section-heading-h1 {
+      margin-top: 1.5rem;
+      max-width: 16ch;
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      line-height: var(--lh-h1);
+      letter-spacing: -0.01em;
+      font-size: var(--fs-h2);
+      color: var(--foreground);
+    }
+    @media (min-width: 640px) {
+      .section-heading-h1 { font-size: var(--fs-h1); }
+    }
+    .story-lead {
+      margin-top: 2rem;
+      max-width: 48ch;
+      font-size: var(--fs-lead);
+      line-height: var(--lh-lead);
+      color: var(--muted);
+    }
+
+    .story-right {
+      grid-column: span 1;
+    }
+    @media (min-width: 1024px) {
+      .story-right {
+        grid-column: span 6;
+        padding-top: 0.5rem;
+      }
+    }
+    .principles-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .principle-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      column-gap: 1.5rem;
+      border-top: 1px solid var(--line);
+      padding: 2rem 0;
+    }
+    .principle-item:last-child {
+      border-bottom: 1px solid var(--line);
+    }
+    .principle-num {
+      font-family: var(--font-sans);
+      font-size: var(--fs-h3);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      line-height: var(--lh-h3);
+    }
+    .principle-title {
+      font-family: var(--font-sans);
+      font-size: var(--fs-h3);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: var(--lh-h3);
+      color: var(--foreground);
+    }
+    .principle-desc {
+      margin-top: 0.75rem;
+      max-width: 44ch;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      color: var(--muted);
+    }
+
+    /* =========================================================================
+       6) Ventures Section
+       ========================================================================= */
+    #ventures {
+      padding: var(--section) var(--gutter);
+    }
+    .ventures-header {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    @media (min-width: 640px) {
+      .ventures-header {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+      }
+    }
+    .ventures-count-label {
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+      line-height: var(--lh-eyebrow);
+    }
+    .ventures-grid {
+      margin-top: 4rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      row-gap: 4rem;
+    }
+    @media (min-width: 768px) {
+      .ventures-grid {
+        grid-template-columns: repeat(2, 1fr);
+        column-gap: var(--gutter);
+      }
+      .ventures-grid > li:nth-child(even) {
+        margin-top: 6rem;
+      }
+    }
+    .venture-item {
+      opacity: 0;
+      transform: translateY(60px);
+      transition: opacity 620ms var(--ease-out-expo), transform 620ms var(--ease-out-expo);
+      will-change: transform, opacity;
+    }
+    .venture-item.in-view {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .venture-card {
+      display: flex;
+      flex-direction: column;
+    }
+    .venture-img-wrap {
+      aspect-ratio: 16 / 11;
+      width: 100%;
+      border-radius: 0.125rem;
+    }
+    .venture-row {
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--line);
+      padding-top: 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+    .venture-name {
+      font-family: var(--font-sans);
+      font-size: var(--fs-h3);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: var(--lh-h3);
+      color: var(--foreground);
+      transition: color 340ms ease-out;
+    }
+    .group:hover .venture-name {
+      color: var(--accent);
+    }
+    .venture-blurb {
+      margin-top: 0.5rem;
+      max-width: 42ch;
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      color: var(--muted);
+    }
+    .venture-meta {
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .venture-year {
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+    }
+    .venture-outcome {
+      margin-top: 0.5rem;
+      font-size: var(--fs-eyebrow);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--accent);
+    }
+    .venture-category {
+      margin-top: 0.75rem;
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+    }
+
+    /* =========================================================================
+       7) Impact Section
+       ========================================================================= */
+    #impact {
+      padding: var(--section) var(--gutter);
+    }
+    .impact-header {
+      display: flex;
+      flex-direction: column;
+    }
+    .section-heading-h2 {
+      margin-top: 1.5rem;
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      line-height: var(--lh-h2);
+      letter-spacing: -0.01em;
+      font-size: var(--fs-h2);
+      color: var(--foreground);
+    }
+    .impact-list {
+      margin-top: 4rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      border-top: 1px solid var(--line);
+    }
+    @media (min-width: 640px) {
+      .impact-list {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (min-width: 1024px) {
+      .impact-list {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    .impact-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      border-bottom: 1px solid var(--line);
+      padding: 2.5rem 0;
+    }
+    @media (min-width: 640px) and (max-width: 1023px) {
+      .impact-cell:nth-child(2n) {
+        border-left: 1px solid var(--line);
+        padding-left: 2rem;
+      }
+    }
+    @media (min-width: 1024px) {
+      .impact-cell {
+        padding: 3rem 0;
+      }
+      .impact-cell:not(:first-child) {
+        border-left: 1px solid var(--line);
+        padding-left: 2rem;
+      }
+    }
+    .impact-figure {
+      font-family: var(--font-display);
+      font-size: var(--fs-display);
+      line-height: var(--lh-display);
+      letter-spacing: -0.01em;
+      color: var(--foreground);
+      transition: color 340ms var(--ease-out-expo);
+      cursor: default;
+    }
+    .impact-figure:hover {
+      color: var(--accent);
+    }
+    .impact-label {
+      max-width: 22ch;
+      font-size: var(--fs-body);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      line-height: var(--lh-body);
+    }
+
+    /* =========================================================================
+       8) Voices Section (Interactive Testimonials)
+       ========================================================================= */
+    #voices {
+      padding: var(--section) var(--gutter);
+    }
+    .voices-grid {
+      margin-top: 4rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+    @media (min-width: 1024px) {
+      .voices-grid {
+        grid-template-columns: repeat(12, 1fr);
+        gap: var(--gutter);
+      }
+    }
+    .voices-selector {
+      grid-column: span 1;
+    }
+    @media (min-width: 1024px) {
+      .voices-selector {
+        grid-column: span 5;
+      }
+    }
+    .voices-btn {
+      width: 100%;
+      display: flex;
+      align-items: baseline;
+      gap: 1.25rem;
+      border-top: 1px solid var(--line);
+      padding: 1.75rem 0;
+      text-align: left;
+      background: none;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+      cursor: pointer;
+      position: relative;
+    }
+    .voices-selector > li:last-child .voices-btn {
+      border-bottom: 1px solid var(--line);
+    }
+    .voice-btn-index {
+      font-size: var(--fs-eyebrow);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      transition: color 0.3s ease;
+    }
+    .voices-btn.active .voice-btn-index {
+      color: var(--accent);
+    }
+    .voice-btn-content {
+      flex: 1;
+    }
+    .voice-btn-name {
+      font-family: var(--font-sans);
+      font-size: var(--fs-h3);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: var(--lh-h3);
+      color: var(--muted);
+      transition: color 0.3s ease;
+    }
+    .voices-btn.active .voice-btn-name {
+      color: var(--foreground);
+    }
+    .voice-btn-role {
+      margin-top: 0.25rem;
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+    }
+    .voice-btn-indicator {
+      width: 0;
+      height: 1px;
+      background: var(--accent);
+      transition: width 340ms var(--ease-out-expo);
+      flex-shrink: 0;
+    }
+    .voices-btn.active .voice-btn-indicator {
+      width: 2.5rem;
+    }
+
+    .voices-panel {
+      grid-column: span 1;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    @media (min-width: 640px) {
+      .voices-panel {
+        grid-template-columns: 1fr auto;
+        align-items: flex-start;
+        gap: 2.5rem;
+      }
+    }
+    @media (min-width: 1024px) {
+      .voices-panel {
+        grid-column: span 7;
+      }
+    }
+    .voice-quote-col {
+      order: 2;
+    }
+    @media (min-width: 640px) {
+      .voice-quote-col { order: 1; }
+    }
+    .voice-quote-text {
+      max-width: 32ch;
+      font-family: var(--font-sans);
+      font-size: var(--fs-h3);
+      font-weight: 500;
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+      color: var(--foreground);
+    }
+    .voice-quote-footer {
+      margin-top: 2rem;
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+    }
+    .voice-portrait-wrap {
+      order: 1;
+      aspect-ratio: 4 / 5;
+      width: 100%;
+      border-radius: 0.125rem;
+      opacity: 0;
+      transform: scale(1.06);
+      transition: opacity 640ms var(--ease-out-expo), transform 640ms var(--ease-out-expo);
+    }
+    @media (min-width: 640px) {
+      .voice-portrait-wrap {
+        order: 2;
+        width: 16rem;
+      }
+    }
+    .in-view .voice-portrait-wrap,
+    .voice-portrait-wrap.in-view {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Word-by-word reveal for quote */
+    .word-mask {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: baseline;
+      margin-right: 0.28em;
+    }
+    .word-inner {
+      display: inline-block;
+      transform: translateY(18px);
+      opacity: 0;
+      transition: transform 520ms var(--ease-out-quart), opacity 520ms var(--ease-out-quart);
+      will-change: transform, opacity;
+    }
+    .word-mask.active .word-inner {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* =========================================================================
+       9) ContactFooter Section
+       ========================================================================= */
+    #contact {
+      padding-top: var(--section);
+      padding-inline: var(--gutter);
+    }
+    .contact-heading {
+      margin-top: 1.5rem;
+      max-width: 18ch;
+      font-family: var(--font-display);
+      text-transform: uppercase;
+      line-height: var(--lh-h1);
+      letter-spacing: -0.01em;
+      font-size: var(--fs-h1);
+      color: var(--foreground);
+    }
+    @media (min-width: 640px) {
+      .contact-heading {
+        font-size: var(--fs-display);
+        line-height: var(--lh-display);
+      }
+    }
+    .contact-desc {
+      margin-top: 2rem;
+      max-width: 48ch;
+      font-size: var(--fs-lead);
+      line-height: var(--lh-lead);
+      color: var(--muted);
+    }
+    .contact-links-group {
+      margin-top: 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .contact-email-link {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      font-family: var(--font-sans);
+      font-size: var(--fs-h3);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      word-break: break-all;
+      color: var(--foreground);
+      transition: transform 340ms var(--ease-out-expo), color 340ms var(--ease-out-expo);
+      width: fit-content;
+    }
+    @media (min-width: 640px) {
+      .contact-email-link {
+        gap: 1rem;
+        font-size: var(--fs-h2);
+      }
+    }
+    .contact-email-link:hover {
+      transform: translateX(14px);
+      color: var(--accent);
+    }
+    .contact-email-arrow {
+      color: var(--accent);
+      display: inline-block;
+      transition: transform 340ms var(--ease-out-expo);
+    }
+    .contact-email-link:hover .contact-email-arrow {
+      transform: translate(4px, -4px);
+    }
+    .contact-sub-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: var(--fs-body);
+      color: var(--muted);
+      transition: color 0.3s ease;
+      width: fit-content;
+    }
+    .contact-sub-email:hover {
+      color: var(--accent);
+    }
+
+    /* Footer Bar */
+    .footer-bar {
+      margin-top: var(--section);
+      border-top: 1px solid var(--line);
+      padding: 3rem 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+    @media (min-width: 1024px) {
+      .footer-bar {
+        grid-template-columns: repeat(12, 1fr);
+      }
+    }
+    .footer-left {
+      grid-column: span 1;
+    }
+    @media (min-width: 1024px) {
+      .footer-left { grid-column: span 6; }
+    }
+    .footer-signature {
+      font-family: var(--font-display);
+      font-size: var(--fs-h2);
+      text-transform: uppercase;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      color: var(--foreground);
+    }
+    .footer-tagline {
+      margin-top: 1rem;
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--muted);
+    }
+
+    .footer-mid {
+      grid-column: span 1;
+    }
+    @media (min-width: 1024px) {
+      .footer-mid { grid-column: span 3; }
+    }
+    .social-nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: var(--fs-body);
+      color: var(--muted);
+      transition: color 0.3s ease;
+      padding: 0.25rem 0;
+    }
+    .social-link:hover {
+      color: var(--foreground);
+    }
+    .social-link-rule {
+      display: inline-block;
+      width: 0;
+      height: 1px;
+      background: var(--accent);
+      transition: width 340ms var(--ease-out-expo);
+    }
+    .social-link:hover .social-link-rule {
+      width: 1.5rem;
+    }
+
+    .footer-right {
+      grid-column: span 1;
+    }
+    @media (min-width: 1024px) {
+      .footer-right {
+        grid-column: span 3;
+        text-align: right;
+      }
+    }
+    .footer-copy {
+      font-size: var(--fs-eyebrow);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      line-height: var(--lh-body);
+    }
+
+    /* =========================================================================
+       Reduced Motion
+       ========================================================================= */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      #preloader {
+        display: none !important;
+      }
+      .marquee-track {
+        transform: none !important;
+        animation: none !important;
+      }
+      .reveal-inner,
+      .line-word-inner,
+      .hero-letter-inner,
+      .hero-desc,
+      .hero-scroll-cue,
+      .fade-up,
+      .venture-item,
+      .word-inner,
+      .voice-portrait-wrap {
+        transform: none !important;
+        opacity: 1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1) PRELOADER -->
+  <div id="preloader" aria-hidden="false">
+    <div class="preloader-bg"></div>
+    <div class="preloader-brand">Vishwanth Malla</div>
+    <div class="preloader-counter" id="preloader-counter">0<span class="pct">%</span></div>
+  </div>
+
+  <!-- 2) SITE NAV (FIXED) -->
+  <header id="site-nav">
+    <nav class="nav-inner" aria-label="Main Navigation">
+      <a href="#top" class="nav-logo" aria-label="Vishwanth Malla Home">
+        <div class="nav-monogram">VM</div>
+        <div class="nav-name">Vishwanth Malla</div>
+      </a>
+
+      <!-- Desktop Links -->
+      <ul class="nav-desktop-links">
+        <li><a href="#story" class="nav-link-item">Vision</a></li>
+        <li><a href="#ventures" class="nav-link-item">Ventures</a></li>
+        <li><a href="#impact" class="nav-link-item">Metrics</a></li>
+        <li><a href="#voices" class="nav-link-item">Voices</a></li>
+        <li><a href="#contact" class="nav-link-item">Contact</a></li>
+        <li><a href="/" class="nav-link-item" style="color: #00f0ff; font-weight: 600;">⚡ Launch App</a></li>
+      </ul>
+
+      <!-- Mobile Burger -->
+      <button class="nav-burger" id="burger-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+        <span class="burger-bar bar-top"></span>
+        <span class="burger-bar bar-mid"></span>
+        <span class="burger-bar bar-bot"></span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Mobile Menu Panel -->
+  <div id="mobile-menu" aria-hidden="true">
+    <ul class="mobile-nav-list">
+      <li class="mobile-nav-item"><a href="#story" class="mobile-nav-link">Vision</a></li>
+      <li class="mobile-nav-item"><a href="#ventures" class="mobile-nav-link">Ventures</a></li>
+      <li class="mobile-nav-item"><a href="#impact" class="mobile-nav-link">Metrics</a></li>
+      <li class="mobile-nav-item"><a href="#voices" class="mobile-nav-link">Voices</a></li>
+      <li class="mobile-nav-item"><a href="#contact" class="mobile-nav-link">Contact</a></li>
+      <li class="mobile-nav-item"><a href="/" class="mobile-nav-link" style="color: #00f0ff; font-weight: 600;">⚡ Launch Direct Beam App</a></li>
+    </ul>
+  </div>
+
+  <main>
+    <!-- 3) HERO SECTION -->
+    <section id="top">
+      <!-- Top Row: Role Words + Description -->
+      <div class="hero-top-row">
+        <h2 class="hero-roles">
+          <span class="reveal-mask"><span class="reveal-inner hero-role-item">Founder</span></span>
+          <span class="reveal-mask"><span class="reveal-inner hero-role-item">Architect</span></span>
+          <span class="reveal-mask"><span class="reveal-inner hero-role-item">Engineer</span></span>
+          <span class="reveal-mask"><span class="reveal-inner hero-role-item">Builder</span></span>
+        </h2>
+        <p class="hero-desc" id="hero-desc">
+          Computer Science undergraduate and systems architect building performant, decentralized web applications and real-time protocols. Creator of Direct Beam: zero-cloud, encrypted peer-to-peer streaming.
+        </p>
+      </div>
+
+      <!-- Hero Portrait Column with Bare LiquidImage treatment -->
+      <div class="hero-portrait-col">
+        <figure class="liquid-image bare" id="liquid-hero" role="img" style="width:100%; height:100%;">
+          <svg class="liquid-svg-def">
+            <defs>
+              <filter id="liquid-filter-hero">
+                <feTurbulence id="turb-hero" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                <feDisplacementMap id="disp-hero" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+            </defs>
+          </svg>
+          <img
+            class="liquid-media"
+            src="assets/founder.jpg"
+            alt="Vishwanth Malla — Founder & Systems Architect"
+            style="filter: url(#liquid-filter-hero); border-radius: 0.25rem;"
+          />
+        </figure>
+      </div>
+
+      <!-- Gradient base layer that melts portrait & name into page -->
+      <div class="hero-gradient-base"></div>
+
+      <!-- Giant Name (behind portrait) -->
+      <h1 class="hero-giant-name" aria-label="Vishwanth Malla">
+        <span class="hero-name-line" id="hero-name-line-1">
+          <!-- VISHWANTH -->
+          <span class="hero-letter"><span class="hero-letter-inner">V</span></span><span class="hero-letter"><span class="hero-letter-inner">I</span></span><span class="hero-letter"><span class="hero-letter-inner">S</span></span><span class="hero-letter"><span class="hero-letter-inner">H</span></span><span class="hero-letter"><span class="hero-letter-inner">W</span></span><span class="hero-letter"><span class="hero-letter-inner">A</span></span><span class="hero-letter"><span class="hero-letter-inner">N</span></span><span class="hero-letter"><span class="hero-letter-inner">T</span></span><span class="hero-letter"><span class="hero-letter-inner">H</span></span>
+        </span>
+        <span class="hero-name-line" id="hero-name-line-2">
+          <!-- MALLA -->
+          <span class="hero-letter"><span class="hero-letter-inner">M</span></span><span class="hero-letter"><span class="hero-letter-inner">A</span></span><span class="hero-letter"><span class="hero-letter-inner">L</span></span><span class="hero-letter"><span class="hero-letter-inner">L</span></span><span class="hero-letter"><span class="hero-letter-inner">A</span></span>
+        </span>
+      </h1>
+
+      <!-- Scroll cue -->
+      <div class="hero-scroll-cue" id="hero-scroll-cue">
+        <span class="hero-scroll-rule"></span>
+        <span>Scroll to enter</span>
+      </div>
+    </section>
+
+    <!-- 4) MARQUEE SECTION -->
+    <section id="marquee-section" aria-label="Operating principles">
+      <div class="marquee-track">
+        <!-- Rendered twice for seamless loop -->
+        <div class="marquee-word-group">
+          <div class="marquee-item">Decentralized By Design</div><div class="marquee-dot"></div>
+          <div class="marquee-item">Zero-Cloud Architecture</div><div class="marquee-dot"></div>
+          <div class="marquee-item">Direct P2P Streaming</div><div class="marquee-dot"></div>
+          <div class="marquee-item">Cryptographic Security</div><div class="marquee-dot"></div>
+          <div class="marquee-item">Embedded Hardware Logic</div><div class="marquee-dot"></div>
+        </div>
+        <div class="marquee-word-group">
+          <div class="marquee-item">Decentralized By Design</div><div class="marquee-dot"></div>
+          <div class="marquee-item">Zero-Cloud Architecture</div><div class="marquee-dot"></div>
+          <div class="marquee-item">Direct P2P Streaming</div><div class="marquee-dot"></div>
+          <div class="marquee-item">Cryptographic Security</div><div class="marquee-dot"></div>
+          <div class="marquee-item">Embedded Hardware Logic</div><div class="marquee-dot"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5) STORY SECTION -->
+    <section id="story">
+      <div class="story-grid">
+        <!-- Left Column -->
+        <div class="story-left trigger-in-view">
+          <div class="eyebrow">
+            <span class="eyebrow-dot"></span>
+            <span>The Vision</span>
+          </div>
+          <h2 class="section-heading-h1 heading-split-lines">
+            Privacy is not a feature. It is the architecture.
+          </h2>
+          <p class="story-lead fade-up">
+            From low-level microcontrollers and SPI communication to WebRTC peer-to-peer streaming, I engineer systems that eliminate middlemen. Whether routing encrypted payloads across distributed browsers or prototyping hardware logic on ESP32 silicon, the objective is uncompromising: sovereign, blazing-fast, decentralized software.
+          </p>
+        </div>
+
+        <!-- Right Column: Principles -->
+        <div class="story-right">
+          <ul class="principles-list">
+            <li class="principle-item trigger-in-view fade-up" style="--stagger-delay: 0ms;">
+              <div class="principle-num">01</div>
+              <div>
+                <h3 class="principle-title">Peer-to-peer over centralized clouds</h3>
+                <p class="principle-desc">Data shouldn't transit a third-party server when two nodes can communicate directly. Zero latency leaks, zero surveillance.</p>
+              </div>
+            </li>
+            <li class="principle-item trigger-in-view fade-up" style="--stagger-delay: 90ms;">
+              <div class="principle-num">02</div>
+              <div>
+                <h3 class="principle-title">DTLS & cryptographic trust</h3>
+                <p class="principle-desc">Security isn't bolted on afterwards. Every packet is signed, verified, and shielded by modern DTLS 1.3 cryptographic standards.</p>
+              </div>
+            </li>
+            <li class="principle-item trigger-in-view fade-up" style="--stagger-delay: 180ms;">
+              <div class="principle-num">03</div>
+              <div>
+                <h3 class="principle-title">Silicon to browser fluency</h3>
+                <p class="principle-desc">True systems mastery bridges hardware and the web: from C and ESP32 firmware to TypeScript and modern reactive interfaces.</p>
+              </div>
+            </li>
+            <li class="principle-item trigger-in-view fade-up" style="--stagger-delay: 270ms;">
+              <div class="principle-num">04</div>
+              <div>
+                <h3 class="principle-title">Open-source velocity</h3>
+                <p class="principle-desc">Ship real solutions to real problems. Direct Beam was engineered to make secure file transfer effortless, transparent, and accessible to all.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6) VENTURES SECTION -->
+    <section id="ventures">
+      <div class="ventures-header trigger-in-view">
+        <div>
+          <div class="eyebrow">
+            <span class="eyebrow-dot"></span>
+            <span>Selected Ventures & Systems</span>
+          </div>
+          <h2 class="section-heading-h1 heading-split-lines">
+            The code that moves data.
+          </h2>
+        </div>
+        <div class="ventures-count-label">08 / Flagship Deployments</div>
+      </div>
+
+      <ul class="ventures-grid">
+        <!-- 1: Direct Beam -->
+        <li class="venture-item trigger-in-view" style="--stagger-delay: 0ms;">
+          <article class="venture-card group">
+            <a href="https://directbeam.space" target="_blank" rel="noopener noreferrer" aria-label="Visit Direct Beam P2P Platform">
+              <figure class="liquid-image venture-img-wrap" id="liquid-v1" role="img">
+                <svg class="liquid-svg-def">
+                  <defs>
+                    <filter id="liquid-filter-v1">
+                      <feTurbulence id="turb-v1" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                      <feDisplacementMap id="disp-v1" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                    </filter>
+                  </defs>
+                </svg>
+                <div class="liquid-placeholder"></div>
+                <img
+                  class="liquid-media"
+                  src="assets/direct_beam_venture.webp"
+                  alt="Direct Beam — P2P File Transfer"
+                  loading="lazy"
+                  style="filter: url(#liquid-filter-v1);"
+                />
+                <div class="liquid-vignette"></div>
+                <div class="liquid-veil"></div>
+                <div class="liquid-glow"></div>
+              </figure>
+            </a>
+            <div class="venture-row">
+              <div>
+                <a href="https://directbeam.space" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                  <h3 class="venture-name">Direct Beam ↗</h3>
+                </a>
+                <p class="venture-blurb">Browser-to-browser encrypted peer-to-peer file transfer platform powered by WebRTC and DTLS 1.3 encryption.</p>
+              </div>
+              <div class="venture-meta">
+                <div class="venture-year">2024</div>
+                <a href="https://directbeam.space" target="_blank" rel="noopener noreferrer" class="venture-outcome hover:underline">Live — directbeam.space</a>
+              </div>
+            </div>
+            <div class="venture-category">Decentralized WebRTC · DTLS 1.3 · Cloudflare</div>
+          </article>
+        </li>
+
+        <!-- 2: Embedded IoT & ESP32 (Offset down md:mt-24) -->
+        <li class="venture-item trigger-in-view" style="--stagger-delay: 120ms;">
+          <article class="venture-card group">
+            <figure class="liquid-image venture-img-wrap" id="liquid-v2" role="img">
+              <svg class="liquid-svg-def">
+                <defs>
+                  <filter id="liquid-filter-v2">
+                    <feTurbulence id="turb-v2" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                    <feDisplacementMap id="disp-v2" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                  </filter>
+                </defs>
+              </svg>
+              <div class="liquid-placeholder"></div>
+              <img
+                class="liquid-media"
+                src="assets/iot_hardware.jpg"
+                alt="Embedded IoT & Microcontrollers"
+                loading="lazy"
+                style="filter: url(#liquid-filter-v2);"
+              />
+              <div class="liquid-vignette"></div>
+              <div class="liquid-veil"></div>
+              <div class="liquid-glow"></div>
+            </figure>
+            <div class="venture-row">
+              <div>
+                <h3 class="venture-name">Embedded IoT Hardware</h3>
+                <p class="venture-blurb">Custom ESP32 firmware, RFID/SPI bus telemetry, and hardware integrations interfacing physical silicon with cloud APIs.</p>
+              </div>
+              <div class="venture-meta">
+                <div class="venture-year">2023</div>
+                <div class="venture-outcome">Active — Embedded Lab</div>
+              </div>
+            </div>
+            <div class="venture-category">ESP32 · C · SPI Microcontrollers · IoT</div>
+          </article>
+        </li>
+
+        <!-- 3: Muntaj Shaan -->
+        <li class="venture-item trigger-in-view" style="--stagger-delay: 0ms;">
+          <article class="venture-card group">
+            <a href="https://muntaj-seven.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Visit Muntaj Shaan Live Demo">
+              <figure class="liquid-image venture-img-wrap" id="liquid-v5" role="img">
+                <svg class="liquid-svg-def">
+                  <defs>
+                    <filter id="liquid-filter-v5">
+                      <feTurbulence id="turb-v5" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                      <feDisplacementMap id="disp-v5" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                    </filter>
+                  </defs>
+                </svg>
+                <div class="liquid-placeholder"></div>
+                <img
+                  class="liquid-media"
+                  src="assets/muntaj-shaan-poster.png"
+                  alt="Muntaj Shaan — Creative Showcase"
+                  loading="lazy"
+                  style="filter: url(#liquid-filter-v5);"
+                />
+                <div class="liquid-vignette"></div>
+                <div class="liquid-veil"></div>
+                <div class="liquid-glow"></div>
+              </figure>
+            </a>
+            <div class="venture-row">
+              <div>
+                <a href="https://muntaj-seven.vercel.app/" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                  <h3 class="venture-name">Muntaj Shaan ↗</h3>
+                </a>
+                <p class="venture-blurb">An elegant interactive creative web showcase highlighting modern front-end design, high-end typography, WebGL fluid dynamics, and responsive animations.</p>
+              </div>
+              <div class="venture-meta">
+                <div class="venture-year">2024</div>
+                <a href="https://muntaj-seven.vercel.app/" target="_blank" rel="noopener noreferrer" class="venture-outcome hover:underline">Live Demo ↗</a>
+              </div>
+            </div>
+            <div class="venture-category">Creative Showcase · WebGL · GSAP · CSS3</div>
+          </article>
+        </li>
+
+        <!-- 4: B-Square Engineers (Offset down md:mt-24) -->
+        <li class="venture-item trigger-in-view" style="--stagger-delay: 120ms;">
+          <article class="venture-card group">
+            <a href="https://b-sque.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Visit B-Square Engineers Live Portal">
+              <figure class="liquid-image venture-img-wrap" id="liquid-v6" role="img">
+                <svg class="liquid-svg-def">
+                  <defs>
+                    <filter id="liquid-filter-v6">
+                      <feTurbulence id="turb-v6" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                      <feDisplacementMap id="disp-v6" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                    </filter>
+                  </defs>
+                </svg>
+                <div class="liquid-placeholder"></div>
+                <img
+                  class="liquid-media"
+                  src="assets/b-square-engineers-poster.png"
+                  alt="B-Square Engineers — Industrial Portal"
+                  loading="lazy"
+                  style="filter: url(#liquid-filter-v6);"
+                />
+                <div class="liquid-vignette"></div>
+                <div class="liquid-veil"></div>
+                <div class="liquid-glow"></div>
+              </figure>
+            </a>
+            <div class="venture-row">
+              <div>
+                <a href="https://b-sque.vercel.app/" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                  <h3 class="venture-name">B-Square Engineers ↗</h3>
+                </a>
+                <p class="venture-blurb">Commercial engineering and industrial manufacturing showcase featuring interactive Three.js 3D mechanical CAD object loaders and camera scroll triggers.</p>
+              </div>
+              <div class="venture-meta">
+                <div class="venture-year">2024</div>
+                <a href="https://b-sque.vercel.app/" target="_blank" rel="noopener noreferrer" class="venture-outcome hover:underline">Live Portal ↗</a>
+              </div>
+            </div>
+            <div class="venture-category">Three.js · 3D WebGL · CAD · TypeScript</div>
+          </article>
+        </li>
+
+        <!-- 5: Metallurgy — Govt Polytechnic -->
+        <li class="venture-item trigger-in-view" style="--stagger-delay: 0ms;">
+          <article class="venture-card group">
+            <a href="https://metallutgy-clg1.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Visit Metallurgy Polytechnic Portal">
+              <figure class="liquid-image venture-img-wrap" id="liquid-v7" role="img">
+                <svg class="liquid-svg-def">
+                  <defs>
+                    <filter id="liquid-filter-v7">
+                      <feTurbulence id="turb-v7" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                      <feDisplacementMap id="disp-v7" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                    </filter>
+                  </defs>
+                </svg>
+                <div class="liquid-placeholder"></div>
+                <img
+                  class="liquid-media"
+                  src="assets/metallurgy-poster.png"
+                  alt="METALLURGY — Govt Polytechnic Portal"
+                  loading="lazy"
+                  style="filter: url(#liquid-filter-v7);"
+                />
+                <div class="liquid-vignette"></div>
+                <div class="liquid-veil"></div>
+                <div class="liquid-glow"></div>
+              </figure>
+            </a>
+            <div class="venture-row">
+              <div>
+                <a href="https://metallutgy-clg1.vercel.app/" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                  <h3 class="venture-name">Metallurgy — Govt Polytechnic ↗</h3>
+                </a>
+                <p class="venture-blurb">Department portal and centralized study material repository custom-built for the Department of Metallurgy at Government Polytechnic, Visakhapatnam.</p>
+              </div>
+              <div class="venture-meta">
+                <div class="venture-year">2024</div>
+                <a href="https://metallutgy-clg1.vercel.app/" target="_blank" rel="noopener noreferrer" class="venture-outcome hover:underline">Live Portal ↗</a>
+              </div>
+            </div>
+            <div class="venture-category">Educational Portal · Vite · JavaScript · UI</div>
+          </article>
+        </li>
+
+        <!-- 6: Sri Krishna Orthopaedic Clinic (Offset down md:mt-24) -->
+        <li class="venture-item trigger-in-view" style="--stagger-delay: 120ms;">
+          <article class="venture-card group">
+            <a href="https://sko-hospital.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Visit Sri Krishna Orthopaedic Clinic Website">
+              <figure class="liquid-image venture-img-wrap" id="liquid-v8" role="img">
+                <svg class="liquid-svg-def">
+                  <defs>
+                    <filter id="liquid-filter-v8">
+                      <feTurbulence id="turb-v8" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                      <feDisplacementMap id="disp-v8" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                    </filter>
+                  </defs>
+                </svg>
+                <div class="liquid-placeholder"></div>
+                <img
+                  class="liquid-media"
+                  src="assets/srikrishna-clinic-poster.png"
+                  alt="SRI KRISHNA ORTHOPAEDIC CLINIC"
+                  loading="lazy"
+                  style="filter: url(#liquid-filter-v8);"
+                />
+                <div class="liquid-vignette"></div>
+                <div class="liquid-veil"></div>
+                <div class="liquid-glow"></div>
+              </figure>
+            </a>
+            <div class="venture-row">
+              <div>
+                <a href="https://sko-hospital.vercel.app/" target="_blank" rel="noopener noreferrer" class="hover:underline">
+                  <h3 class="venture-name">Sri Krishna Orthopaedic Clinic ↗</h3>
+                </a>
+                <p class="venture-blurb">Healthcare patient portal showcasing specialized orthopaedic treatments, patient consultation scheduling, interactive inquiry forms, and location maps.</p>
+              </div>
+              <div class="venture-meta">
+                <div class="venture-year">2024</div>
+                <a href="https://sko-hospital.vercel.app/" target="_blank" rel="noopener noreferrer" class="venture-outcome hover:underline">Live Clinic ↗</a>
+              </div>
+            </div>
+            <div class="venture-category">Healthcare Portal · Patient UX · Responsive</div>
+          </article>
+        </li>
+
+        <!-- 7: Full-Stack Systems -->
+        <li class="venture-item trigger-in-view" style="--stagger-delay: 0ms;">
+          <article class="venture-card group">
+            <figure class="liquid-image venture-img-wrap" id="liquid-v3" role="img">
+              <svg class="liquid-svg-def">
+                <defs>
+                  <filter id="liquid-filter-v3">
+                    <feTurbulence id="turb-v3" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                    <feDisplacementMap id="disp-v3" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                  </filter>
+                </defs>
+              </svg>
+              <div class="liquid-placeholder"></div>
+              <img
+                class="liquid-media"
+                src="assets/web_platforms.jpg"
+                alt="Full-Stack Web Ecosystems"
+                loading="lazy"
+                style="filter: url(#liquid-filter-v3);"
+              />
+              <div class="liquid-vignette"></div>
+              <div class="liquid-veil"></div>
+              <div class="liquid-glow"></div>
+            </figure>
+            <div class="venture-row">
+              <div>
+                <h3 class="venture-name">Reactive Web Platforms</h3>
+                <p class="venture-blurb">Full-stack web architectures utilizing Next.js, Prisma ORM, PostgreSQL, and Firebase for real-time state synchronization.</p>
+              </div>
+              <div class="venture-meta">
+                <div class="venture-year">2023</div>
+                <div class="venture-outcome">Production Scaled</div>
+              </div>
+            </div>
+            <div class="venture-category">Next.js · Prisma · PostgreSQL</div>
+          </article>
+        </li>
+
+        <!-- 8: Hackathon & Open Source (Offset down md:mt-24) -->
+        <li class="venture-item trigger-in-view" style="--stagger-delay: 120ms;">
+          <article class="venture-card group">
+            <figure class="liquid-image venture-img-wrap" id="liquid-v4" role="img">
+              <svg class="liquid-svg-def">
+                <defs>
+                  <filter id="liquid-filter-v4">
+                    <feTurbulence id="turb-v4" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                    <feDisplacementMap id="disp-v4" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                  </filter>
+                </defs>
+              </svg>
+              <div class="liquid-placeholder"></div>
+              <img
+                class="liquid-media"
+                src="assets/hackathon.jpg"
+                alt="Open Source & Hackathons"
+                loading="lazy"
+                style="filter: url(#liquid-filter-v4);"
+              />
+              <div class="liquid-vignette"></div>
+              <div class="liquid-veil"></div>
+              <div class="liquid-glow"></div>
+            </figure>
+            <div class="venture-row">
+              <div>
+                <h3 class="venture-name">Hackathon Engineering</h3>
+                <p class="venture-blurb">Leading high-velocity hackathon teams and contributing to privacy-first open-source protocol research and real-time tooling.</p>
+              </div>
+              <div class="venture-meta">
+                <div class="venture-year">2022</div>
+                <div class="venture-outcome">Open Source Leader</div>
+              </div>
+            </div>
+            <div class="venture-category">System Architecture · Python · C</div>
+          </article>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 7) IMPACT SECTION -->
+    <section id="impact">
+      <div class="impact-header trigger-in-view">
+        <div class="eyebrow">
+          <span class="eyebrow-dot"></span>
+          <span>By The Numbers</span>
+        </div>
+        <h2 class="section-heading-h2 heading-split-lines">
+          Architecture, measured.
+        </h2>
+      </div>
+
+      <dl class="impact-list">
+        <!-- Stat 1 -->
+        <div class="impact-cell trigger-in-view fade-up" style="--stagger-delay: 0ms;">
+          <dd class="impact-figure">100%</dd>
+          <dt class="impact-label">Zero-cloud P2P encryption</dt>
+        </div>
+        <!-- Stat 2 -->
+        <div class="impact-cell trigger-in-view fade-up" style="--stagger-delay: 110ms;">
+          <dd class="impact-figure">DTLS 1.3</dd>
+          <dt class="impact-label">WebRTC cryptographic standard</dt>
+        </div>
+        <!-- Stat 3 -->
+        <div class="impact-cell trigger-in-view fade-up" style="--stagger-delay: 220ms;">
+          <dd class="impact-figure">0-Cloud</dd>
+          <dt class="impact-label">Direct browser-to-browser transit</dt>
+        </div>
+        <!-- Stat 4 -->
+        <div class="impact-cell trigger-in-view fade-up" style="--stagger-delay: 330ms;">
+          <dd class="impact-figure">ESP32</dd>
+          <dt class="impact-label">Microcontroller & SPI telemetry</dt>
+        </div>
+      </dl>
+    </section>
+
+    <!-- 8) VOICES SECTION -->
+    <section id="voices">
+      <div class="trigger-in-view">
+        <div class="eyebrow">
+          <span class="eyebrow-dot"></span>
+          <span>Voices</span>
+        </div>
+        <h2 class="section-heading-h2 heading-split-lines">
+          What collaborators say.
+        </h2>
+      </div>
+
+      <div class="voices-grid">
+        <!-- Selector List -->
+        <div class="voices-selector">
+          <ul>
+            <li>
+              <button class="voices-btn active" data-voice="0" aria-label="View testimonial from Elena Cardoso">
+                <span class="voice-btn-index">01</span>
+                <div class="voice-btn-content">
+                  <div class="voice-btn-name">Technical Reviewer</div>
+                  <div class="voice-btn-role">Peer-to-Peer Protocol Research</div>
+                </div>
+                <span class="voice-btn-indicator"></span>
+              </button>
+            </li>
+            <li>
+              <button class="voices-btn" data-voice="1" aria-label="View testimonial from Hackathon Peer">
+                <span class="voice-btn-index">02</span>
+                <div class="voice-btn-content">
+                  <div class="voice-btn-name">Hackathon Collaborator</div>
+                  <div class="voice-btn-role">Systems & Full-Stack Engineering</div>
+                </div>
+                <span class="voice-btn-indicator"></span>
+              </button>
+            </li>
+            <li>
+              <button class="voices-btn" data-voice="2" aria-label="View testimonial from Community User">
+                <span class="voice-btn-index">03</span>
+                <div class="voice-btn-content">
+                  <div class="voice-btn-name">Community User</div>
+                  <div class="voice-btn-role">Direct Beam User Community</div>
+                </div>
+                <span class="voice-btn-indicator"></span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Featured Panel -->
+        <div class="voices-panel trigger-in-view">
+          <blockquote class="voice-quote-col">
+            <p class="voice-quote-text" id="voice-quote-content"></p>
+            <footer class="voice-quote-footer" id="voice-quote-author">Technical Reviewer — Peer-to-Peer Protocol Research</footer>
+          </blockquote>
+
+          <figure class="liquid-image voice-portrait-wrap trigger-in-view" id="liquid-voice" role="img">
+            <svg class="liquid-svg-def">
+              <defs>
+                <filter id="liquid-filter-voice">
+                  <feTurbulence id="turb-voice" type="fractalNoise" baseFrequency="0.009" numOctaves="2" result="noise" />
+                  <feDisplacementMap id="disp-voice" in="SourceGraphic" in2="noise" scale="1" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+              </defs>
+            </svg>
+            <div class="liquid-placeholder"></div>
+            <img
+              id="voice-portrait-img"
+              class="liquid-media"
+              src="https://api.getlayers.ai/storage/v1/object/public/public/assets/marcus-vane-6799bd1fb6/voices/voice-01.webp"
+              alt="Voice Portrait"
+              style="filter: url(#liquid-filter-voice);"
+            />
+            <div class="liquid-vignette"></div>
+            <div class="liquid-veil"></div>
+            <div class="liquid-glow"></div>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9) CONTACT FOOTER -->
+    <footer id="contact">
+      <div class="trigger-in-view">
+        <div class="eyebrow">
+          <span class="eyebrow-dot"></span>
+          <span>Let's Build</span>
+        </div>
+        <h2 class="contact-heading heading-split-lines">
+          Building something that demands performance?
+        </h2>
+        <p class="contact-desc fade-up">
+          I'm always open to discussing distributed protocols, embedded hardware integrations, or next-generation web platforms. Reach out directly.
+        </p>
+        <div class="contact-links-group">
+          <a href="mailto:vishwanthmalla1@gmail.com" class="contact-email-link">
+            <span>vishwanthmalla1@gmail.com</span>
+            <span class="contact-email-arrow">↗</span>
+          </a>
+          <a href="mailto:support@directbeam.space" class="contact-sub-email">
+            <span style="color:var(--accent);">●</span> Work: support@directbeam.space
+          </a>
+        </div>
+      </div>
+
+      <!-- Footer Bar -->
+      <div class="footer-bar">
+        <!-- Left: Signature -->
+        <div class="footer-left">
+          <p class="footer-signature">Vishwanth Malla</p>
+          <p class="footer-tagline">Systems Builder · Designed & built with conviction.</p>
+        </div>
+
+        <!-- Middle: Social Links -->
+        <div class="footer-mid">
+          <nav aria-label="Social">
+            <ul class="social-nav-list">
+              <li>
+                <a href="https://github.com/vishwanthmalla0324-tech" target="_blank" rel="noreferrer noopener" class="social-link">
+                  <span class="social-link-rule"></span>
+                  <span>GitHub</span>
+                </a>
+              </li>
+              <li>
+                <a href="https://directbeam.space" target="_blank" rel="noreferrer noopener" class="social-link">
+                  <span class="social-link-rule"></span>
+                  <span>Direct Beam</span>
+                </a>
+              </li>
+              <li>
+                <a href="mailto:support@directbeam.space" class="social-link">
+                  <span class="social-link-rule"></span>
+                  <span>Direct Beam Support</span>
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+
+        <!-- Right: Copyright -->
+        <div class="footer-right">
+          <p class="footer-copy">© 2026 Vishwanth Malla. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Script Modules -->
+  <script type="module">
+    import Lenis from "lenis";
+
+    /* =========================================================================
+       1) Adaptive Grid Scaling (> 1920px)
+       ========================================================================= */
+    const FONT_BASE = 16, BASE_W = 1920, COEF = 0.6666;
+    function applyAdaptiveGrid() {
+      const w = window.innerWidth;
+      const reduction = ((BASE_W - w) / BASE_W) * 100 * COEF;
+      const size = FONT_BASE - (FONT_BASE * reduction) / 100;
+      if (size > FONT_BASE) {
+        document.documentElement.style.fontSize = size + "px";
+      } else {
+        document.documentElement.style.removeProperty("font-size");
+      }
+    }
+    applyAdaptiveGrid();
+    window.addEventListener("resize", applyAdaptiveGrid);
+
+    /* =========================================================================
+       2) Lenis Smooth Scroll Setup
+       ========================================================================= */
+    const lenis = new Lenis({
+      smoothWheel: true,
+      duration: 1.2
+    });
+    window.lenis = lenis;
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    // Stop Lenis while preloader runs
+    lenis.stop();
+    window.scrollTo(0, 0);
+
+    // Smooth scroll for internal anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const targetId = a.getAttribute('href');
+        if (targetId === '#' || !targetId) return;
+        const targetEl = document.querySelector(targetId);
+        if (targetEl) {
+          e.preventDefault();
+          // Close mobile menu if open
+          closeMobileMenu();
+          lenis.scrollTo(targetEl, { offset: 0, duration: 1.2 });
+        }
+      });
+    });
+
+    /* =========================================================================
+       3) Preloader Animation Sequence & Hero Entrance
+       ========================================================================= */
+    const preloader = document.getElementById("preloader");
+    const preloaderCounter = document.getElementById("preloader-counter");
+    const preloaderBrand = document.querySelector(".preloader-brand");
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function runHeroReveal() {
+      // 1. Giant Name Letters Reveal: Line 1 at 0ms, Line 2 at 240ms
+      const l1Letters = document.querySelectorAll("#hero-name-line-1 .hero-letter");
+      l1Letters.forEach((el, i) => {
+        setTimeout(() => el.classList.add("revealed"), i * 52);
+      });
+
+      const l2Letters = document.querySelectorAll("#hero-name-line-2 .hero-letter");
+      l2Letters.forEach((el, i) => {
+        setTimeout(() => el.classList.add("revealed"), 240 + i * 52);
+      });
+
+      // 2. Hero Roles Reveal: Starts at 200ms after baseline
+      const roleItems = document.querySelectorAll(".hero-role-item");
+      roleItems.forEach((item, i) => {
+        setTimeout(() => {
+          item.parentElement.classList.add("revealed");
+          item.style.transform = "translateY(0)";
+          item.style.opacity = "1";
+        }, 200 + i * 80);
+      });
+
+      // 3. Hero Description: 400ms after baseline
+      const desc = document.getElementById("hero-desc");
+      setTimeout(() => desc.classList.add("revealed"), 400);
+
+      // 4. Scroll Cue: 900ms after baseline
+      const cue = document.getElementById("hero-scroll-cue");
+      setTimeout(() => cue.classList.add("revealed"), 900);
+    }
+
+    if (prefersReducedMotion) {
+      preloader.style.display = "none";
+      lenis.start();
+      runHeroReveal();
+    } else {
+      let startTime = null;
+      const countDuration = 2000;
+
+      function updateCounter(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const progress = Math.min(elapsed / countDuration, 1);
+        const currentCount = Math.floor(progress * 100);
+
+        preloaderCounter.innerHTML = currentCount + '<span class="pct">%</span>';
+
+        if (progress < 1) {
+          requestAnimationFrame(updateCounter);
+        } else {
+          // Finished counting to 100
+          preloaderCounter.innerHTML = '100<span class="pct">%</span>';
+
+          // Fade out labels over ~300ms
+          preloaderBrand.style.opacity = "0";
+          preloaderCounter.style.opacity = "0";
+
+          // After 200ms delay, wipe preloader upward over ~650ms
+          setTimeout(() => {
+            preloader.style.transform = "translateY(-100%)";
+
+            // Trigger hero sequence at REVEAL_DELAY baseline
+            runHeroReveal();
+
+            // When wipe finishes (~650ms)
+            setTimeout(() => {
+              lenis.start();
+              preloader.style.display = "none";
+              preloader.setAttribute("aria-hidden", "true");
+            }, 650);
+          }, 200);
+        }
+      }
+      requestAnimationFrame(updateCounter);
+    }
+
+    /* =========================================================================
+       4) Mobile Menu Controller
+       ========================================================================= */
+    const burgerBtn = document.getElementById("burger-btn");
+    const mobileMenu = document.getElementById("mobile-menu");
+    const mobileLinks = document.querySelectorAll(".mobile-nav-link");
+
+    function openMobileMenu() {
+      burgerBtn.classList.add("open");
+      burgerBtn.setAttribute("aria-expanded", "true");
+      mobileMenu.classList.add("open");
+      mobileMenu.setAttribute("aria-hidden", "false");
+      lenis.stop();
+
+      mobileLinks.forEach((link, i) => {
+        link.style.transitionDelay = `${120 + i * 60}ms`;
+      });
+    }
+
+    function closeMobileMenu() {
+      burgerBtn.classList.remove("open");
+      burgerBtn.setAttribute("aria-expanded", "false");
+      mobileMenu.classList.remove("open");
+      mobileMenu.setAttribute("aria-hidden", "true");
+      lenis.start();
+
+      mobileLinks.forEach((link) => {
+        link.style.transitionDelay = `0ms`;
+      });
+    }
+
+    burgerBtn.addEventListener("click", () => {
+      if (mobileMenu.classList.contains("open")) {
+        closeMobileMenu();
+      } else {
+        openMobileMenu();
+      }
+    });
+
+    /* =========================================================================
+       5) Line-by-Line & Block Reveals (IntersectionObserver)
+       ========================================================================= */
+    function setupHeadingLineSplits() {
+      document.querySelectorAll(".heading-split-lines").forEach(heading => {
+        const text = heading.textContent.trim();
+        const words = text.split(/\s+/);
+        heading.innerHTML = words.map(w => 
+          `<span class="line-word-mask"><span class="line-word-inner">${w}</span></span>`
+        ).join("");
+
+        const masks = heading.querySelectorAll(".line-word-mask");
+        let lastTop = -1;
+        let lineIdx = -1;
+        masks.forEach(mask => {
+          const top = mask.offsetTop;
+          if (Math.abs(top - lastTop) > 6) {
+            lastTop = top;
+            lineIdx++;
+          }
+          const inner = mask.querySelector(".line-word-inner");
+          inner.style.transitionDelay = `${lineIdx * 90}ms`;
+        });
+      });
+    }
+
+    setupHeadingLineSplits();
+    window.addEventListener("resize", () => {
+      document.querySelectorAll(".heading-split-lines").forEach(heading => {
+        const masks = heading.querySelectorAll(".line-word-mask");
+        let lastTop = -1;
+        let lineIdx = -1;
+        masks.forEach(mask => {
+          const top = mask.offsetTop;
+          if (Math.abs(top - lastTop) > 6) {
+            lastTop = top;
+            lineIdx++;
+          }
+          const inner = mask.querySelector(".line-word-inner");
+          inner.style.transitionDelay = `${lineIdx * 90}ms`;
+        });
+      });
+    });
+
+    const observerOptions = {
+      root: null,
+      threshold: 0,
+      rootMargin: "0px"
+    };
+
+    const inViewObserver = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const target = entry.target;
+          const delay = target.style.getPropertyValue("--stagger-delay");
+          if (delay) {
+            setTimeout(() => {
+              target.classList.add("in-view");
+            }, parseInt(delay, 10));
+          } else {
+            target.classList.add("in-view");
+          }
+          obs.unobserve(target);
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll(".trigger-in-view").forEach(el => inViewObserver.observe(el));
+
+    /* =========================================================================
+       6) LiquidImage Component Shaders & Physics Wobble
+       ========================================================================= */
+    class LiquidSpring {
+      constructor(containerEl, config) {
+        this.container = containerEl;
+        this.dispEl = document.getElementById(config.dispId);
+        this.turbEl = document.getElementById(config.turbId);
+        this.maxScale = config.maxScale;
+        this.baseFreqTarget = 0.022;
+
+        this.scale = 1;
+        this.scaleTarget = 1;
+        this.scaleVel = 0;
+
+        this.freq = 0.009;
+        this.freqTarget = 0.009;
+        this.freqVel = 0;
+
+        this.tension = 140;
+        this.friction = 13;
+        this.animating = false;
+
+        this.init();
+      }
+
+      init() {
+        if (!this.dispEl || !this.turbEl) return;
+
+        // Disable hover displacement on touch/mobile <= 768px
+        this.container.addEventListener("mouseenter", () => {
+          if (window.innerWidth <= 768) return;
+          this.scaleTarget = this.maxScale;
+          this.freqTarget = this.baseFreqTarget;
+          this.startLoop();
+        });
+
+        this.container.addEventListener("mouseleave", () => {
+          this.scaleTarget = 1;
+          this.freqTarget = 0.009;
+          this.startLoop();
+        });
+      }
+
+      startLoop() {
+        if (this.animating) return;
+        this.animating = true;
+        let lastTime = performance.now();
+
+        const step = (now) => {
+          const dt = Math.min((now - lastTime) / 1000, 0.032);
+          lastTime = now;
+
+          // Scale spring physics (tension 140 / friction 13)
+          const scaleForce = -this.tension * (this.scale - this.scaleTarget) - this.friction * this.scaleVel;
+          this.scaleVel += scaleForce * dt;
+          this.scale += this.scaleVel * dt;
+
+          // Frequency spring physics
+          const freqForce = -this.tension * (this.freq - this.freqTarget) - this.friction * this.freqVel;
+          this.freqVel += freqForce * dt;
+          this.freq += this.freqVel * dt;
+
+          // Write directly to DOM attributes
+          this.dispEl.setAttribute("scale", this.scale.toFixed(2));
+          this.turbEl.setAttribute("baseFrequency", this.freq.toFixed(4));
+
+          // Settle condition
+          const scaleSettled = Math.abs(this.scale - this.scaleTarget) < 0.05 && Math.abs(this.scaleVel) < 0.05;
+          const freqSettled = Math.abs(this.freq - this.freqTarget) < 0.0001 && Math.abs(this.freqVel) < 0.0001;
+
+          if (scaleSettled && freqSettled) {
+            this.scale = this.scaleTarget;
+            this.freq = this.freqTarget;
+            this.dispEl.setAttribute("scale", this.scale);
+            this.turbEl.setAttribute("baseFrequency", this.freq);
+            this.animating = false;
+          } else {
+            requestAnimationFrame(step);
+          }
+        };
+        requestAnimationFrame(step);
+      }
+    }
+
+    // Initialize all LiquidImage instances
+    const heroLiquid = document.getElementById("liquid-hero");
+    if (heroLiquid) new LiquidSpring(heroLiquid, { dispId: "disp-hero", turbId: "turb-hero", maxScale: 30 });
+
+    const v1 = document.getElementById("liquid-v1");
+    if (v1) new LiquidSpring(v1.closest(".group"), { dispId: "disp-v1", turbId: "turb-v1", maxScale: 28 });
+
+    const v2 = document.getElementById("liquid-v2");
+    if (v2) new LiquidSpring(v2.closest(".group"), { dispId: "disp-v2", turbId: "turb-v2", maxScale: 28 });
+
+    const v3 = document.getElementById("liquid-v3");
+    if (v3) new LiquidSpring(v3.closest(".group"), { dispId: "disp-v3", turbId: "turb-v3", maxScale: 28 });
+
+    const v4 = document.getElementById("liquid-v4");
+    if (v4) new LiquidSpring(v4.closest(".group"), { dispId: "disp-v4", turbId: "turb-v4", maxScale: 28 });
+
+    const v5 = document.getElementById("liquid-v5");
+    if (v5) new LiquidSpring(v5.closest(".group"), { dispId: "disp-v5", turbId: "turb-v5", maxScale: 28 });
+
+    const v6 = document.getElementById("liquid-v6");
+    if (v6) new LiquidSpring(v6.closest(".group"), { dispId: "disp-v6", turbId: "turb-v6", maxScale: 28 });
+
+    const v7 = document.getElementById("liquid-v7");
+    if (v7) new LiquidSpring(v7.closest(".group"), { dispId: "disp-v7", turbId: "turb-v7", maxScale: 28 });
+
+    const v8 = document.getElementById("liquid-v8");
+    if (v8) new LiquidSpring(v8.closest(".group"), { dispId: "disp-v8", turbId: "turb-v8", maxScale: 28 });
+
+    const voiceLiquid = document.getElementById("liquid-voice");
+    if (voiceLiquid) new LiquidSpring(voiceLiquid, { dispId: "disp-voice", turbId: "turb-voice", maxScale: 22 });
+
+    /* =========================================================================
+       7) Voices Interactive Testimonials & Word-by-Word Reveal
+       ========================================================================= */
+    const voicesData = [
+      {
+        quote: "Vishwanth architected Direct Beam with an obsession for zero-latency peer connections. The WebRTC data pipeline is exceptionally clean.",
+        name: "Technical Reviewer",
+        role: "Peer-to-Peer Protocol Research",
+        image: "https://api.getlayers.ai/storage/v1/object/public/public/assets/marcus-vane-6799bd1fb6/voices/voice-01.webp"
+      },
+      {
+        quote: "His ability to bridge embedded hardware firmware with modern full-stack web frameworks makes him an exceptionally versatile systems builder.",
+        name: "Hackathon Collaborator",
+        role: "Systems & Full-Stack Engineering",
+        image: "https://api.getlayers.ai/storage/v1/object/public/public/assets/marcus-vane-6799bd1fb6/voices/voice-02.webp"
+      },
+      {
+        quote: "Direct Beam solved our encrypted file sharing problem with zero cloud overhead. Intuitive, reliable, and completely private.",
+        name: "Community User",
+        role: "Direct Beam User Community",
+        image: "https://api.getlayers.ai/storage/v1/object/public/public/assets/marcus-vane-6799bd1fb6/voices/voice-03.webp"
+      }
+    ];
+
+    const voiceQuoteContent = document.getElementById("voice-quote-content");
+    const voiceQuoteAuthor = document.getElementById("voice-quote-author");
+    const voicePortraitImg = document.getElementById("voice-portrait-img");
+    const voiceBtns = document.querySelectorAll(".voices-btn");
+
+    function renderVoice(index) {
+      const data = voicesData[index];
+
+      // Update button active states
+      voiceBtns.forEach((btn, i) => {
+        btn.classList.toggle("active", i === index);
+      });
+
+      // Update author
+      voiceQuoteAuthor.textContent = `${data.name} — ${data.role}`;
+
+      // Update portrait src with smooth fade
+      voicePortraitImg.style.opacity = "0.7";
+      voicePortraitImg.src = data.image;
+      voicePortraitImg.onload = () => {
+        voicePortraitImg.style.opacity = "1";
+      };
+
+      // Word-by-word reveal (wrapped in curly quotes “…” with 22ms stagger, 520ms easeOutQuart)
+      const words = data.quote.split(" ");
+      const wrappedWords = words.map((w, idx) => {
+        const prefix = idx === 0 ? "“" : "";
+        const suffix = idx === words.length - 1 ? "”" : "";
+        return `<span class="word-mask"><span class="word-inner">${prefix}${w}${suffix}</span></span>`;
+      }).join("");
+
+      voiceQuoteContent.innerHTML = wrappedWords;
+
+      // Stagger word inner spans rising into place
+      const wordMasks = voiceQuoteContent.querySelectorAll(".word-mask");
+      wordMasks.forEach((wm, idx) => {
+        setTimeout(() => {
+          wm.classList.add("active");
+        }, idx * 22);
+      });
+    }
+
+    // Initial render for Voice 0
+    renderVoice(0);
+
+    // Event listeners on buttons (hover/focus/click)
+    voiceBtns.forEach((btn, index) => {
+      btn.addEventListener("click", () => renderVoice(index));
+      btn.addEventListener("mouseenter", () => renderVoice(index));
+      btn.addEventListener("focus", () => renderVoice(index));
+    });
+
+  </script>
+</body>
+</html>

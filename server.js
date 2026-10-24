@@ -37,6 +37,15 @@ app.get('/api/ice-servers', (req, res) => {
   res.json({ iceServers });
 });
 
+app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  next();
+});
+
 app.use(express.json());
 
 // In-memory user & session store for local dev
@@ -174,6 +183,17 @@ app.get('/api/auth/cloudflare-access', (req, res) => {
 
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Staging Preview Routes for UI Variants
+app.get('/preview/theme-1', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'preview', 'theme-1.html'));
+});
+app.get('/preview/theme-2', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'preview', 'theme-2.html'));
+});
+app.get('/preview/theme-3', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'preview', 'theme-3.html'));
 });
 
 // Serve static assets from public/

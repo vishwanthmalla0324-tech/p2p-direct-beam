@@ -262,8 +262,10 @@ export default {
     const url = new URL(request.url);
 
     // 0a. Enforce HTTPS 301 Redirect in production
-    const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
-    if (proto === "http" && !url.hostname.includes("localhost") && !url.hostname.includes("127.0.0.1")) {
+    const cfVisitor = request.headers.get("cf-visitor");
+    const isHttpCf = cfVisitor && cfVisitor.includes('"scheme":"http"');
+    const proto = request.headers.get("x-forwarded-proto") || (isHttpCf ? "http" : url.protocol.replace(":", ""));
+    if ((proto === "http" || isHttpCf) && !url.hostname.includes("localhost") && !url.hostname.includes("127.0.0.1")) {
       return Response.redirect(`https://${url.host}${url.pathname}${url.search}`, 301);
     }
 
@@ -275,6 +277,9 @@ export default {
       headers.set("X-Content-Type-Options", "nosniff");
       headers.set("X-Frame-Options", "SAMEORIGIN");
       headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+      headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+      headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=()");
+      headers.set("Content-Security-Policy", "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' wss: https:; frame-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'self';");
       return new Response(res.body, {
         status: res.status,
         statusText: res.statusText,
@@ -300,6 +305,34 @@ export default {
     if (url.pathname === "/reset-password" || url.pathname === "/reset-password/") {
       if (env.ASSETS) {
         const res = await env.ASSETS.fetch(new Request(new URL("/reset-password.html", request.url), request));
+        return withSecurityHeaders(res);
+      }
+    }
+
+    // Rewrite clean /about and /founder paths to /about.html
+    if (url.pathname === "/about" || url.pathname === "/about/" || url.pathname === "/founder" || url.pathname === "/founder/") {
+      if (env.ASSETS) {
+        const res = await env.ASSETS.fetch(new Request(new URL("/about.html", request.url), request));
+        return withSecurityHeaders(res);
+      }
+    }
+
+    // Staging Preview Routes for UI Variants
+    if (url.pathname === "/preview/theme-1" || url.pathname === "/preview/theme-1/") {
+      if (env.ASSETS) {
+        const res = await env.ASSETS.fetch(new Request(new URL("/preview/theme-1.html", request.url), request));
+        return withSecurityHeaders(res);
+      }
+    }
+    if (url.pathname === "/preview/theme-2" || url.pathname === "/preview/theme-2/") {
+      if (env.ASSETS) {
+        const res = await env.ASSETS.fetch(new Request(new URL("/preview/theme-2.html", request.url), request));
+        return withSecurityHeaders(res);
+      }
+    }
+    if (url.pathname === "/preview/theme-3" || url.pathname === "/preview/theme-3/") {
+      if (env.ASSETS) {
+        const res = await env.ASSETS.fetch(new Request(new URL("/preview/theme-3.html", request.url), request));
         return withSecurityHeaders(res);
       }
     }
