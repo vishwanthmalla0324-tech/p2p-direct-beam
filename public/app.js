@@ -2003,12 +2003,22 @@
       if (user && user.email) {
         const emailShort = user.email.split('@')[0];
         navAuthStatus.textContent = isPro ? `⭐ ${emailShort}` : `${emailShort} (${count}/3)`;
-        navAuthStatus.className = isPro ? 'text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider' : 'text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider';
+        navAuthStatus.className = isPro ? 'text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider truncate block max-w-[80px] sm:max-w-none' : 'text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider truncate block max-w-[80px] sm:max-w-none';
       } else {
         navAuthStatus.textContent = isPro ? 'PRO ⚡' : 'Sign In';
         navAuthStatus.className = isPro ? 'text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider' : 'text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider';
       }
     }
+
+    window.toggleMobileQuickMenu = function(force) {
+      const menu = document.getElementById('mobile-quick-menu');
+      if (!menu) return;
+      if (typeof force === 'boolean') {
+        menu.classList.toggle('hidden', !force);
+      } else {
+        menu.classList.toggle('hidden');
+      }
+    };
 
     if (navAuthTooltip) {
       if (user && user.email) {
