@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "build": "wrangler deploy --dry-run",
-    "deploy": "wrangler deploy",
+    "build:js": "esbuild public/app.js --minify --outfile=public/app.min.js && esbuild public/js/beam-canvas.js --minify --outfile=public/js/beam-canvas.min.js",
+    "build": "npm run build:js && wrangler deploy --dry-run",
+    "deploy": "npm run build:js && wrangler deploy",
     "test": "node test/security_flow.test.mjs"
   },
   "dependencies": {
@@ -15,6 +16,7 @@
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "socket.io-client": "^4.8.4",
     "wrangler": "^4.151.1"
   }

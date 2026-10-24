@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <title>Direct Beam — Encrypted P2P File & Data Streaming</title>
   <meta name="description" content="Direct Beam delivers fast browser-to-browser encrypted P2P file transfers with zero cloud retention, unlimited file size, and DTLS 1.3 security." />
   <meta name="keywords" content="P2P file transfer, WebRTC direct beam, encrypted file sharing, browser to browser transfer, zero cloud storage, large file sharing, batch transfers" />
@@ -143,13 +143,21 @@
     };
   </script>
 
-  <!-- Ultra-Premium Bespoke Stylesheet (Linear / Apple Tier) -->
+  <!-- Bespoke Responsive Stylesheet (Linear / Apple Tier) -->
+  <link rel="stylesheet" href="/style.css" />
   <style>
     :root {
       --brand-cyan: #00f0ff;
       --brand-indigo: #6366f1;
       --brand-purple: #a855f7;
     }
+
+    /* Fluid Media & Responsive Reset */
+    img, video, canvas, svg {
+      max-width: 100%;
+      height: auto;
+    }
+
     body {
       background-color: #030407;
       color: #f1f5f9;
@@ -164,13 +172,48 @@
       top: 0;
       left: 50%;
       transform: translate(-50%, -20%);
-      width: 1100px;
-      height: 650px;
+      width: min(1100px, 95vw);
+      height: min(650px, 50vh);
       background: radial-gradient(ellipse 60% 40% at 50% 50%, rgba(0, 240, 255, 0.16) 0%, rgba(99, 102, 241, 0.12) 40%, rgba(168, 85, 247, 0.05) 70%, transparent 100%);
       filter: blur(90px);
       pointer-events: none;
       z-index: 0;
       animation: beamGlow 10s ease-in-out infinite alternate;
+    }
+
+    /* Standard Responsive Breakpoints */
+    @media (max-width: 640px) {
+      body {
+        font-size: 14px;
+      }
+      .ambient-aurora {
+        width: 95vw !important;
+        height: 40vh !important;
+      }
+      .conic-beam-border {
+        border-radius: 20px;
+        padding: 1px;
+      }
+      .conic-beam-inner {
+        border-radius: 19px;
+      }
+      button, a.btn-luxury-primary, input {
+        min-height: 44px;
+      }
+    }
+
+    @media (min-width: 641px) and (max-width: 1024px) {
+      .ambient-aurora {
+        width: 85vw !important;
+        height: 50vh !important;
+      }
+    }
+
+    @media (min-width: 1025px) {
+      .ambient-aurora {
+        width: min(1100px, 90vw);
+        height: min(650px, 55vh);
+      }
     }
 
     /* Subtle architectural micro-grid */
@@ -414,7 +457,7 @@
 
   <!-- Floating Toast Notification -->
   <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 -translate-y-20 opacity-0 pointer-events-none glass-card px-5 py-2.5 rounded-2xl shadow-2xl text-xs font-mono flex items-center gap-3 border border-cyan-400/40 text-white">
-    <img src="/assets/direct_beam_logo.webp" alt="DirectBeam Logo" width="18" height="18" class="w-4.5 h-4.5 rounded-full object-cover shrink-0 border border-cyan-400" />
+    <img src="/assets/direct_beam_logo.webp" srcset="/assets/direct_beam_logo.webp 1x, /assets/direct_beam_logo.webp 2x" alt="DirectBeam Logo" width="18" height="18" class="w-4.5 h-4.5 rounded-full object-cover shrink-0 border border-cyan-400" />
     <span id="toast-message">Notification</span>
   </div>
 
@@ -434,7 +477,7 @@
         <!-- Brand -->
         <div class="flex items-center gap-3 cursor-pointer group" id="brand-home-link">
           <div class="relative">
-            <img src="/assets/direct_beam_logo.webp" alt="Direct Beam Logo" width="38" height="38" class="w-9 h-9 rounded-xl object-cover border border-white/20 shadow-md transition duration-300 group-hover:scale-105 group-hover:border-cyan-400" />
+            <img src="/assets/direct_beam_logo.webp" srcset="/assets/direct_beam_logo.webp 1x, /assets/direct_beam_logo.webp 2x" alt="Direct Beam Logo" width="38" height="38" class="w-9 h-9 rounded-xl object-cover border border-white/20 shadow-md transition duration-300 group-hover:scale-105 group-hover:border-cyan-400" />
             <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-black animate-pulse"></span>
           </div>
           <div>
@@ -471,7 +514,7 @@
             <i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i>
           </button>
           <button id="nav-founder-btn" class="p-1.5 rounded-xl hover:bg-white/5 transition" title="Architect Profile">
-            <img src="/profile.webp" alt="Founder" width="20" height="20" class="w-5 h-5 rounded-full object-cover border border-cyan-400/50" onerror="this.src='/profile.jpg'" />
+            <img src="/profile.webp" srcset="/profile.webp 1x, /profile.webp 2x" alt="Founder" width="20" height="20" class="w-5 h-5 rounded-full object-cover border border-cyan-400/50" onerror="this.src='/profile.jpg'" />
           </button>
 
           <!-- Sign In Button -->
@@ -1183,7 +1226,7 @@
     <!-- SECTION 8: ARCHITECT PROFILE BANNER -->
     <section class="glass-card p-6 md:p-8 rounded-3xl flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
       <div class="relative shrink-0">
-        <img src="/profile.webp" alt="Founder" width="76" height="76" loading="lazy" class="w-18 h-18 rounded-2xl border-2 border-cyan-400/50 object-cover shadow-xl" onerror="this.src='/profile.jpg'" />
+        <img src="/profile.webp" srcset="/profile.webp 1x, /profile.webp 2x" alt="Founder" width="76" height="76" loading="lazy" class="w-18 h-18 rounded-2xl border-2 border-cyan-400/50 object-cover shadow-xl" onerror="this.src='/profile.jpg'" />
         <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-black" title="Active Core Engineer"></span>
       </div>
       <div class="space-y-1.5 flex-1 text-center md:text-left">
@@ -1210,7 +1253,7 @@
     <footer class="border-t border-white/10 pt-8 pb-4 space-y-6">
       <div class="flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-zinc-400 font-mono">
         <div class="flex items-center gap-3">
-          <img src="/profile.webp" alt="Founder" width="34" height="34" loading="lazy" class="w-8 h-8 rounded-xl object-cover border border-cyan-400/30" onerror="this.src='/profile.jpg'" />
+          <img src="/profile.webp" srcset="/profile.webp 1x, /profile.webp 2x" alt="Founder" width="34" height="34" loading="lazy" class="w-8 h-8 rounded-xl object-cover border border-cyan-400/30" onerror="this.src='/profile.jpg'" />
           <div>
             <span class="text-white font-bold">DirectBeam Core Infrastructure</span>
             <span class="block text-zinc-400">Architected by <a href="/about" class="text-cyan-300 hover:underline">Vishwanth Malla</a> (<button id="open-founder-footer-btn" class="hover:text-cyan-400 transition cursor-pointer underline">Contact</button>)</span>
@@ -1229,7 +1272,7 @@
 
       <div class="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-white/5 text-[11px] text-zinc-400 font-mono gap-2">
         <div class="flex items-center gap-2">
-          <img src="/assets/direct_beam_logo.webp" alt="DirectBeam Logo" width="16" height="16" loading="lazy" class="w-4 h-4 rounded-sm object-cover opacity-80" />
+          <img src="/assets/direct_beam_logo.webp" srcset="/assets/direct_beam_logo.webp 1x, /assets/direct_beam_logo.webp 2x" alt="DirectBeam Logo" width="16" height="16" loading="lazy" class="w-4 h-4 rounded-sm object-cover opacity-80" />
           <span>Direct Beam © 2026. All Rights Reserved.</span>
         </div>
         <span class="text-[10px] text-zinc-400 font-mono tracking-widest uppercase">DTLS 1.3 ENCRYPTED • ZERO CLOUD STORAGE</span>
@@ -1249,7 +1292,7 @@
       </div>
 
       <div class="flex flex-col items-center text-center space-y-3 pt-2">
-        <img src="/profile.webp" alt="Vishwanth Malla" width="96" height="96" loading="lazy" class="w-24 h-24 rounded-2xl object-cover shadow-2xl border-2 border-cyan-400/50" onerror="this.src='/profile.jpg'" />
+        <img src="/profile.webp" srcset="/profile.webp 1x, /profile.webp 2x" alt="Vishwanth Malla" width="96" height="96" loading="lazy" class="w-24 h-24 rounded-2xl object-cover shadow-2xl border-2 border-cyan-400/50" onerror="this.src='/profile.jpg'" />
         <div>
           <h3 class="text-xl font-display font-bold text-white">Vishwanth Malla</h3>
           <p class="text-xs text-zinc-400 font-mono mt-0.5">Full-Stack &amp; WebRTC Systems Architect</p>
@@ -1442,13 +1485,13 @@
     </div>
   </div>
 
-  <!-- Deferred Core Libraries (Non-Render-Blocking) -->
+  <!-- Deferred Core Libraries (Non-Render-Blocking, 100% Minified) -->
   <script src="/socket.io.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
-  <script src="https://unpkg.com/lucide@latest" defer></script>
-  <script src="/app.js" defer></script>
-  <script type="module" src="/js/beam-canvas.js"></script>
+  <script src="/lucide.min.js" defer></script>
+  <script src="/app.min.js" defer></script>
+  <script type="module" src="/js/beam-canvas.min.js"></script>
   <script>
     function refreshLucideIcons() {
       if (typeof lucide !== 'undefined') lucide.createIcons();

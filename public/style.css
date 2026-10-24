@@ -1,1 +1,36 @@
 @import url('/css/theme.css');
+
+/* ============================================================================
+   RESPONSIVE DESIGN SYSTEM MEDIA QUERIES (Mobile-First / Fluid Grid)
+   ============================================================================ */
+img, video, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --text-216: clamp(2.5rem, 10vw, 4rem);
+    --text-128: clamp(2rem, 8vw, 3rem);
+  }
+  .container, main {
+    width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .container, main {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1025px) {
+  .container, main {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

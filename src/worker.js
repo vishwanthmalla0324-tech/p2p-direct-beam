@@ -269,8 +269,8 @@ export default {
       return Response.redirect(`https://${url.host}${url.pathname}${url.search}`, 301);
     }
 
-    // Helper to attach security headers to responses
-    function withSecurityHeaders(res) {
+    // Helper to attach security headers and asset caching to responses
+    function withSecurityHeaders(res, reqUrl = url) {
       if (!res) return res;
       const headers = new Headers(res.headers);
       headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
@@ -280,6 +280,11 @@ export default {
       headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
       headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=()");
       headers.set("Content-Security-Policy", "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' wss: https:; frame-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'self';");
+
+      // Caching optimizations for static immutable assets
+      if (reqUrl && reqUrl.pathname.match(/\.(?:js|css|webp|jpg|png|svg|ico|woff2?)$/)) {
+        headers.set("Cache-Control", "public, max-age=31536000, immutable");
+      }
       return new Response(res.body, {
         status: res.status,
         statusText: res.statusText,
