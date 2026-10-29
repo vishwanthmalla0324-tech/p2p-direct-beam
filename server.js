@@ -194,7 +194,7 @@ const handleCreateCheckout = async (req, res) => {
     const apiKey = getLemonApiKey();
     const storeId = getLemonStoreId();
     const variantId = getLemonVariantId();
-    const redirectUrl = `${getAppUrl()}/dashboard?payment=success`;
+    const redirectUrl = `${getAppUrl()}/?payment=success`;
 
     let checkoutUrl;
     if (apiKey && storeId && variantId && !apiKey.includes('placeholder') && !apiKey.includes('test_')) {

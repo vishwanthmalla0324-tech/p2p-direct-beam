@@ -117,7 +117,7 @@ export async function handlePaymentRequest(request, env = {}) {
         }, 400);
       }
 
-      const redirectUrl = `${config.appUrl}/dashboard?payment=success`;
+      const redirectUrl = `${config.appUrl}/?payment=success`;
 
       let checkoutUrl;
       if (

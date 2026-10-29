@@ -279,8 +279,8 @@ export default {
       headers.set("X-Frame-Options", "SAMEORIGIN");
       headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
       headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-      headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=(self 'https://assets.lemonsqueezy.com' 'https://app.lemonsqueezy.com')");
-      headers.set("Content-Security-Policy", "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' wss: https: https://api.lemonsqueezy.com https://assets.lemonsqueezy.com https://app.lemonsqueezy.com; frame-src 'self' https://accounts.google.com https://assets.lemonsqueezy.com https://app.lemonsqueezy.com; object-src 'none'; base-uri 'self';");
+      headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=(self 'https://*.lemonsqueezy.com' 'https://assets.lemonsqueezy.com' 'https://app.lemonsqueezy.com')");
+      headers.set("Content-Security-Policy", "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' wss: https: https://*.lemonsqueezy.com https://api.lemonsqueezy.com https://assets.lemonsqueezy.com https://app.lemonsqueezy.com; frame-src 'self' https://accounts.google.com https://*.lemonsqueezy.com https://assets.lemonsqueezy.com https://app.lemonsqueezy.com; object-src 'none'; base-uri 'self';");
 
       // Caching optimizations: Immutable media assets vs fresh revalidating code
       if (reqUrl && reqUrl.pathname.match(/\.(?:webp|jpg|png|svg|ico|woff2?)$/)) {

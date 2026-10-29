@@ -2491,12 +2491,9 @@
 
       const checkoutUrl = data.checkoutUrl;
 
-      // 2. Open via Lemon Squeezy overlay if supported, or standard redirect
-      if (window.LemonSqueezy && window.LemonSqueezy.Url && typeof window.LemonSqueezy.Url.Open === 'function') {
-        window.LemonSqueezy.Url.Open(checkoutUrl);
-      } else {
-        window.location.href = checkoutUrl;
-      }
+      // 2. Direct redirect to Lemon Squeezy secure hosted checkout
+      // Direct navigation prevents browser iframe sandbox, CSP frame, and third-party cookie blocks
+      window.location.href = checkoutUrl;
     } catch (err) {
       console.error('[Lemon Squeezy Checkout Error]:', err);
       showToast(err.message || 'Could not launch payment gateway. Please try again.');

@@ -4,5 +4,5 @@
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Cross-Origin-Opener-Policy: same-origin-allow-popups
-  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=()
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(self "https://*.lemonsqueezy.com" "https://assets.lemonsqueezy.com" "https://app.lemonsqueezy.com")
   Access-Control-Allow-Origin: *
