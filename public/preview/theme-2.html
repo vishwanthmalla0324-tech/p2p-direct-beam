@@ -819,15 +819,15 @@
       </div>
       <div class="space-y-3 pt-1">
         <h3 class="text-lg font-display font-semibold text-white">Enter License Key</h3>
-        <p class="text-xs text-neutral-400 font-mono">Activate your Lemon Squeezy order key to unlock unlimited high-speed transfers.</p>
-        <input type="text" id="license-key-input" placeholder="e.g., 8f3c7e2b-4d2a-4a9f-b981-123456789abc" class="w-full bg-black border border-white/20 px-3 py-2.5 rounded-md font-mono text-xs text-white focus:outline-none uppercase" />
+        <p class="text-xs text-neutral-400 font-mono">Activate your Lemon Squeezy order ID or lifetime key to unlock unlimited high-speed transfers.</p>
+        <input type="text" id="license-key-input" placeholder="e.g., Order ID or License Key" class="w-full bg-black border border-white/20 px-3 py-2.5 rounded-md font-mono text-xs text-white focus:outline-none uppercase" />
         <div id="license-status-msg" class="hidden text-xs font-mono p-2.5 rounded border"></div>
         <button id="btn-verify-license" type="button" onclick="window.verifyAndActivateLicenseKey && window.verifyAndActivateLicenseKey(document.getElementById('license-key-input').value)" class="cyber-btn-primary w-full py-2.5 rounded-md text-xs font-mono uppercase font-bold cursor-pointer">
           <span id="btn-verify-license-text">Activate License</span>
         </button>
         <div class="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono text-neutral-400">
           <span>Need a license?</span>
-          <a href="javascript:void(0)" onclick="window.startProCheckout && window.startProCheckout(event)" class="text-white hover:underline font-bold">Get Pro (₹300 Lifetime)</a>
+          <a href="javascript:void(0)" onclick="window.startProCheckout && window.startProCheckout(event)" class="text-white hover:underline font-bold">Get Pro Lifetime</a>
         </div>
       </div>
     </div>

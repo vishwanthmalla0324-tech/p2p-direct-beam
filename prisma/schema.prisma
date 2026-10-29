@@ -1,0 +1,52 @@
+// Prisma Schema for Direct Beam (Production Lemon Squeezy Architecture)
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Plan {
+  FREE
+  LIFETIME_PRO
+}
+
+model User {
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  name                   String?
+  avatar                 String?
+  password               String?
+  provider               String?   @default("credentials")
+  plan                   Plan      @default(FREE)
+  isPro                  Boolean   @default(false)
+  freeSharesUsed         Int       @default(0)
+  lemonSqueezyCustomerId String?   @unique
+  lemonSqueezyOrderId    String?   @unique
+  proActivatedAt         DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  orders                 Payment[]
+
+  @@map("users")
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  orderId    String   @unique // Lemon Squeezy Order ID
+  customerId String?
+  variantId  String
+  amount     Int      // Total in cents (e.g. 2900 for $29.00 USD)
+  currency   String   @default("USD")
+  status     String   // "paid", "refunded", etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User?    @relation(fields: [customerId], references: [lemonSqueezyCustomerId])
+
+  @@map("payments")
+}

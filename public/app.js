@@ -1602,6 +1602,62 @@
     STORAGE_KEY_TOKEN: 'direct_beam_auth_token'
   };
 
+  // Production Launch Data Purge: Wipe any lingering legacy trial counters & test pro state
+  function purgeClientTrialCache() {
+    try {
+      const launchResetFlag = 'directbeam_launch_clean_2026_10_30_v5_trials';
+      if (!localStorage.getItem(launchResetFlag)) {
+        const legacyKeys = [
+          'directbeam_free_shares',
+          'trial_count',
+          'directbeam_pro_status',
+          'direct_beam_pro',
+          'direct_beam_pro_key',
+          'direct_beam_pro_status',
+          'direct_beam_transfer_count',
+          'direct_beam_pro_active',
+          'direct_beam_license_key'
+        ];
+        legacyKeys.forEach(k => localStorage.removeItem(k));
+        if (typeof document !== 'undefined' && document.cookie) {
+          document.cookie.split(";").forEach(c => {
+            const name = c.split("=")[0].trim();
+            if (legacyKeys.includes(name)) {
+              document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+            }
+          });
+        }
+
+        // Hard reset any stale Pro attributes or trial counts inside stored user account
+        const rawUser = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_USER);
+        if (rawUser) {
+          try {
+            const userObj = JSON.parse(rawUser);
+            userObj.pro = false;
+            userObj.isPro = false;
+            userObj.plan = 'FREE';
+            userObj.transfersCount = 0;
+            userObj.freeSharesUsed = 0;
+            delete userObj.lemonSqueezyOrderId;
+            delete userObj.lemonSqueezyCustomerId;
+            delete userObj.proActivatedAt;
+            delete userObj.proPaymentId;
+            delete userObj.proOrderId;
+            delete userObj.licenseKey;
+            localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(userObj));
+          } catch (e) {
+            localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
+          }
+        }
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, '0');
+        localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+        window.DIRECT_BEAM_PRO = false;
+        localStorage.setItem(launchResetFlag, 'true');
+      }
+    } catch (e) {}
+  }
+  purgeClientTrialCache();
+
   function getLoggedInUser() {
     try {
       const raw = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_USER);
@@ -1614,15 +1670,23 @@
   function getTransferCount() {
     const user = getLoggedInUser();
     if (!user || !user.email) return 0;
-    return typeof user.transfersCount === 'number' ? user.transfersCount : 0;
+    // Server database truth always invalidates local counter mismatches
+    const serverCount = typeof user.transfersCount === 'number'
+      ? user.transfersCount
+      : (typeof user.freeSharesUsed === 'number' ? user.freeSharesUsed : 0);
+    const localCount = parseInt(localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
+    if (localCount !== serverCount) {
+      localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, serverCount.toString());
+    }
+    return serverCount;
   }
 
   function isProUser() {
     const user = getLoggedInUser();
-    // Pro is STRICTLY bound to an active, logged-in user account!
+    // Pro is STRICTLY bound to an active, logged-in user account verified by server truth!
     // Guests or signed-out states are never Pro.
     if (!user || !user.email) return false;
-    return user.pro === true;
+    return Boolean(user.pro === true && user.plan === 'LIFETIME_PRO');
   }
 
   function canInitiateTransfer() {
@@ -1960,8 +2024,6 @@
     localStorage.removeItem('direct_beam_pro');
     localStorage.removeItem('direct_beam_pro_status');
     localStorage.removeItem('direct_beam_pro_key');
-    localStorage.removeItem('direct_beam_instance_id');
-    localStorage.removeItem('direct_beam_pro_meta');
     window.DIRECT_BEAM_PRO = false;
     updateProUI(false);
     updateQuotaBadge();
@@ -1985,25 +2047,25 @@
       if (isPro) {
         headerQuotaPill.onclick = null;
         headerQuotaPill.innerHTML = '<i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i><span class="text-amber-300 font-bold">PRO: UNLIMITED</span>';
-        headerQuotaPill.className = 'db-pill text-[10px] text-amber-300 border-amber-400/50 bg-amber-950/30 font-mono tracking-wider flex items-center gap-1 shadow-sm';
+        headerQuotaPill.className = 'hidden sm:inline-flex db-pill text-[10px] text-amber-300 border-amber-400/50 bg-amber-950/30 font-mono tracking-wider items-center gap-1 shadow-sm';
       } else if (!user || !user.email) {
         headerQuotaPill.onclick = openAuthModal;
         headerQuotaPill.innerHTML = '<i data-lucide="lock" class="w-3 h-3 text-cyan-400"></i><span>3 FREE <strong class="text-white">TRANSFERS</strong> (SIGN IN)</span>';
-        headerQuotaPill.className = 'db-pill text-[10px] border-cyan-500/40 bg-cyan-950/20 text-cyan-300 font-mono tracking-wider flex items-center gap-1 shadow-sm cursor-pointer hover:border-cyan-400 transition';
+        headerQuotaPill.className = 'hidden sm:inline-flex db-pill text-[10px] border-cyan-500/40 bg-cyan-950/20 text-cyan-300 font-mono tracking-wider items-center gap-1 shadow-sm cursor-pointer hover:border-cyan-400 transition';
       } else {
         headerQuotaPill.onclick = null;
         const remaining = Math.max(0, USAGE_CONFIG.FREE_LIMIT - count);
         const isExhausted = count >= USAGE_CONFIG.FREE_LIMIT;
         headerQuotaPill.innerHTML = `<i data-lucide="${isExhausted ? 'alert-triangle' : 'gauge'}" class="w-3 h-3 ${isExhausted ? 'text-rose-400' : 'text-cyan-400'}"></i><span>${isExhausted ? '<strong class="text-rose-400">LIMIT (3/3)</strong>' : `FREE: <strong class="${remaining <= 1 ? 'text-amber-400' : 'text-white'}">${count}</strong>/3`}</span>`;
-        headerQuotaPill.className = `db-pill text-[10px] ${isExhausted ? 'border-rose-500/50 bg-rose-950/30' : 'border-base-800 bg-black/70'} font-mono tracking-wider flex items-center gap-1 shadow-sm`;
+        headerQuotaPill.className = `hidden sm:inline-flex db-pill text-[10px] ${isExhausted ? 'border-rose-500/50 bg-rose-950/30' : 'border-base-800 bg-black/70'} font-mono tracking-wider items-center gap-1 shadow-sm`;
       }
     }
 
     if (navAuthStatus) {
       if (user && user.email) {
         const emailShort = user.email.split('@')[0];
-        navAuthStatus.textContent = isPro ? `⭐ ${emailShort}` : `${emailShort} (${count}/3)`;
-        navAuthStatus.className = isPro ? 'text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider truncate block max-w-[80px] sm:max-w-none' : 'text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider truncate block max-w-[80px] sm:max-w-none';
+        navAuthStatus.textContent = isPro ? `⭐ ${emailShort}` : `${emailShort}`;
+        navAuthStatus.className = isPro ? 'text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider truncate block max-w-[70px] sm:max-w-none' : 'text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider truncate block max-w-[70px] sm:max-w-none';
       } else {
         navAuthStatus.textContent = isPro ? 'PRO ⚡' : 'Sign In';
         navAuthStatus.className = isPro ? 'text-[10px] font-mono text-amber-300 font-bold uppercase tracking-wider' : 'text-[10px] font-mono text-cyan-300 font-bold uppercase tracking-wider';
@@ -2106,6 +2168,12 @@
       } else if (res.status === 401) {
         localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
         localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
+        localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+        localStorage.removeItem('direct_beam_pro');
+        localStorage.removeItem('direct_beam_pro_status');
+        localStorage.removeItem('direct_beam_pro_key');
+        window.DIRECT_BEAM_PRO = false;
+        updateProUI(false);
       }
     } catch (err) {
       console.warn('[DirectBeam] Session sync fallback:', err);
@@ -2207,11 +2275,9 @@
         localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
       }
       if (data.user) {
-        const localCount = parseInt(localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
         const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-        const effectiveCount = Math.max(localCount, remoteCount);
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, effectiveCount.toString());
-        data.user.transfersCount = effectiveCount;
+        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, remoteCount.toString());
+        data.user.transfersCount = remoteCount;
         localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
 
         if (data.user.pro) {
@@ -2289,8 +2355,41 @@
   // Run SSO check on start
   checkCloudflareAccessSSO();
 
+  // Initialize Lemon Squeezy Overlay SDK if present
+  if (typeof window.createLemonSqueezy === 'function') {
+    try { window.createLemonSqueezy(); } catch (e) {}
+  }
+  if (window.LemonSqueezy && typeof window.LemonSqueezy.Setup === 'function') {
+    try {
+      window.LemonSqueezy.Setup({
+        eventHandler: (event) => {
+          if (event && (event.event === 'Checkout.Success' || event.event === 'Order.Created')) {
+            showToast('⚡ Payment Successful! Upgrading to Direct Beam Pro Lifetime...');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          }
+        }
+      });
+    } catch (e) {}
+  }
+
+  // Handle redirect return from Lemon Squeezy hosted checkout
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success' || urlParams.get('payment_success') === 'true') {
+      showToast('⚡ Welcome to Direct Beam Pro Lifetime! Your upgrade is active.');
+      localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+      localStorage.setItem('direct_beam_pro_status', 'active');
+      window.DIRECT_BEAM_PRO = true;
+      updateProUI(true);
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  } catch (e) {}
+
   // ==========================================================================
-  // PRO LICENSE KEY (LEMON SQUEEZY) MODAL & ACTIVATION CONTROLLER
+  // PRO LICENSE KEY & LEMON SQUEEZY ACTIVATION CONTROLLER
   // ==========================================================================
 
   const proContent = proLicenseModalContent || (proLicenseModal ? proLicenseModal.querySelector('div#pro-license-modal-content') || proLicenseModal.querySelector('div.relative') : null);
@@ -2355,32 +2454,62 @@
     return isPro;
   }
 
-  // Dynamic Lemon Squeezy Checkout with User Email Binding & Overlay Support
-  function startProCheckout(e) {
+  // Lemon Squeezy Checkout (Live Mode, Hosted / Overlay)
+  async function startProCheckout(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const user = getLoggedInUser();
-    if (!user || !user.email) {
-      showToast('Please sign in first so your Pro license is delivered directly to your email!');
+    const token = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+
+    if (!user || !user.email || !token) {
+      showToast('Please sign in first so your Pro upgrade is activated immediately!');
       openAuthModal();
       return;
     }
-    const checkoutBase = 'https://directbeam.lemonsqueezy.com/checkout/buy/fc8b75f3-55cb-4a02-9d30-f397a0aa16c0';
-    const emailParam = encodeURIComponent(user.email);
-    const nameParam = encodeURIComponent(user.name || '');
-    const userParam = encodeURIComponent(user.id || '');
-    const checkoutUrl = `${checkoutBase}?checkout[email]=${emailParam}&checkout[name]=${nameParam}&checkout[custom][user_id]=${userParam}`;
 
-    showToast(`Opening Lemon Squeezy checkout for ${user.email}...`);
-    window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+    if (isProUser()) {
+      showToast('⭐ Direct Beam Pro is already active on this account!');
+      return;
+    }
+
+    showToast('Initializing secure Lemon Squeezy checkout...');
+
+    try {
+      // 1. Create Checkout Session on Server
+      const res = await fetch('/api/payments/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ plan: 'pro_lifetime' })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.checkoutUrl) {
+        throw new Error(data.error || 'Failed to initialize Lemon Squeezy checkout');
+      }
+
+      const checkoutUrl = data.checkoutUrl;
+
+      // 2. Open via Lemon Squeezy overlay if supported, or standard redirect
+      if (window.LemonSqueezy && window.LemonSqueezy.Url && typeof window.LemonSqueezy.Url.Open === 'function') {
+        window.LemonSqueezy.Url.Open(checkoutUrl);
+      } else {
+        window.location.href = checkoutUrl;
+      }
+    } catch (err) {
+      console.error('[Lemon Squeezy Checkout Error]:', err);
+      showToast(err.message || 'Could not launch payment gateway. Please try again.');
+    }
   }
 
-  // Single-Use User-Bound License Key Activation
+  // Single-Use User-Bound Payment ID / License Key Activation
   async function verifyAndActivateLicenseKey(rawKey) {
     const key = (rawKey || '').trim();
     if (!key) {
       if (licenseStatusMsg) {
         licenseStatusMsg.className = 'text-xs font-mono p-3 border border-rose-500/50 bg-rose-950/40 text-rose-300 block flex items-center gap-2';
-        licenseStatusMsg.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>Please enter a license key.</span>';
+        licenseStatusMsg.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i><span>Please enter a payment ID or license key.</span>';
         if (typeof lucide !== 'undefined') lucide.createIcons();
       }
       return;
@@ -2418,7 +2547,6 @@
       const data = await response.json();
 
       if (response.ok && data && data.success) {
-        // Update user profile in local storage
         if (data.user) {
           localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
         }
@@ -2478,8 +2606,6 @@
 
     localStorage.removeItem('direct_beam_pro_key');
     localStorage.removeItem('direct_beam_pro_status');
-    localStorage.removeItem('direct_beam_instance_id');
-    localStorage.removeItem('direct_beam_pro_meta');
     localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
 
     const user = getLoggedInUser();
@@ -2493,33 +2619,6 @@
     updateQuotaBadge();
     showToast('Direct Beam Pro license deactivated on this browser.');
   }
-
-  // Initialize Lemon Squeezy Modal Overlay
-  function initLemonSqueezy() {
-    if (typeof window.createLemonSqueezy === 'function') {
-      window.createLemonSqueezy();
-    }
-    if (window.LemonSqueezy) {
-      window.LemonSqueezy.Setup({
-        eventHandler: (event) => {
-          if (event && event.event === 'Checkout.Success') {
-            console.log('[DirectBeam] Purchase successful:', event.data);
-            const modal = document.getElementById('pro-license-modal');
-            if (modal) {
-              modal.classList.remove('hidden');
-              if (typeof openProLicense === 'function') {
-                openProLicense();
-              }
-            } else {
-              alert('Payment successful! Check your email for your Pro license key.');
-            }
-          }
-        }
-      });
-    }
-  }
-
-  window.initLemonSqueezy = initLemonSqueezy;
 
   // Expose Pro helpers globally on window
   window.openProLicense = openProLicense;
@@ -2548,6 +2647,21 @@
 
   if (btnDeactivatePro) {
     btnDeactivatePro.onclick = deactivateProKey;
+  }
+
+  const btnUpgradePro = document.getElementById('btn-upgrade-pro');
+  if (btnUpgradePro) {
+    btnUpgradePro.addEventListener('click', startProCheckout);
+  }
+
+  const btnPricingCheckout = document.getElementById('btn-pricing-checkout');
+  if (btnPricingCheckout) {
+    btnPricingCheckout.addEventListener('click', startProCheckout);
+  }
+
+  const btnPaywallUpgrade = document.getElementById('btn-paywall-upgrade');
+  if (btnPaywallUpgrade) {
+    btnPaywallUpgrade.addEventListener('click', startProCheckout);
   }
 
   // ==========================================================================
@@ -2709,12 +2823,12 @@
   }
 
   // Initialize Signaling Socket on load for instant readiness
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
+    purgeClientTrialCache();
     initSocket();
-    syncUserSession();
+    await syncUserSession();
     checkProStatus();
     updateQuotaBadge();
-    initLemonSqueezy();
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('forgot') || params.get('reset')) {
@@ -2731,7 +2845,5 @@
       joinRoomByCode(code);
     }
   });
-
-  window.addEventListener('load', initLemonSqueezy);
 
 })();

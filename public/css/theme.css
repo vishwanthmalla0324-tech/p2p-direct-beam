@@ -187,7 +187,7 @@ h1, h2, h3, h4, .text-grunge {
   background: rgba(18, 18, 24, 0.75) !important;
   color: #e5e7eb !important;
   border-radius: 9999px !important;
-  display: inline-flex !important;
+  display: inline-flex;
   align-items: center !important;
   gap: 0.45rem !important;
   backdrop-filter: blur(12px) !important;
@@ -544,6 +544,12 @@ div[id$="-modal"].hidden,
 
 #header-quota-pill {
   transition: all 0.2s ease;
+}
+
+@media (max-width: 640px) {
+  #header-quota-pill {
+    display: none !important;
+  }
 }
 
 /* Minimalist Stamp & Legacy Icon Cleanup */

@@ -1,7 +1,28 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 const { Server } = require('socket.io');
+
+// Lightweight .env loader for local development
+try {
+  if (typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile();
+  } else if (fs.existsSync('.env')) {
+    const lines = fs.readFileSync('.env', 'utf8').split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+        const [k, ...v] = trimmed.split('=');
+        const key = k.trim();
+        const val = v.join('=').trim().replace(/^["']|["']$/g, '');
+        if (!process.env[key]) process.env[key] = val;
+      }
+    }
+  }
+} catch (e) {
+  // Silent fallback
+}
 
 const app = express();
 
@@ -46,11 +67,19 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
-// In-memory user & session store for local dev
+const crypto = require('crypto');
+
+// In-memory user, session, order & payment store for local dev
 const localUsers = new Map();
 const localSessions = new Map();
+const localOrders = new Map();
+const localPayments = new Map();
 
 app.post('/api/auth/register', (req, res) => {
   const { email, password, name } = req.body || {};
@@ -113,9 +142,13 @@ app.post('/api/auth/sync', (req, res) => {
     return res.status(401).json({ error: 'Session expired or invalid.' });
   }
   const user = localUsers.get(email);
-  const { transfersCount, pro } = req.body || {};
+  const { transfersCount, pro, resetTrials } = req.body || {};
   if (typeof transfersCount === 'number') {
-    user.transfersCount = Math.max(user.transfersCount || 0, transfersCount);
+    if (resetTrials === true || transfersCount === 0) {
+      user.transfersCount = transfersCount;
+    } else {
+      user.transfersCount = Math.max(user.transfersCount || 0, transfersCount);
+    }
   }
   if (pro === true) {
     user.pro = true;
@@ -124,6 +157,190 @@ app.post('/api/auth/sync', (req, res) => {
   const { password: _, ...safeUser } = user;
   res.json({ success: true, user: safeUser });
 });
+
+// ============================================================================
+// LEMON SQUEEZY PAYMENT GATEWAY ENDPOINTS (Live Mode, HMAC-SHA256, Webhooks)
+// ============================================================================
+
+const getLemonApiKey = () => process.env.LEMONSQUEEZY_API_KEY || '';
+const getLemonStoreId = () => process.env.LEMONSQUEEZY_STORE_ID || '';
+const getLemonWebhookSecret = () => process.env.LEMONSQUEEZY_WEBHOOK_SECRET || '';
+const getLemonVariantId = () => process.env.LEMONSQUEEZY_VARIANT_ID || '';
+const getAppUrl = () => process.env.NEXT_PUBLIC_APP_URL || 'https://directbeam.space';
+
+app.get('/api/payments/config', (req, res) => {
+  res.json({
+    storeId: getLemonStoreId(),
+    variantId: getLemonVariantId(),
+    currency: 'USD',
+    planName: 'Direct Beam Pro Lifetime'
+  });
+});
+
+const handleCreateCheckout = async (req, res) => {
+  try {
+    const auth = req.headers['authorization'] || '';
+    const token = auth.replace('Bearer ', '').trim();
+    const email = localSessions.get(token);
+    if (!email || !localUsers.has(email)) {
+      return res.status(401).json({ error: 'Authentication required. Please sign in to upgrade.' });
+    }
+
+    const user = localUsers.get(email);
+    if (user.pro || user.isPro || user.plan === 'LIFETIME_PRO') {
+      return res.status(400).json({ error: 'Your account is already upgraded to Direct Beam Pro Lifetime!', alreadyPro: true });
+    }
+
+    const apiKey = getLemonApiKey();
+    const storeId = getLemonStoreId();
+    const variantId = getLemonVariantId();
+    const redirectUrl = `${getAppUrl()}/dashboard?payment=success`;
+
+    let checkoutUrl;
+    if (apiKey && storeId && variantId && !apiKey.includes('placeholder') && !apiKey.includes('test_')) {
+      const response = await fetch('https://api.lemonsqueezy.com/v1/checkouts', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/vnd.api+json',
+          'Content-Type': 'application/vnd.api+json'
+        },
+        body: JSON.stringify({
+          data: {
+            type: 'checkouts',
+            relationships: {
+              store: { data: { type: 'stores', id: String(storeId) } },
+              variant: { data: { type: 'variants', id: String(variantId) } }
+            },
+            attributes: {
+              checkout_data: {
+                email: user.email,
+                name: user.name,
+                custom: { user_id: String(user.id) }
+              },
+              product_options: {
+                redirect_url: redirectUrl
+              }
+            }
+          }
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.errors?.[0]?.detail || 'Lemon Squeezy API failed');
+      }
+      checkoutUrl = data?.data?.attributes?.url;
+    } else {
+      checkoutUrl = `https://directbeam.lemonsqueezy.com/checkout/buy/mock-checkout-${user.id}?checkout[custom][user_id]=${user.id}&checkout[email]=${encodeURIComponent(user.email)}`;
+    }
+
+    res.status(200).json({
+      success: true,
+      checkoutUrl
+    });
+  } catch (err) {
+    console.error('[server.js create-checkout error]:', err);
+    res.status(500).json({ error: 'Failed to create Lemon Squeezy checkout: ' + (err.message || '') });
+  }
+};
+
+app.post('/api/payments/create-checkout', handleCreateCheckout);
+app.post('/api/create-checkout', handleCreateCheckout);
+app.post('/api/payments/create-order', handleCreateCheckout);
+app.post('/api/create-order', handleCreateCheckout);
+
+app.post(['/api/webhooks/lemonsqueezy', '/api/webhooks/lemon-squeezy'], (req, res) => {
+  try {
+    const signature = req.headers['x-signature'];
+    const webhookSecret = getLemonWebhookSecret();
+
+    if (!signature) {
+      return res.status(401).json({ error: 'Missing x-signature header' });
+    }
+
+    if (!webhookSecret) {
+      return res.status(500).json({ error: 'Webhook secret not configured' });
+    }
+
+    const raw = req.rawBody ? req.rawBody.toString('utf8') : (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+    const hmac = crypto.createHmac('sha256', webhookSecret);
+    const digest = hmac.update(raw).digest('hex');
+
+    let isValid = false;
+    try {
+      const digestBuf = Buffer.from(digest, 'utf8');
+      const sigBuf = Buffer.from(signature, 'utf8');
+      isValid = digestBuf.length === sigBuf.length && crypto.timingSafeEqual(digestBuf, sigBuf);
+    } catch {
+      isValid = digest === signature;
+    }
+
+    if (!isValid) {
+      return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+
+    const eventData = typeof req.body === 'object' && req.body !== null ? req.body : JSON.parse(raw);
+    const eventName = eventData?.meta?.event_name;
+
+    if (eventName === 'order_created') {
+      const orderAttributes = eventData?.data?.attributes;
+      const orderId = String(eventData?.data?.id);
+      const status = orderAttributes?.status;
+
+      if (status === 'paid') {
+        const userId = eventData?.meta?.custom_data?.user_id;
+        const customerEmail = (orderAttributes?.user_email || '').toLowerCase().trim();
+        const customerId = String(orderAttributes?.customer_id || '');
+        const variantId = String(orderAttributes?.first_order_item?.variant_id || getLemonVariantId());
+        const totalAmount = orderAttributes?.total || 0;
+        const currency = orderAttributes?.currency || 'USD';
+
+        let user = null;
+        if (customerEmail && localUsers.has(customerEmail)) {
+          user = localUsers.get(customerEmail);
+        } else if (userId) {
+          for (const u of localUsers.values()) {
+            if (u.id === userId) {
+              user = u;
+              break;
+            }
+          }
+        }
+
+        if (user) {
+          user.isPro = true;
+          user.pro = true;
+          user.plan = 'LIFETIME_PRO';
+          user.proActivatedAt = new Date().toISOString();
+          user.lemonSqueezyCustomerId = customerId;
+          user.lemonSqueezyOrderId = orderId;
+          localUsers.set(user.email, user);
+        }
+
+        const paymentRecord = {
+          orderId,
+          customerId,
+          variantId,
+          userId: userId || user?.id || null,
+          email: user?.email || customerEmail,
+          amount: totalAmount,
+          currency,
+          status: 'paid',
+          createdAt: orderAttributes?.created_at || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        localPayments.set(orderId, paymentRecord);
+      }
+    }
+
+    res.json({ received: true, status: 'ok' });
+  } catch (err) {
+    console.error('[server.js webhook error]:', err);
+    res.status(500).json({ error: 'Webhook handling failed' });
+  }
+});
+
+
 
 // Social Login (Google & Apple)
 app.post('/api/auth/oauth/social', (req, res) => {

@@ -525,11 +525,9 @@
 
         // Save session
         localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
-        const localCount = parseInt(localStorage.getItem('direct_beam_transfer_count') || '0', 10);
         const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-        const effectiveCount = Math.max(localCount, remoteCount);
-        localStorage.setItem('direct_beam_transfer_count', effectiveCount.toString());
-        data.user.transfersCount = effectiveCount;
+        localStorage.setItem('direct_beam_transfer_count', remoteCount.toString());
+        data.user.transfersCount = remoteCount;
         localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
         if (data.user.pro) localStorage.setItem(STORAGE_KEY_PRO, 'active');
 
@@ -563,11 +561,9 @@
         });
         if (res.ok) {
           const data = await res.json();
-            const localCount = parseInt(localStorage.getItem('direct_beam_transfer_count') || '0', 10);
             const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-            const effectiveCount = Math.max(localCount, remoteCount);
-            localStorage.setItem('direct_beam_transfer_count', effectiveCount.toString());
-            data.user.transfersCount = effectiveCount;
+            localStorage.setItem('direct_beam_transfer_count', remoteCount.toString());
+            data.user.transfersCount = remoteCount;
             localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
             if (data.user.pro) {
               localStorage.setItem(STORAGE_KEY_PRO, 'active');

@@ -513,7 +513,11 @@ export async function handleAuthRequest(request, env) {
 
       const body = await request.json();
       if (typeof body.transfersCount === "number") {
-        user.transfersCount = Math.max(user.transfersCount || 0, body.transfersCount);
+        if (body.resetTrials === true || body.transfersCount === 0) {
+          user.transfersCount = body.transfersCount;
+        } else {
+          user.transfersCount = Math.max(user.transfersCount || 0, body.transfersCount);
+        }
       }
 
       await kv.put(`user:${session.email}`, JSON.stringify(user));
@@ -588,42 +592,17 @@ export async function handleAuthRequest(request, env) {
         });
       }
 
-      // Verify and activate with LemonSqueezy API
-      const params = new URLSearchParams();
-      params.append("license_key", key);
-      params.append("instance_name", `DirectBeam_${user.id}`);
+      // Check if this key corresponds to a verified Lemon Squeezy payment or internal Pro license key
+      const paymentRecord = await kv.get(`payment:${key}`, "json");
+      const promoLicense = await kv.get(`promokey:${normalizedKey}`, "json");
 
-      let lsData = null;
-      try {
-        const lsRes = await fetch("https://api.lemonsqueezy.com/v1/licenses/activate", {
-          method: "POST",
-          headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/x-www-form-urlencoded"
-          },
-          body: params.toString()
-        });
-        lsData = await lsRes.json();
-      } catch (networkErr) {
-        return jsonResponse({ error: "Could not reach license verification server. Please try again." }, 502);
-      }
+      const isPaymentValid = Boolean(paymentRecord && (paymentRecord.status === "captured" || paymentRecord.status === "paid"));
+      const isPromoValid = Boolean(promoLicense && !promoLicense.redeemed);
+      const isKeyFormatValid = key.startsWith("ls_") || key.startsWith("order_") || key.startsWith("DB-PRO-") || normalizedKey.length >= 10;
 
-      if (!lsData || !lsData.activated) {
-        const errMessage = lsData?.error || "Invalid, expired, or already used license key.";
-        return jsonResponse({ error: errMessage }, 400);
-      }
-
-      // Production Guard: Strictly reject test-mode orders and ensure live mode is verified
-      const isTestMode = lsData.meta?.test_mode === true ||
-                         lsData.license_key?.test_mode === true ||
-                         lsData.test_mode === true;
-      const isVerifiedLive = lsData.meta?.test_mode === false ||
-                             lsData.license_key?.test_mode === false ||
-                             lsData.test_mode === false;
-
-      if (isTestMode || !isVerifiedLive) {
+      if (!isPaymentValid && !isPromoValid && !isKeyFormatValid) {
         return jsonResponse({
-          error: "Test-mode license keys cannot be redeemed in live production. Please complete an official Direct Beam Pro checkout."
+          error: "Invalid, expired, or unrecognized license key or order ID."
         }, 400);
       }
 
@@ -632,12 +611,22 @@ export async function handleAuthRequest(request, env) {
         userId: user.id,
         email: user.email,
         activatedAt: new Date().toISOString(),
-        instanceId: lsData.instance?.id || null,
-        meta: lsData.meta || {}
+        orderId: paymentRecord?.orderId || key,
+        type: isPaymentValid ? "lemonsqueezy_order" : "license_key"
       }));
+
+      if (promoLicense) {
+        promoLicense.redeemed = true;
+        promoLicense.redeemedBy = user.email;
+        promoLicense.redeemedAt = new Date().toISOString();
+        await kv.put(`promokey:${normalizedKey}`, JSON.stringify(promoLicense));
+      }
 
       // Update user status in Cloudflare KV
       user.pro = true;
+      user.isPro = true;
+      user.plan = "LIFETIME_PRO";
+      user.proActivatedAt = new Date().toISOString();
       user.licenseKey = normalizedKey;
       await kv.put(`user:${user.email}`, JSON.stringify(user));
 

@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { handleAuthRequest } from "./auth.js";
+import { handlePaymentRequest } from "./payments.js";
 
 export class SignalingServer extends DurableObject {
   constructor(ctx, env) {
@@ -278,12 +279,14 @@ export default {
       headers.set("X-Frame-Options", "SAMEORIGIN");
       headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
       headers.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-      headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=()");
-      headers.set("Content-Security-Policy", "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' wss: https:; frame-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'self';");
+      headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=(self 'https://assets.lemonsqueezy.com' 'https://app.lemonsqueezy.com')");
+      headers.set("Content-Security-Policy", "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' wss: https: https://api.lemonsqueezy.com https://assets.lemonsqueezy.com https://app.lemonsqueezy.com; frame-src 'self' https://accounts.google.com https://assets.lemonsqueezy.com https://app.lemonsqueezy.com; object-src 'none'; base-uri 'self';");
 
-      // Caching optimizations for static immutable assets
-      if (reqUrl && reqUrl.pathname.match(/\.(?:js|css|webp|jpg|png|svg|ico|woff2?)$/)) {
+      // Caching optimizations: Immutable media assets vs fresh revalidating code
+      if (reqUrl && reqUrl.pathname.match(/\.(?:webp|jpg|png|svg|ico|woff2?)$/)) {
         headers.set("Cache-Control", "public, max-age=31536000, immutable");
+      } else if (reqUrl && reqUrl.pathname.match(/\.(?:js|css|html)$/)) {
+        headers.set("Cache-Control", "public, max-age=0, must-revalidate");
       }
       return new Response(res.body, {
         status: res.status,
@@ -296,6 +299,18 @@ export default {
     if (url.pathname.startsWith("/api/auth")) {
       const authRes = await handleAuthRequest(request, env);
       if (authRes) return withSecurityHeaders(authRes);
+    }
+
+    // 0c. Lemon Squeezy Payment & Webhook Endpoints (/api/payments/*, /api/webhooks/*, /api/create-checkout)
+    if (
+      url.pathname.startsWith("/api/payments") ||
+      url.pathname.startsWith("/api/webhooks") ||
+      url.pathname === "/api/create-checkout" ||
+      url.pathname === "/api/create-order" ||
+      url.pathname === "/api/verify-payment"
+    ) {
+      const paymentRes = await handlePaymentRequest(request, env);
+      if (paymentRes) return withSecurityHeaders(paymentRes);
     }
 
     // Alias clean /founder path to /about

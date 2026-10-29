@@ -94,10 +94,10 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <!-- High-Performance Precompiled Tailwind CSS -->
-  <link rel="stylesheet" href="/tailwind.min.css" />
+  <link rel="stylesheet" href="/tailwind.min.css?v=3.0.0-ls" />
 
   <!-- Bespoke Responsive Stylesheet (Linear / Apple Tier) -->
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/style.css?v=3.0.0-ls" />
   <style>
     :root {
       --brand-cyan: #00f0ff;
@@ -152,6 +152,9 @@
       }
       button, a.btn-luxury-primary, input {
         min-height: 44px;
+      }
+      #header-quota-pill {
+        display: none !important;
       }
     }
 
@@ -485,15 +488,15 @@
 
           <!-- Pro Upgrade Action -->
           <div id="pro-nav-cta" class="flex items-center gap-1 shrink-0">
-            <a 
-              href="#pro-pricing" 
+            <button 
+              type="button" 
               onclick="window.startProCheckout && window.startProCheckout(event)"
               id="btn-upgrade-pro"
               class="px-2.5 py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-extrabold text-[10px] sm:text-[11px] font-mono shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_25px_rgba(245,158,11,0.6)] cursor-pointer tracking-wide flex items-center gap-1 transition shrink-0"
             >
               <span class="sm:hidden font-extrabold">⚡ PRO</span>
               <span class="hidden sm:inline font-extrabold">⚡ PRO — ₹300</span>
-            </a>
+            </button>
             <button id="btn-open-license-modal" type="button" onclick="window.openProLicense && window.openProLicense()" class="hidden sm:inline-block text-[11px] font-mono text-zinc-400 hover:text-amber-300 transition underline underline-offset-4 cursor-pointer px-1 py-1">
               Key
             </button>
@@ -1132,14 +1135,15 @@
           </div>
 
           <div class="space-y-2">
-            <a 
-              href="#pro-pricing" 
+            <button 
+              type="button" 
+              id="btn-pricing-checkout"
               onclick="window.startProCheckout && window.startProCheckout(event)"
               class="btn-gold-pro w-full py-3.5 rounded-xl text-xs font-mono uppercase font-extrabold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
               <i data-lucide="zap" class="w-4 h-4 fill-current"></i>
               <span>⚡ Get Pro Lifetime — ₹300</span>
-            </a>
+            </button>
             <button 
               id="footer-enter-key-btn" 
               type="button" 
@@ -1351,15 +1355,15 @@
       </div>
       <div class="space-y-3.5 pt-1">
         <h3 class="text-xl font-display font-bold text-white">Enter License Key</h3>
-        <p class="text-xs text-zinc-400 font-mono">Activate your Lemon Squeezy lifetime key to unlock unlimited high-speed relays.</p>
-        <input type="text" id="license-key-input" placeholder="e.g., 8f3c7e2b-4d2a-4a9f-b981-123456789abc" class="w-full bg-black/90 border border-white/15 focus:border-amber-400 px-4 py-3 rounded-xl font-mono text-xs text-white focus:outline-none uppercase" />
+        <p class="text-xs text-zinc-400 font-mono">Activate your Lemon Squeezy order ID or lifetime key to unlock unlimited high-speed relays.</p>
+        <input type="text" id="license-key-input" placeholder="e.g., Order ID or License Key" class="w-full bg-black/90 border border-white/15 focus:border-amber-400 px-4 py-3 rounded-xl font-mono text-xs text-white focus:outline-none uppercase" />
         <div id="license-status-msg" class="hidden text-xs font-mono p-3 rounded-xl border"></div>
         <button id="btn-verify-license" type="button" onclick="window.verifyAndActivateLicenseKey && window.verifyAndActivateLicenseKey(document.getElementById('license-key-input').value)" class="btn-gold-pro w-full py-3 rounded-xl text-xs font-mono uppercase font-bold cursor-pointer">
           <span id="btn-verify-license-text">Activate License Key</span>
         </button>
         <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400">
           <span>Need a license?</span>
-          <a href="#pro-pricing" onclick="window.startProCheckout && window.startProCheckout(event)" class="text-amber-300 hover:underline uppercase font-bold">Get Pro (₹300 Lifetime)</a>
+          <button type="button" onclick="window.startProCheckout && window.startProCheckout(event)" class="text-amber-300 hover:underline uppercase font-bold cursor-pointer">Get Pro Lifetime</button>
         </div>
       </div>
     </div>
@@ -1380,9 +1384,9 @@
         </div>
         <p class="text-xs text-zinc-400 font-mono">You've reached your 3 free transfers limit. Upgrade to Direct Beam Pro Lifetime for unlimited P2P streaming.</p>
         <div class="space-y-2 pt-2">
-          <a href="#pro-pricing" onclick="window.startProCheckout && window.startProCheckout(event)" class="btn-gold-pro w-full py-3.5 rounded-xl text-xs font-mono uppercase font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg">
+          <button type="button" id="btn-paywall-upgrade" onclick="window.startProCheckout && window.startProCheckout(event)" class="btn-gold-pro w-full py-3.5 rounded-xl text-xs font-mono uppercase font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg">
             <span>⚡ Upgrade to Pro (Lifetime) — ₹300</span>
-          </a>
+          </button>
           <button type="button" id="paywall-btn-enter-key" onclick="window.closePaywallModal && window.closePaywallModal(); setTimeout(window.openProLicense, 200);" class="w-full py-2.5 rounded-xl text-xs font-mono uppercase flex items-center justify-center gap-2 cursor-pointer text-white bg-white/5 hover:bg-white/10 border border-white/10">
             <span>Already have a license? Enter Key</span>
           </button>
@@ -1473,10 +1477,11 @@
 
   <!-- Deferred Core Libraries (Non-Render-Blocking, 100% Minified) -->
   <script src="/socket.io.min.js" defer></script>
+  <script src="https://assets.lemonsqueezy.com/lemon.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
   <script src="/lucide.min.js" defer></script>
-  <script src="/app.min.js" defer></script>
+  <script src="/app.min.js?v=3.3.0-launch-trials" defer></script>
   <script type="module" src="/js/beam-canvas.min.js"></script>
   <script>
     function refreshLucideIcons() {

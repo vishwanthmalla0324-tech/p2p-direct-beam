@@ -18,6 +18,9 @@ img, video, canvas, svg {
     padding-left: 1rem;
     padding-right: 1rem;
   }
+  #header-quota-pill {
+    display: none !important;
+  }
 }
 
 @media (min-width: 641px) and (max-width: 1024px) {
