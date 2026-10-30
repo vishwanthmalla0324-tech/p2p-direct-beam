@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
+  <script src="/js/safe-storage.js?v=3.5.0"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Direct Beam — Account Authentication & Cloudflare KV Portal</title>
@@ -524,12 +525,12 @@
         }
 
         // Save session
-        localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
+        safeStorage.setItem(STORAGE_KEY_TOKEN, data.token);
         const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-        localStorage.setItem('direct_beam_transfer_count', remoteCount.toString());
+        safeStorage.setItem('direct_beam_transfer_count', remoteCount.toString());
         data.user.transfersCount = remoteCount;
-        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
-        if (data.user.pro) localStorage.setItem(STORAGE_KEY_PRO, 'active');
+        safeStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
+        if (data.user.pro) safeStorage.setItem(STORAGE_KEY_PRO, 'active');
 
         showAlert(`✅ Welcome, ${data.user.name}! Redirecting...`, false);
         setTimeout(() => { window.location.href = '/'; }, 800);
@@ -552,7 +553,7 @@
 
     // Check if user is already logged in
     async function checkCurrentSession() {
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+      const token = safeStorage.getItem(STORAGE_KEY_TOKEN);
       if (!token) return;
 
       try {
@@ -562,16 +563,16 @@
         if (res.ok) {
           const data = await res.json();
             const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-            localStorage.setItem('direct_beam_transfer_count', remoteCount.toString());
+            safeStorage.setItem('direct_beam_transfer_count', remoteCount.toString());
             data.user.transfersCount = remoteCount;
-            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
+            safeStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
             if (data.user.pro) {
-              localStorage.setItem(STORAGE_KEY_PRO, 'active');
+              safeStorage.setItem(STORAGE_KEY_PRO, 'active');
             }
             renderLoggedInState(data.user);
         } else {
-          localStorage.removeItem(STORAGE_KEY_TOKEN);
-          localStorage.removeItem(STORAGE_KEY_USER);
+          safeStorage.removeItem(STORAGE_KEY_TOKEN);
+          safeStorage.removeItem(STORAGE_KEY_USER);
         }
       } catch (err) {
         console.warn('Session verification fallback:', err);
@@ -594,9 +595,9 @@
         const res = await fetch('/api/auth/cloudflare-access');
         const data = await res.json();
         if (data && data.active && data.token && data.user) {
-          localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
-          localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
-          if (data.user.pro) localStorage.setItem(STORAGE_KEY_PRO, 'active');
+          safeStorage.setItem(STORAGE_KEY_TOKEN, data.token);
+          safeStorage.setItem(STORAGE_KEY_USER, JSON.stringify(data.user));
+          if (data.user.pro) safeStorage.setItem(STORAGE_KEY_PRO, 'active');
           renderLoggedInState(data.user);
         }
       } catch (e) {}
@@ -607,18 +608,18 @@
       const logoutBtn = document.getElementById('btn-logout');
       if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
-          const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+          const token = safeStorage.getItem(STORAGE_KEY_TOKEN);
           if (token) {
             await fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }).catch(() => {});
           }
-          localStorage.removeItem(STORAGE_KEY_TOKEN);
-          localStorage.removeItem(STORAGE_KEY_USER);
-          localStorage.removeItem(STORAGE_KEY_PRO);
-          localStorage.removeItem('direct_beam_pro');
-          localStorage.removeItem('direct_beam_pro_status');
-          localStorage.removeItem('direct_beam_pro_key');
-          localStorage.removeItem('direct_beam_instance_id');
-          localStorage.removeItem('direct_beam_pro_meta');
+          safeStorage.removeItem(STORAGE_KEY_TOKEN);
+          safeStorage.removeItem(STORAGE_KEY_USER);
+          safeStorage.removeItem(STORAGE_KEY_PRO);
+          safeStorage.removeItem('direct_beam_pro');
+          safeStorage.removeItem('direct_beam_pro_status');
+          safeStorage.removeItem('direct_beam_pro_key');
+          safeStorage.removeItem('direct_beam_instance_id');
+          safeStorage.removeItem('direct_beam_pro_meta');
           window.location.reload();
         });
       }

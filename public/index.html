@@ -90,6 +90,9 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" />
   </noscript>
 
+  <!-- Zero-throw safe storage polyfill for incognito/private webviews -->
+  <script src="/js/safe-storage.js?v=3.5.0"></script>
+
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -1481,7 +1484,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
   <script src="/lucide.min.js" defer></script>
-  <script src="/app.min.js?v=3.4.0-checkout-direct" defer></script>
+  <script src="/app.min.js?v=3.5.0-safestorage" defer></script>
   <script type="module" src="/js/beam-canvas.min.js"></script>
   <script>
     function refreshLucideIcons() {

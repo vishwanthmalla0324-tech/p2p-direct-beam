@@ -421,12 +421,22 @@ const translations = {
   }
 };
 
-let currentLang = localStorage.getItem('directbeam_lang') || 'en';
+function getSafeStorage() {
+  try {
+    if (typeof window !== 'undefined' && window.safeStorage) return window.safeStorage;
+    if (typeof window !== 'undefined' && 'localStorage' in window) return window.localStorage;
+  } catch (e) {}
+  return { getItem: function() { return null; }, setItem: function() {} };
+}
+
+let currentLang = getSafeStorage().getItem('directbeam_lang') || 'en';
 
 function applyTranslations(lang) {
   if (!translations[lang]) lang = 'en';
   currentLang = lang;
-  localStorage.setItem('directbeam_lang', lang);
+  try {
+    getSafeStorage().setItem('directbeam_lang', lang);
+  } catch (e) {}
 
   // Set document direction for RTL languages (Arabic)
   document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';

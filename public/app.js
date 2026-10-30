@@ -4,6 +4,87 @@
 
 (() => {
   'use strict';
+  // Bulletproof Storage for Incognito mode / Private Browsing / Restricted WebViews
+  const safeStorage = (() => {
+    const memory = new Map();
+    let hasLocal = false;
+    try {
+      if (typeof window !== 'undefined' && 'localStorage' in window) {
+        const testKey = '__db_probe__';
+        window.safeStorage.setItem(testKey, '1');
+        window.safeStorage.removeItem(testKey);
+        hasLocal = true;
+      }
+    } catch (e) {
+      hasLocal = false;
+    }
+
+    function getCookie(name) {
+      try {
+        if (typeof document === 'undefined' || !document.cookie) return null;
+        const m = document.cookie.match(new RegExp('(?:^|;\\s*)' + encodeURIComponent(name) + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function setCookie(name, val) {
+      try {
+        if (typeof document === 'undefined') return;
+        document.cookie = encodeURIComponent(name) + '=' + encodeURIComponent(val) + '; path=/; max-age=2592000; SameSite=Lax';
+      } catch (e) {}
+    }
+
+    function removeCookie(name) {
+      try {
+        if (typeof document === 'undefined') return;
+        document.cookie = encodeURIComponent(name) + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
+      } catch (e) {}
+    }
+
+    return {
+      getItem(k) {
+        if (hasLocal) {
+          try {
+            const v = window.safeStorage.getItem(k);
+            if (v !== null) return v;
+          } catch (e) {}
+        }
+        if (memory.has(k)) return memory.get(k);
+        const cv = getCookie(k);
+        if (cv !== null) {
+          memory.set(k, cv);
+          return cv;
+        }
+        return null;
+      },
+      setItem(k, v) {
+        const str = String(v);
+        memory.set(k, str);
+        if (hasLocal) {
+          try { window.safeStorage.setItem(k, str); } catch (e) {}
+        }
+        if (str.length < 3500) {
+          setCookie(k, str);
+        }
+      },
+      removeItem(k) {
+        memory.delete(k);
+        if (hasLocal) {
+          try { window.safeStorage.removeItem(k); } catch (e) {}
+        }
+        removeCookie(k);
+      },
+      clear() {
+        memory.clear();
+        if (hasLocal) {
+          try { window.safeStorage.clear(); } catch (e) {}
+        }
+      }
+    };
+  })();
+
 
   // --- Configuration Constants ---
   const CHUNK_SIZE = 256 * 1024; // 256 KB per frame
@@ -1606,7 +1687,7 @@
   function purgeClientTrialCache() {
     try {
       const launchResetFlag = 'directbeam_launch_clean_2026_10_30_v5_trials';
-      if (!localStorage.getItem(launchResetFlag)) {
+      if (!safeStorage.getItem(launchResetFlag)) {
         const legacyKeys = [
           'directbeam_free_shares',
           'trial_count',
@@ -1618,7 +1699,7 @@
           'direct_beam_pro_active',
           'direct_beam_license_key'
         ];
-        legacyKeys.forEach(k => localStorage.removeItem(k));
+        legacyKeys.forEach(k => safeStorage.removeItem(k));
         if (typeof document !== 'undefined' && document.cookie) {
           document.cookie.split(";").forEach(c => {
             const name = c.split("=")[0].trim();
@@ -1629,7 +1710,7 @@
         }
 
         // Hard reset any stale Pro attributes or trial counts inside stored user account
-        const rawUser = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_USER);
+        const rawUser = safeStorage.getItem(USAGE_CONFIG.STORAGE_KEY_USER);
         if (rawUser) {
           try {
             const userObj = JSON.parse(rawUser);
@@ -1644,15 +1725,15 @@
             delete userObj.proPaymentId;
             delete userObj.proOrderId;
             delete userObj.licenseKey;
-            localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(userObj));
+            safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(userObj));
           } catch (e) {
-            localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
+            safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
           }
         }
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, '0');
-        localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, '0');
+        safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
         window.DIRECT_BEAM_PRO = false;
-        localStorage.setItem(launchResetFlag, 'true');
+        safeStorage.setItem(launchResetFlag, 'true');
       }
     } catch (e) {}
   }
@@ -1660,7 +1741,7 @@
 
   function getLoggedInUser() {
     try {
-      const raw = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_USER);
+      const raw = safeStorage.getItem(USAGE_CONFIG.STORAGE_KEY_USER);
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
       return null;
@@ -1674,9 +1755,9 @@
     const serverCount = typeof user.transfersCount === 'number'
       ? user.transfersCount
       : (typeof user.freeSharesUsed === 'number' ? user.freeSharesUsed : 0);
-    const localCount = parseInt(localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
+    const localCount = parseInt(safeStorage.getItem(USAGE_CONFIG.STORAGE_KEY_COUNT) || '0', 10);
     if (localCount !== serverCount) {
-      localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, serverCount.toString());
+      safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, serverCount.toString());
     }
     return serverCount;
   }
@@ -1956,20 +2037,20 @@
       }
 
       if (data.token) {
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
       }
       if (data.user) {
         const count = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
         data.user.transfersCount = count;
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, count.toString());
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, count.toString());
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
 
         if (data.user.pro) {
-          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+          safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
           window.DIRECT_BEAM_PRO = true;
           updateProUI(true);
         } else {
-          localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+          safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
           window.DIRECT_BEAM_PRO = false;
           updateProUI(false);
         }
@@ -2006,7 +2087,7 @@
   }
 
   async function signOutUser() {
-    const token = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+    const token = safeStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
     try {
       if (token) {
         await fetch('/api/auth/logout', {
@@ -2015,15 +2096,15 @@
         });
       }
     } catch (e) {}
-    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
-    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_LEGACY_USER);
-    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
-    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
-    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_COUNT);
-    localStorage.removeItem('direct_beam_transfer_count');
-    localStorage.removeItem('direct_beam_pro');
-    localStorage.removeItem('direct_beam_pro_status');
-    localStorage.removeItem('direct_beam_pro_key');
+    safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
+    safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_LEGACY_USER);
+    safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+    safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+    safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_COUNT);
+    safeStorage.removeItem('direct_beam_transfer_count');
+    safeStorage.removeItem('direct_beam_pro');
+    safeStorage.removeItem('direct_beam_pro_status');
+    safeStorage.removeItem('direct_beam_pro_key');
     window.DIRECT_BEAM_PRO = false;
     updateProUI(false);
     updateQuotaBadge();
@@ -2105,17 +2186,17 @@
   function recordSuccessfulTransfer() {
     if (isProUser()) return;
     const current = getTransferCount() + 1;
-    localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, current.toString());
+    safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, current.toString());
     
     const user = getLoggedInUser();
     if (user) {
       user.transfersCount = current;
-      localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(user));
+      safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(user));
     }
     updateQuotaBadge();
 
     // Sync to Cloudflare KV database if user is authenticated
-    const token = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+    const token = safeStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
     if (token) {
       fetch('/api/auth/sync', {
         method: 'POST',
@@ -2133,7 +2214,7 @@
   }
 
   async function syncUserSession() {
-    const token = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+    const token = safeStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
     if (!token) {
       updateQuotaBadge();
       return;
@@ -2149,29 +2230,29 @@
         if (data && data.user) {
           const userCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
           data.user.transfersCount = userCount;
-          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, userCount.toString());
-          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+          safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, userCount.toString());
+          safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
 
           if (data.user.pro) {
-            localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+            safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
             window.DIRECT_BEAM_PRO = true;
             updateProUI(true);
           } else {
-            localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
-            localStorage.removeItem('direct_beam_pro');
-            localStorage.removeItem('direct_beam_pro_status');
-            localStorage.removeItem('direct_beam_pro_key');
+            safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+            safeStorage.removeItem('direct_beam_pro');
+            safeStorage.removeItem('direct_beam_pro_status');
+            safeStorage.removeItem('direct_beam_pro_key');
             window.DIRECT_BEAM_PRO = false;
             updateProUI(false);
           }
         }
       } else if (res.status === 401) {
-        localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
-        localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
-        localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
-        localStorage.removeItem('direct_beam_pro');
-        localStorage.removeItem('direct_beam_pro_status');
-        localStorage.removeItem('direct_beam_pro_key');
+        safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+        safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_USER);
+        safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+        safeStorage.removeItem('direct_beam_pro');
+        safeStorage.removeItem('direct_beam_pro_status');
+        safeStorage.removeItem('direct_beam_pro_key');
         window.DIRECT_BEAM_PRO = false;
         updateProUI(false);
       }
@@ -2272,16 +2353,16 @@
       }
 
       if (data.token) {
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
       }
       if (data.user) {
         const remoteCount = typeof data.user.transfersCount === 'number' ? data.user.transfersCount : 0;
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, remoteCount.toString());
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_COUNT, remoteCount.toString());
         data.user.transfersCount = remoteCount;
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
 
         if (data.user.pro) {
-          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+          safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
           window.DIRECT_BEAM_PRO = true;
           updateProUI(true);
         }
@@ -2320,10 +2401,10 @@
       const res = await fetch('/api/auth/cloudflare-access');
       const data = await res.json();
       if (data && data.active && data.token && data.user) {
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_TOKEN, data.token);
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
         if (data.user.pro) {
-          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+          safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
           window.DIRECT_BEAM_PRO = true;
           updateProUI(true);
         }
@@ -2379,8 +2460,8 @@
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('payment') === 'success' || urlParams.get('payment_success') === 'true') {
       showToast('⚡ Welcome to Direct Beam Pro Lifetime! Your upgrade is active.');
-      localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
-      localStorage.setItem('direct_beam_pro_status', 'active');
+      safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+      safeStorage.setItem('direct_beam_pro_status', 'active');
       window.DIRECT_BEAM_PRO = true;
       updateProUI(true);
       const cleanUrl = window.location.pathname;
@@ -2458,7 +2539,7 @@
   async function startProCheckout(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const user = getLoggedInUser();
-    const token = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+    const token = safeStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
 
     if (!user || !user.email || !token) {
       showToast('Please sign in first so your Pro upgrade is activated immediately!');
@@ -2513,7 +2594,7 @@
     }
 
     const user = getLoggedInUser();
-    const token = localStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
+    const token = safeStorage.getItem(USAGE_CONFIG.STORAGE_KEY_TOKEN);
     if (!user || !token) {
       showToast('Please sign in to your account first before activating a license.');
       openAuthModal();
@@ -2545,11 +2626,11 @@
 
       if (response.ok && data && data.success) {
         if (data.user) {
-          localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
+          safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(data.user));
         }
-        localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
-        localStorage.setItem('direct_beam_pro_key', key);
-        localStorage.setItem('direct_beam_pro_status', 'active');
+        safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_PRO, 'active');
+        safeStorage.setItem('direct_beam_pro_key', key);
+        safeStorage.setItem('direct_beam_pro_status', 'active');
 
         window.DIRECT_BEAM_PRO = true;
         updateProUI(true);
@@ -2601,14 +2682,14 @@
       return;
     }
 
-    localStorage.removeItem('direct_beam_pro_key');
-    localStorage.removeItem('direct_beam_pro_status');
-    localStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
+    safeStorage.removeItem('direct_beam_pro_key');
+    safeStorage.removeItem('direct_beam_pro_status');
+    safeStorage.removeItem(USAGE_CONFIG.STORAGE_KEY_PRO);
 
     const user = getLoggedInUser();
     if (user) {
       user.pro = false;
-      localStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(user));
+      safeStorage.setItem(USAGE_CONFIG.STORAGE_KEY_USER, JSON.stringify(user));
     }
 
     window.DIRECT_BEAM_PRO = false;
